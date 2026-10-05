@@ -1,5 +1,8 @@
 import express from 'express';
 import http from 'http';
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
 import next from 'next';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
@@ -19,6 +22,24 @@ const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const handle = nextApp.getRequestHandler();
 
+// Check for SSL certificates in certificates/ or custom paths
+function getSslCredentials() {
+  const certDir = path.join(process.cwd(), 'certificates');
+  const certPath = process.env.SSL_CERT_PATH || path.join(certDir, 'cert.pem');
+  const keyPath = process.env.SSL_KEY_PATH || path.join(certDir, 'key.pem');
+
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    try {
+      const cert = fs.readFileSync(certPath);
+      const key = fs.readFileSync(keyPath);
+      return { cert, key, certPath, keyPath };
+    } catch (e) {
+      console.warn('[SSL] Failed to read certificate files, falling back to HTTP:', e);
+    }
+  }
+  return null;
+}
+
 async function main() {
   await nextApp.prepare();
 
@@ -26,8 +47,13 @@ async function main() {
   app.use(cors());
   app.use(express.json({ limit: '20mb' }));
 
-  const httpServer = http.createServer(app);
-  const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+  const ssl = getSslCredentials();
+  const isHttps = !!ssl;
+  const server = isHttps
+    ? https.createServer({ key: ssl.key, cert: ssl.cert }, app)
+    : http.createServer(app);
+
+  const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
@@ -235,8 +261,16 @@ async function main() {
     return handle(req, res);
   });
 
-  httpServer.listen(port, () => {
-    console.log(`> Ready on http://localhost:${port}`);
+  server.listen(port, () => {
+    const protocol = isHttps ? 'https' : 'http';
+    console.log(`> Ready on ${protocol}://localhost:${port}`);
+    if (isHttps) {
+      console.log(`[SSL] HTTPS enabled using:`);
+      console.log(`      Cert: ${ssl.certPath}`);
+      console.log(`      Key:  ${ssl.keyPath}`);
+    } else {
+      console.log(`[SSL] Running on HTTP (certificates/cert.pem & key.pem not found or not loaded)`);
+    }
   });
 }
 

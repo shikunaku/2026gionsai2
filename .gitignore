@@ -16,6 +16,9 @@
 # Misc
 .DS_Store
 *.pem
+*.key
+/certificates/
+/certs/
 
 # Debug
 npm-debug.log*

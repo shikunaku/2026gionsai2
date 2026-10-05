@@ -117,6 +117,17 @@ npm run dev
 - **集中管理コンソール**: [http://localhost:3000/admin](http://localhost:3000/admin)
 - **機材演出制御盤**: [http://localhost:3000/equipment](http://localhost:3000/equipment)
 
+#### 🔒 HTTPS (SSL) の設定方法
+スマートフォンのカメラアクセスやトーチ機能、Web Audio の安定動作のため、ローカルネットワーク等で HTTPS を利用したい場合は、`certificates/` ディレクトリに証明書を配置するだけで自動認識されます：
+```text
+certificates/
+├── cert.pem   # サーバー証明書
+└── key.pem    # 秘密鍵
+```
+※ `certificates/` フォルダおよび `*.pem` / `*.key` ファイルは `.gitignore` に登録されているため、Git にコミットされる心配はありません。
+証明書が存在する場合は自動的に `https://localhost:3000` で起動し、存在しない場合は通常の `http://localhost:3000` で起動します。
+環境変数 `SSL_CERT_PATH` および `SSL_KEY_PATH` を指定して別パスの証明書を読み込むことも可能です。
+
 ### 3. 型チェック & ビルド
 ```bash
 # TypeScript 型チェック
