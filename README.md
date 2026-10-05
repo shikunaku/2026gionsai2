@@ -6,7 +6,7 @@ Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成�
 
 ---
 
-## 🏗️ システムアーキテクチャ
+## システムアーキテクチャ
 
 ```text
 [ 参加者用 PDA 端末 ] (/client)
@@ -37,7 +37,7 @@ Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成�
 
 ---
 
-## 🌟 主な機能・特徴
+## 主な機能・特徴
 
 ### 1. 参加者用 PDA 端末 (`/client`)
 - **スマホ縦長最適化**: 縦画面（横幅 `480px` 上限）に完全対応し、片手操作しやすい親指リーチレイアウト。
@@ -65,7 +65,7 @@ Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成�
 
 ---
 
-## 📁 ディレクトリ構成
+## ディレクトリ構成
 
 ```text
 .
@@ -96,7 +96,7 @@ Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成�
 
 ---
 
-## 🚀 セットアップ & 起動方法
+## セットアップ & 起動方法
 
 ### 前提環境
 - Node.js 18+ (推奨: Node.js 20+)
@@ -128,6 +128,6 @@ npm run build
 
 ---
 
-## 🔒 ライセンス・著作権
+## ライセンス・著作権
 本プロジェクトは文化祭・展示イベント専用に設計されたシステムです。
 詳細な演出仕様およびハードウェア連携仕様については `requirements_definition.md` をご参照ください。

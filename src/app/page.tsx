@@ -151,12 +151,15 @@ export default function PortalPage() {
             <div>[STATUS] Next.js 14 App Router + Realtime WebSocket Ready.</div>
             <div>[NODE_ENV] {process.env.NODE_ENV || 'development'}</div>
             <div>[NETWORK] 全画面は単一Socket.ioサーバーと自動双方向同期します。</div>
+            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #3a404a', color: '#88909d' }}>
+              [LICENSE] 本システムは 2026年 祇園祭・文化祭展示専用に設計・制作されたアトラクション制御基盤です。
+            </div>
           </div>
         </div>
 
         <div className="win95-statusbar">
           <div className="win95-statusbar-item" style={{ flex: 1 }}>
-            文化祭・工場点検ホラーアトラクションシステム 2026
+            文化祭・工場点検ホラーアトラクションシステム 2026 | All Rights Reserved
           </div>
           <div className="win95-statusbar-item">v2.0-NEXT</div>
         </div>
