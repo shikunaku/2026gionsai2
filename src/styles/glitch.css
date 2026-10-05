@@ -1,0 +1,126 @@
+/* Flashlight Fallback Screen Flash (softened eye-friendly opacity) */
+.screen-flash-active {
+  position: fixed !important;
+  inset: 0 !important;
+  background-color: rgba(245, 245, 235, 0.85) !important;
+  z-index: 999999 !important;
+  pointer-events: none !important;
+}
+
+/* CRT Scanline Overlay removed per user preference */
+.crt-overlay {
+  display: none !important;
+}
+
+/* Glitch Base */
+.glitch-active {
+  animation: glitch-anim 0.2s steps(2, start) infinite;
+  filter: contrast(150%) brightness(120%);
+}
+
+.glitch-violent {
+  animation: glitch-violent-anim 0.08s steps(1) infinite;
+  filter: invert(15%) saturate(250%) contrast(180%);
+}
+
+.glitch-creepy {
+  animation: glitch-creepy-anim 0.35s ease-in-out infinite alternate;
+  filter: sepia(30%) hue-rotate(300deg) contrast(140%) brightness(85%);
+}
+
+@keyframes glitch-anim {
+  0% {
+    transform: translate(0);
+    clip-path: inset(0 0 0 0);
+  }
+  20% {
+    transform: translate(-3px, 2px);
+    clip-path: inset(10% 0 85% 0);
+  }
+  40% {
+    transform: translate(3px, -2px);
+    clip-path: inset(40% 0 40% 0);
+  }
+  60% {
+    transform: translate(-2px, -1px);
+    clip-path: inset(80% 0 5% 0);
+  }
+  80% {
+    transform: translate(2px, 2px);
+    clip-path: inset(15% 0 60% 0);
+  }
+  100% {
+    transform: translate(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes glitch-violent-anim {
+  0% {
+    transform: translate(-6px, 4px) skewX(2deg);
+    text-shadow: -2px 0 #ff0000, 2px 0 #00ffff;
+  }
+  25% {
+    transform: translate(5px, -3px) skewX(-3deg);
+    text-shadow: 3px 0 #ff0000, -3px 0 #00ffff;
+  }
+  50% {
+    transform: translate(-4px, -2px) skewX(1deg);
+    text-shadow: -3px 0 #00ff00, 3px 0 #ff00ff;
+  }
+  75% {
+    transform: translate(6px, 3px) skewX(-2deg);
+    text-shadow: 2px 0 #00ffff, -2px 0 #ff0000;
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes glitch-creepy-anim {
+  0% {
+    opacity: 0.95;
+    transform: scale(1.0);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.005) rotate(0.1deg);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(0.998) rotate(-0.1deg);
+  }
+}
+
+/* Shutdown Blackout Overlay */
+.shutdown-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #000000;
+  color: #ff2222;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  animation: shutdown-fade 1.5s ease-out forwards;
+}
+
+@keyframes shutdown-fade {
+  0% {
+    background-color: #ff0000;
+    opacity: 1;
+  }
+  15% {
+    background-color: #000000;
+    opacity: 0.9;
+  }
+  30% {
+    background-color: #aa0000;
+  }
+  100% {
+    background-color: #000000;
+    opacity: 1;
+  }
+}

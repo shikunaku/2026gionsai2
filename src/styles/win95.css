@@ -1,0 +1,161 @@
+/* Windows 95/98 Classic Design System - Muted Eye-Friendly Theme */
+
+.win95-window {
+  background-color: #c7c4bd;
+  border-top: 2px solid #e2e0d8;
+  border-left: 2px solid #e2e0d8;
+  border-right: 2px solid #5a5955;
+  border-bottom: 2px solid #5a5955;
+  box-shadow: 1px 1px 0px #302f2d;
+  padding: 3px;
+  color: #232528;
+  font-family: "MS Gothic", "MS PGothic", "Yu Gothic", monospace;
+  box-sizing: border-box;
+}
+
+.win95-titlebar {
+  background: linear-gradient(90deg, #2c4159, #3f5d7d);
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e6e9ed;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.win95-titlebar-inactive {
+  background: linear-gradient(90deg, #6c7178, #8c9199);
+}
+
+.win95-btn {
+  background-color: #c7c4bd;
+  border-top: 2px solid #e2e0d8;
+  border-left: 2px solid #e2e0d8;
+  border-right: 2px solid #5a5955;
+  border-bottom: 2px solid #5a5955;
+  color: #232528;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 12px;
+  min-height: 30px;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.win95-btn:active,
+.win95-btn.active {
+  border-top: 2px solid #5a5955;
+  border-left: 2px solid #5a5955;
+  border-right: 2px solid #e2e0d8;
+  border-bottom: 2px solid #e2e0d8;
+  padding: 6px 11px 4px 13px;
+}
+
+.win95-btn:disabled {
+  color: #7d8085;
+  text-shadow: 1px 1px 0 #dedcd5;
+  cursor: not-allowed;
+}
+
+.win95-btn-danger {
+  background-color: #9c4141;
+  color: #f1ede8;
+}
+
+.win95-inset {
+  background-color: #eae8e1;
+  border-top: 2px solid #64635f;
+  border-left: 2px solid #64635f;
+  border-right: 2px solid #dedcd5;
+  border-bottom: 2px solid #dedcd5;
+  color: #232528;
+  padding: 4px 8px;
+  box-sizing: border-box;
+}
+
+.win95-inset-dark {
+  background-color: #202328;
+  border-top: 2px solid #16181b;
+  border-left: 2px solid #16181b;
+  border-right: 2px solid #4a4d54;
+  border-bottom: 2px solid #4a4d54;
+  color: #9cb885;
+  font-family: monospace;
+}
+
+.win95-groupbox {
+  border-top: 2px solid #7a7974;
+  border-left: 2px solid #7a7974;
+  border-right: 2px solid #dedcd5;
+  border-bottom: 2px solid #dedcd5;
+  padding: 10px;
+  margin-top: 8px;
+  position: relative;
+}
+
+.win95-groupbox-legend {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  background-color: #c7c4bd;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #2e3034;
+}
+
+.win95-statusbar {
+  display: flex;
+  gap: 4px;
+  padding: 2px;
+  margin-top: 4px;
+}
+
+.win95-statusbar-item {
+  border-top: 1px solid #7a7974;
+  border-left: 1px solid #7a7974;
+  border-right: 1px solid #dedcd5;
+  border-bottom: 1px solid #dedcd5;
+  padding: 2px 6px;
+  font-size: 11px;
+  background-color: #c7c4bd;
+  color: #383a3e;
+}
+
+/* Tab Headers */
+.win95-tabs {
+  display: flex;
+  gap: 2px;
+  padding-left: 4px;
+  border-bottom: 2px solid #7a7974;
+}
+
+.win95-tab {
+  background-color: #c7c4bd;
+  border-top: 2px solid #e2e0d8;
+  border-left: 2px solid #e2e0d8;
+  border-right: 2px solid #5a5955;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.win95-tab.active {
+  font-weight: bold;
+  background-color: #d1cec7;
+  margin-bottom: -2px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #d1cec7;
+}

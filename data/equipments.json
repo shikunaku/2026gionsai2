@@ -1,0 +1,34 @@
+[
+  {
+    "id": "eq_conveyor_01",
+    "name": "第零搬送コンベア (Conveyor A-01)",
+    "type": "relay",
+    "state": true,
+    "topic": "mcu/conveyor/power",
+    "updatedAt": "2026-10-05T07:25:24.996Z"
+  },
+  {
+    "id": "eq_valve_01",
+    "name": "蒸気第2減圧弁 (Steam Valve B)",
+    "type": "servo",
+    "state": true,
+    "topic": "mcu/valve/angle",
+    "updatedAt": "2026-10-05T07:09:41.425Z"
+  },
+  {
+    "id": "eq_alarm_light",
+    "name": "非常用警告赤色灯 (Emergency Beacon)",
+    "type": "light",
+    "state": false,
+    "topic": "mcu/alarm/light",
+    "updatedAt": "2026-10-05T00:00:00.000Z"
+  },
+  {
+    "id": "eq_fan_vent",
+    "name": "排煙大型換気ダクト (Exhaust Vent Fan)",
+    "type": "fan",
+    "state": true,
+    "topic": "mcu/fan/power",
+    "updatedAt": "2026-10-05T00:00:00.000Z"
+  }
+]
