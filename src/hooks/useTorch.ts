@@ -12,7 +12,7 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   const pendingStateRef = useRef<boolean | null>(null);
   const flickerTimerRef = useRef<any>(null);
 
-  // Initialize web camera track for torch once and keep pre-warmed
+  // Initialize web camera track for torch once and keep pre-warmed if supported
   const initWebTorch = useCallback(async (): Promise<MediaStreamTrack | null> => {
     if (trackRef.current && trackRef.current.readyState === 'live') {
       return trackRef.current;
@@ -22,18 +22,14 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     }
 
     try {
-      // Use minimal resolution constraint to ensure instant responsiveness on low-end chipsets
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 320 },
-          height: { ideal: 240 },
         },
       });
       streamRef.current = stream;
       const track = stream.getVideoTracks()[0];
-      const capabilities = (track.getCapabilities && track.getCapabilities()) || {};
-      if ('torch' in capabilities) {
+      if (track) {
         trackRef.current = track;
         return track;
       }
@@ -43,27 +39,53 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     return null;
   }, []);
 
-  // Pre-warm torch stream on mount or first user interaction
-  useEffect(() => {
-    initWebTorch().catch(() => {});
-  }, [initWebTorch]);
-
-  const applyHardwareTorch = useCallback(async (state: boolean) => {
-    // 1. Android Bridge Check (Fastest and 100% reliable on WebView)
-    if (window.Android?.turnOnFlash && window.Android?.turnOffFlash) {
+  const applyHardwareTorch = useCallback(async (state: boolean): Promise<boolean> => {
+    // 1. Android Bridge Check (Dedicated App WebView)
+    // Support common method signatures: turnOnFlash/turnOffFlash, setFlashlight, setTorch, toggleFlash
+    const androidObj = (window as any).Android || (window as any).android || (window as any).FlashlightBridge || (window as any).TorchBridge;
+    if (androidObj) {
       try {
         if (state) {
-          window.Android.turnOnFlash();
+          if (typeof androidObj.turnOnFlash === 'function') {
+            androidObj.turnOnFlash();
+            return true;
+          } else if (typeof androidObj.turnOnTorch === 'function') {
+            androidObj.turnOnTorch();
+            return true;
+          } else if (typeof androidObj.setFlashlight === 'function') {
+            androidObj.setFlashlight(true);
+            return true;
+          } else if (typeof androidObj.setTorch === 'function') {
+            androidObj.setTorch(true);
+            return true;
+          } else if (typeof androidObj.setFlash === 'function') {
+            androidObj.setFlash(true);
+            return true;
+          }
         } else {
-          window.Android.turnOffFlash();
+          if (typeof androidObj.turnOffFlash === 'function') {
+            androidObj.turnOffFlash();
+            return true;
+          } else if (typeof androidObj.turnOffTorch === 'function') {
+            androidObj.turnOffTorch();
+            return true;
+          } else if (typeof androidObj.setFlashlight === 'function') {
+            androidObj.setFlashlight(false);
+            return true;
+          } else if (typeof androidObj.setTorch === 'function') {
+            androidObj.setTorch(false);
+            return true;
+          } else if (typeof androidObj.setFlash === 'function') {
+            androidObj.setFlash(false);
+            return true;
+          }
         }
-        return true;
       } catch (e) {
-        console.warn('[useTorch] Android Bridge invocation failed:', e);
+        console.warn('[useTorch] Dedicated App Android Bridge call error:', e);
       }
     }
 
-    // 2. Web ImageCapture / MediaStreamTrack Torch
+    // 2. Web ImageCapture / MediaStreamTrack Torch Fallback
     try {
       const track = await initWebTorch();
       if (track && track.readyState === 'live') {
@@ -75,6 +97,7 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     } catch (e) {
       console.warn('[useTorch] Web MediaStreamTrack torch failed:', e);
     }
+
     return false;
   }, [initWebTorch]);
 
@@ -83,7 +106,6 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
       setTorchOn(state);
       if (onStateChange) onStateChange(state);
 
-      // Low-end device queue: if a previous hardware call is in flight, queue the newest state
       pendingStateRef.current = state;
       if (isBusyRef.current) return;
 
@@ -101,38 +123,20 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     [onStateChange, applyHardwareTorch]
   );
 
-  /**
-   * Trigger a brief white flash effect when forced OFF (e.g. shutdown / cutoff)
-   */
-  const triggerCutoffFlash = useCallback((durationMs = 280) => {
-    setScreenFlashActive(true);
-    setTimeout(() => {
-      setScreenFlashActive(false);
-    }, durationMs);
-  }, []);
-
   const toggleTorch = useCallback(() => {
-    const nextState = !torchOn;
-    setTorch(nextState);
-    if (!nextState) {
-      triggerCutoffFlash(200);
-    }
-  }, [torchOn, setTorch, triggerCutoffFlash]);
+    setTorch(!torchOn);
+  }, [torchOn, setTorch]);
 
   /**
-   * Robust hardware flicker for low-spec mobile chipsets:
-   * Uses async sequential steps with minimum hardware dwell time (160ms)
-   * so camera driver doesn't drop requests or crash.
+   * Hardware flicker for native app & web:
+   * Uses clear steps without causing screen flashes.
    */
   const flicker = useCallback(
-    (count = 5, intervalMs = 180) => {
+    (count = 5, intervalMs = 140) => {
       if (flickerTimerRef.current) {
         clearInterval(flickerTimerRef.current);
         flickerTimerRef.current = null;
       }
-
-      // Guarantee minimum 150ms per toggle for low-end hardware ISP stability
-      const safeInterval = Math.max(150, intervalMs);
 
       let step = 0;
       let currentState = false;
@@ -145,7 +149,6 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
             flickerTimerRef.current = null;
           }
           await setTorch(false);
-          triggerCutoffFlash(260);
           return;
         }
 
@@ -154,11 +157,10 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
         await setTorch(currentState);
       };
 
-      // Initial trigger
       runFlickerStep();
-      flickerTimerRef.current = setInterval(runFlickerStep, safeInterval);
+      flickerTimerRef.current = setInterval(runFlickerStep, intervalMs);
     },
-    [setTorch, triggerCutoffFlash]
+    [setTorch]
   );
 
   useEffect(() => {
@@ -172,10 +174,9 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
 
   return {
     torchOn,
-    screenFlashActive,
+    screenFlashActive: false,
     setTorch,
     toggleTorch,
     flicker,
-    triggerCutoffFlash,
   };
 }
