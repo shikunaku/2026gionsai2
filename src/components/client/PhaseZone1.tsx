@@ -240,10 +240,10 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
             {isProcessing
               ? '画像圧縮・送信処理中...'
               : currentTask.status === 'APPROVED'
-              ? '点検完了 [合格確認済]'
-              : currentTask.status === 'PENDING'
-              ? '再撮影して提出 [審査待ち上書き]'
-              : '写真を撮影して提出 [CAPTURE]'}
+                ? '点検完了 [合格確認済]'
+                : currentTask.status === 'PENDING'
+                  ? '再撮影して提出 [審査待ち上書き]'
+                  : '写真を撮影して提出 [CAPTURE]'}
           </button>
         </div>
       </div>
@@ -264,7 +264,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
               whiteSpace: 'nowrap',
             }}
           >
-            全点検合格: ZONE 2 (第零製造ライン) へ進む -&gt;
+            全点検合格: ZONE 2 (第零製造ライン) 進む -&gt;
           </button>
         </div>
       )}

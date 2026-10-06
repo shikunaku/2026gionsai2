@@ -21,6 +21,9 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<'relay' | 'servo' | 'light' | 'fan' | 'custom'>('relay');
   const [newTopic, setNewTopic] = useState('');
+  const [newMcuId, setNewMcuId] = useState('ESP32_MAIN');
+  const [newProtocol, setNewProtocol] = useState<'serial' | 'wifi' | 'ble'>('serial');
+  const [newEndpoint, setNewEndpoint] = useState('');
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +34,16 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
       type: newType,
       state: false,
       topic: newTopic || `mcu/${newType}/${newId}`,
+      mcuId: newMcuId || 'ESP32_MAIN',
+      protocol: newProtocol,
+      endpoint: newEndpoint,
     });
     setNewId('');
     setNewName('');
+    setNewTopic('');
+    setNewMcuId('ESP32_MAIN');
+    setNewProtocol('serial');
+    setNewEndpoint('');
     setShowAddModal(false);
   };
 
@@ -52,13 +62,24 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
     }
   };
 
+  const getProtocolBadge = (protocol?: string) => {
+    switch (protocol) {
+      case 'wifi':
+        return <span style={{ backgroundColor: '#2d4d6e', color: '#edf4fb', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>Wi-Fi</span>;
+      case 'ble':
+        return <span style={{ backgroundColor: '#3f386b', color: '#f3f0fb', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>Bluetooth</span>;
+      default:
+        return <span style={{ backgroundColor: '#385d42', color: '#edfbf0', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>有線シリアル</span>;
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Action Toolbar */}
       <div className="win95-window" style={{ marginBottom: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#27292d' }}>
-            登録設備・演出ギミック一覧 ({equipments.length}系統)
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#27292e' }}>
+            登録設備・マルチMCU演出制御盤 ({equipments.length}系統)
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -76,7 +97,7 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
           flex: 1,
           overflowY: 'auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
           gap: '10px',
           alignContent: 'start',
         }}
@@ -100,9 +121,17 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
               </div>
 
               <div style={{ padding: '10px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '11px', color: '#444850', marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', color: '#27292e', lineHeight: 1.6, marginBottom: '8px' }}>
                   <div><strong>ID:</strong> {eq.id}</div>
                   <div><strong>種別:</strong> {eq.type.toUpperCase()}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <strong>担当マイコン:</strong>
+                    <span style={{ fontWeight: 'bold', color: '#2c4159' }}>{eq.mcuId || 'ESP32_MAIN'}</span>
+                    {getProtocolBadge(eq.protocol)}
+                  </div>
+                  {eq.endpoint && (
+                    <div><strong>接続先:</strong> <span style={{ fontFamily: 'monospace' }}>{eq.endpoint}</span></div>
+                  )}
                   <div><strong>トピック:</strong> {eq.topic || 'N/A'}</div>
                   <div><strong>最終同期:</strong> {new Date(eq.updatedAt).toLocaleTimeString()}</div>
                 </div>
@@ -160,10 +189,10 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
           <div
             className="win95-window"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '420px', width: '100%' }}
+            style={{ maxWidth: '460px', width: '100%' }}
           >
             <div className="win95-titlebar">
-              <span>新規機器・演出ギミック登録</span>
+              <span>新規機器・演出ギミック登録 (マルチMCU対応)</span>
               <button onClick={() => setShowAddModal(false)} className="win95-btn" style={{ padding: '0 6px', fontWeight: 'bold' }}>
                 [X]
               </button>
@@ -171,7 +200,7 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
             <form onSubmit={handleAddSubmit} style={{ padding: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>機器ID (例: eq_lamp_01):</label>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>機器ID (例: eq_valve_02):</label>
                   <input
                     type="text"
                     required
@@ -192,23 +221,66 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
                     style={{ width: '100%' }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>制御種別:</label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as any)}
-                    className="win95-inset"
-                    style={{ width: '100%' }}
-                  >
-                    <option value="relay">リレー (Relay)</option>
-                    <option value="servo">サーボ (Servo)</option>
-                    <option value="light">照明・回転灯 (Light)</option>
-                    <option value="fan">換気ファン (Fan)</option>
-                    <option value="custom">カスタム (Custom)</option>
-                  </select>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>制御種別:</label>
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value as any)}
+                      className="win95-inset"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="relay">リレー (Relay)</option>
+                      <option value="servo">サーボ (Servo)</option>
+                      <option value="light">照明・回転灯 (Light)</option>
+                      <option value="fan">換気ファン (Fan)</option>
+                      <option value="custom">カスタム (Custom)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>通信方式 (プロトコル):</label>
+                    <select
+                      value={newProtocol}
+                      onChange={(e) => setNewProtocol(e.target.value as any)}
+                      className="win95-inset"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="serial">有線シリアル (USB/COM)</option>
+                      <option value="wifi">Wi-Fi (WebSocket/TCP)</option>
+                      <option value="ble">Bluetooth (BLE)</option>
+                    </select>
+                  </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>担当マイコンID:</label>
+                    <input
+                      type="text"
+                      value={newMcuId}
+                      placeholder="ESP32_MAIN / ESP32_02"
+                      onChange={(e) => setNewMcuId(e.target.value)}
+                      className="win95-inset"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>接続先 / ポート (任意):</label>
+                    <input
+                      type="text"
+                      value={newEndpoint}
+                      placeholder="COM4 / 192.168.1.10 / BLE_ID"
+                      onChange={(e) => setNewEndpoint(e.target.value)}
+                      className="win95-inset"
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>MQTT/MCUトピック:</label>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>トピック:</label>
                   <input
                     type="text"
                     value={newTopic}
@@ -235,3 +307,4 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
     </div>
   );
 };
+

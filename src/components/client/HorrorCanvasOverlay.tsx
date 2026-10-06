@@ -32,15 +32,30 @@ export const HorrorCanvasOverlay: React.FC<HorrorCanvasOverlayProps> = ({
       // Soft grain noise (gentle and low-contrast)
       const imgData = ctx.createImageData(w, h);
       const data = imgData.data;
-      const count = Math.floor(w * h * 0.05 * level);
+      const density = mode === 'static' ? 0.15 : 0.05;
+      const count = Math.floor(w * h * density * level);
 
       for (let i = 0; i < count; i++) {
         const index = Math.floor(Math.random() * (w * h)) * 4;
-        const color = mode === 'violent' ? 180 : 120;
-        data[index] = color;
-        data[index + 1] = color;
-        data[index + 2] = color;
-        data[index + 3] = Math.random() * 45 * level;
+        let r = 120;
+        let g = 120;
+        let b = 120;
+
+        if (mode === 'violent') {
+          r = 200; g = 140; b = 180;
+        } else if (mode === 'redout') {
+          r = 220; g = 30; b = 30;
+        } else if (mode === 'invert') {
+          r = 240; g = 240; b = 240;
+        } else if (mode === 'static') {
+          const val = Math.random() > 0.5 ? 230 : 20;
+          r = val; g = val; b = val;
+        }
+
+        data[index] = r;
+        data[index + 1] = g;
+        data[index + 2] = b;
+        data[index + 3] = mode === 'static' ? Math.random() * 80 * level : Math.random() * 45 * level;
       }
       ctx.putImageData(imgData, 0, 0);
 

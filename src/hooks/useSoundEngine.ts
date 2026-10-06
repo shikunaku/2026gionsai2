@@ -32,6 +32,7 @@ export function useSoundEngine() {
     playBeep: (freq?: number, duration?: number) => engine.playBeep(freq, duration),
     playShutter: () => engine.playShutter(),
     playLowImpact: () => engine.playLowImpact(),
+    playTaskSuccess: () => engine.playTaskSuccess(),
     playGeiger: (level?: number, durationMs?: number) => engine.playGeiger(level, durationMs),
     playDrone: (duration?: number) => engine.playDrone(duration),
     playMotor: (duration?: number) => engine.playMotor(duration),

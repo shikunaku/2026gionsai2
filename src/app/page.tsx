@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { FullscreenButton } from '../components/common/FullscreenButton';
 
 export default function PortalPage() {
+  const [showLicense, setShowLicense] = React.useState<boolean>(false);
+
   return (
     <div
       style={{
@@ -87,7 +89,7 @@ export default function PortalPage() {
                   [管理] 集中管理コンソール
                 </div>
                 <div style={{ fontSize: '11px', color: '#3d4048', lineHeight: 1.5, marginBottom: '12px' }}>
-                  運営スタッフ向け3カラム画面。端末監視・点検写真合否審査・グリッチ/音響/トーチ遠隔制御。
+                  運営スタッフ向け4カラム画面。端末監視・点検写真合否審査・グリッチ/音響/トーチ遠隔制御。
                 </div>
               </div>
               <Link href="/admin" style={{ textDecoration: 'none' }}>
@@ -123,7 +125,7 @@ export default function PortalPage() {
                   [機材] 機材演出制御盤
                 </div>
                 <div style={{ fontSize: '11px', color: '#3d4048', lineHeight: 1.5, marginBottom: '12px' }}>
-                  物理設備（ESP32リレー/サーボ/非常灯/換気ファン）の登録・削除・永続化と即時手動制御。
+                  物理設備（ESP32有線/Wi-Fi/Bluetooth対応リレー・サーボ・ライト・ファン）の個別登録と遠隔制御。
                 </div>
               </div>
               <Link href="/equipment" style={{ textDecoration: 'none' }}>
@@ -144,6 +146,7 @@ export default function PortalPage() {
             </div>
           </div>
 
+          {/* System Status Console */}
           <div
             className="win95-inset-dark"
             style={{ marginTop: '18px', padding: '10px', fontSize: '11px', lineHeight: 1.6 }}
@@ -151,9 +154,61 @@ export default function PortalPage() {
             <div>[STATUS] Next.js 14 App Router + Realtime WebSocket Ready.</div>
             <div>[NODE_ENV] {process.env.NODE_ENV || 'development'}</div>
             <div>[NETWORK] 全画面は単一Socket.ioサーバーと自動双方向同期します。</div>
-            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #3a404a', color: '#88909d' }}>
-              [LICENSE] 本システムは 2026年 祇園祭・文化祭展示専用に設計・制作されたアトラクション制御基盤です。
+          </div>
+
+          {/* Toggleable License & Legal Information Panel */}
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+              <button
+                onClick={() => setShowLicense(!showLicense)}
+                className="win95-btn"
+                style={{
+                  fontSize: '11px',
+                  padding: '3px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>{showLicense ? '▲ ライセンス情報を隠す' : '▼ ライセンス・著作権表記を表示'}</span>
+              </button>
             </div>
+
+            {showLicense && (
+              <div
+                className="win95-inset"
+                style={{
+                  padding: '12px',
+                  fontSize: '11px',
+                  lineHeight: 1.5,
+                  backgroundColor: '#e6e4dc',
+                  color: '#282b30',
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '6px', borderBottom: '1px solid #9c9a93', paddingBottom: '3px', color: '#1f2530' }}>
+                  [LICENSE & THIRD-PARTY NOTICES / 権利・ライセンス表記]
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>本プロジェクト著作権:</strong><br />
+                  © 2026 祇園祭 ホラーアトラクション制作有志. All Rights Reserved.<br />
+                  本システムは、2026年 祇園祭・文化祭展示専用に設計・制作された演出統合基盤です。
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <strong>使用オープンソースライブラリ / ライセンス:</strong>
+                  <ul style={{ paddingLeft: '18px', margin: '4px 0' }}>
+                    <li><strong>Next.js / React:</strong> MIT License (Copyright © Meta Platforms, Inc. / Vercel, Inc.)</li>
+                    <li><strong>Socket.io:</strong> MIT License (Copyright © Guillermo Rauch)</li>
+                    <li><strong>Express:</strong> MIT License (Copyright © StrongLoop, Inc.)</li>
+                    <li><strong>Lucide React:</strong> ISC License (Copyright © Lucide Contributors)</li>
+                    <li><strong>Web Audio API / Web Bluetooth API:</strong> W3C Standards & Browser Native Implementations</li>
+                    <li><strong>ESP32 Arduino Core / ESP32Servo:</strong> LGPL 2.1 / GPL (Espressif Systems & Kevin Harrington)</li>
+                  </ul>
+                </div>
+                <div style={{ fontSize: '10px', color: '#666a73', borderTop: '1px dotted #aaa', paddingTop: '4px' }}>
+                  ※ 各ソフトウェアは各著作者のライセンス規約に基づき提供されています。無断転載・営利目的の無許可再配布はご遠慮ください。
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

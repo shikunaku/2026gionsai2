@@ -101,13 +101,13 @@ export default function EquipmentPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータルへ移動">
+            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータル移動">
               [ポータル]
             </button>
           </Link>
           <Link href="/admin" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold' }} title="管理コンソールへ移動">
-              [管理コンソールへ]
+            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold' }} title="管理コンソール移動">
+              [管理コンソール]
             </button>
           </Link>
           <Link href="/equipment" style={{ textDecoration: 'none' }}>

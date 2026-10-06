@@ -166,18 +166,18 @@ export default function AdminPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータルへ移動">
+            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータル">
               [ポータル]
             </button>
           </Link>
           <Link href="/admin" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn active" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold', backgroundColor: '#b5b2aa' }} title="管理コンソールへ移動（現在の画面）">
-              [管理コンソールへ]
+            <button className="win95-btn active" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold', backgroundColor: '#b5b2aa' }} title="管理コンソール移動（現在の画面）">
+              [管理コンソール]
             </button>
           </Link>
           <Link href="/equipment" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="機材制御盤へ移動">
-              [機材制御盤へ]
+            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="機材制御盤">
+              [機材制御盤]
             </button>
           </Link>
           <FullscreenButton style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} />

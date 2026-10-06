@@ -5,7 +5,10 @@
     "type": "relay",
     "state": true,
     "topic": "mcu/conveyor/power",
-    "updatedAt": "2026-10-05T07:25:24.996Z"
+    "mcuId": "ESP32_MAIN",
+    "protocol": "serial",
+    "endpoint": "COM3 / USB",
+    "updatedAt": "2026-10-06T06:34:56.584Z"
   },
   {
     "id": "eq_valve_01",
@@ -13,6 +16,9 @@
     "type": "servo",
     "state": true,
     "topic": "mcu/valve/angle",
+    "mcuId": "ESP32_MAIN",
+    "protocol": "serial",
+    "endpoint": "COM3 / USB",
     "updatedAt": "2026-10-05T07:09:41.425Z"
   },
   {
@@ -21,6 +27,9 @@
     "type": "light",
     "state": false,
     "topic": "mcu/alarm/light",
+    "mcuId": "ESP32_SUB_LIGHT",
+    "protocol": "wifi",
+    "endpoint": "192.168.11.52",
     "updatedAt": "2026-10-05T00:00:00.000Z"
   },
   {
@@ -29,6 +38,9 @@
     "type": "fan",
     "state": true,
     "topic": "mcu/fan/power",
+    "mcuId": "ESP32_BLE_HUB",
+    "protocol": "ble",
+    "endpoint": "BLE-FAN-SERVICE",
     "updatedAt": "2026-10-05T00:00:00.000Z"
   }
 ]

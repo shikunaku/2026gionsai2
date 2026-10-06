@@ -5,7 +5,12 @@ import { DevicePhase } from '../../lib/types';
 
 interface EffectTriggerPanelProps {
   onOverrideAllPhase: (phase: DevicePhase) => void;
-  onTriggerGlitch: (options: { level: number; duration: number; mode: 'violent' | 'creepy'; vibrate: boolean }) => void;
+  onTriggerGlitch: (options: {
+    level: number;
+    duration: number;
+    mode: 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
+    vibrate: boolean;
+  }) => void;
   onTriggerSound: (soundType: string, level?: number) => void;
   onTriggerTorch: (options: { state?: boolean; flicker?: boolean; count?: number; intervalMs?: number }) => void;
   onSetVolume: (volume: number) => void;
@@ -24,7 +29,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
 }) => {
   const [glitchLevel, setGlitchLevel] = useState<number>(2);
   const [glitchDuration, setGlitchDuration] = useState<number>(3000);
-  const [glitchMode, setGlitchMode] = useState<'violent' | 'creepy'>('creepy');
+  const [glitchMode, setGlitchMode] = useState<'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static'>('creepy');
   const [selectedVolume, setSelectedVolume] = useState<number>(1.0);
 
   const handleVolumeChange = (vol: number) => {
@@ -87,22 +92,56 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#2b2e34' }}>
-              <span style={{ fontWeight: 'bold' }}>モード:</span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px', color: '#2b2e34' }}>
+              <span style={{ fontWeight: 'bold' }}>妨害タイプ (モード):</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
                 <button
                   onClick={() => setGlitchMode('creepy')}
                   className={`win95-btn ${glitchMode === 'creepy' ? 'active' : ''}`}
-                  style={{ padding: '2px 8px', fontSize: '10px', minHeight: '26px' }}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="不穏な波打ち・微細な歪み"
                 >
-                  不穏 (Creepy)
+                  不穏(歪み)
                 </button>
                 <button
                   onClick={() => setGlitchMode('violent')}
                   className={`win95-btn ${glitchMode === 'violent' ? 'active' : ''}`}
-                  style={{ padding: '2px 8px', fontSize: '10px', minHeight: '26px' }}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="激しいRGBズレ・画面裂け"
                 >
-                  激しい (Violent)
+                  激震(裂け)
+                </button>
+                <button
+                  onClick={() => setGlitchMode('invert')}
+                  className={`win95-btn ${glitchMode === 'invert' ? 'active' : ''}`}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="白黒・色彩の急激な反転妨害"
+                >
+                  色反転
+                </button>
+                <button
+                  onClick={() => setGlitchMode('blackout')}
+                  className={`win95-btn ${glitchMode === 'blackout' ? 'active' : ''}`}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="突発的な暗転・チカチカ点滅"
+                >
+                  突発暗転
+                </button>
+                <button
+                  onClick={() => setGlitchMode('redout')}
+                  className={`win95-btn ${glitchMode === 'redout' ? 'active' : ''}`}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="警告警報・血色赤転フラッシュ"
+                >
+                  血色赤転
+                </button>
+                <button
+                  onClick={() => setGlitchMode('static')}
+                  className={`win95-btn ${glitchMode === 'static' ? 'active' : ''}`}
+                  style={{ padding: '3px 2px', fontSize: '10px', minHeight: '26px' }}
+                  title="アナログ砂嵐・走査線ノイズ"
+                >
+                  砂嵐ノイズ
                 </button>
               </div>
             </div>
@@ -127,7 +166,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
                 marginTop: '4px',
               }}
             >
-              全端末にグリッチ発火 [EXECUTE]
+              全端末に妨害発火 [EXECUTE]
             </button>
           </div>
         </fieldset>
@@ -136,6 +175,9 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
         <fieldset className="win95-groupbox">
           <legend className="win95-groupbox-legend">プロシージャル音響遠隔トリガー</legend>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginTop: '4px' }}>
+            <button onClick={() => onTriggerSound('taskSuccess')} className="win95-btn" style={{ fontSize: '11px', padding: '5px 6px', minHeight: '32px', fontWeight: 'bold', backgroundColor: '#3d6148', color: '#f0f8f2' }} title="合格通知チャイム (880Hz->1320Hz)">
+              合格チャイム ♪
+            </button>
             <button onClick={() => onTriggerSound('beep')} className="win95-btn" style={{ fontSize: '11px', padding: '5px 6px', minHeight: '32px' }}>
               確認ビープ
             </button>

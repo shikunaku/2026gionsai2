@@ -28,6 +28,115 @@
   filter: sepia(30%) hue-rotate(300deg) contrast(140%) brightness(85%);
 }
 
+/* 色反転妨害 (Invert Interference) */
+.glitch-invert {
+  animation: glitch-invert-anim 0.15s steps(2, start) infinite;
+}
+
+/* 突発暗転妨害 (Blackout / Flicker) */
+.glitch-blackout {
+  animation: glitch-blackout-anim 0.28s steps(1) infinite;
+}
+
+/* 警告血色・赤転妨害 (Redout / Alarm flash) */
+.glitch-redout {
+  animation: glitch-redout-anim 0.22s ease-in-out infinite alternate;
+}
+
+/* 砂嵐・走査線ノイズ (Static Noise) */
+.glitch-static {
+  animation: glitch-static-anim 0.09s steps(2) infinite;
+  filter: grayscale(80%) contrast(220%) brightness(90%);
+}
+
+@keyframes glitch-invert-anim {
+  0% {
+    filter: invert(100%) contrast(180%);
+    transform: translate(0, 0);
+  }
+  30% {
+    filter: invert(0%) contrast(120%);
+    transform: translate(-3px, 1px);
+  }
+  50% {
+    filter: invert(90%) hue-rotate(180deg);
+    transform: translate(3px, -2px);
+  }
+  80% {
+    filter: invert(100%) contrast(200%);
+    transform: translate(1px, 2px);
+  }
+  100% {
+    filter: invert(20%);
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes glitch-blackout-anim {
+  0% {
+    filter: brightness(0%) contrast(300%);
+    opacity: 0.1;
+  }
+  35% {
+    filter: brightness(15%);
+    opacity: 0.25;
+  }
+  45% {
+    filter: brightness(95%);
+    opacity: 1;
+  }
+  75% {
+    filter: brightness(0%);
+    opacity: 0.05;
+  }
+  90% {
+    filter: brightness(70%);
+    opacity: 0.8;
+  }
+  100% {
+    filter: brightness(0%);
+    opacity: 0.1;
+  }
+}
+
+@keyframes glitch-redout-anim {
+  0% {
+    filter: sepia(100%) saturate(800%) hue-rotate(315deg) contrast(160%) brightness(80%);
+    transform: scale(1.0);
+  }
+  50% {
+    filter: sepia(100%) saturate(1200%) hue-rotate(330deg) contrast(200%) brightness(65%);
+    transform: scale(1.01) translate(-2px, 2px);
+  }
+  100% {
+    filter: sepia(80%) saturate(600%) hue-rotate(310deg) contrast(140%) brightness(90%);
+    transform: scale(0.99) translate(2px, -1px);
+  }
+}
+
+@keyframes glitch-static-anim {
+  0% {
+    transform: translate(-4px, 3px) skewX(2deg);
+    clip-path: inset(5% 0 80% 0);
+  }
+  25% {
+    transform: translate(3px, -3px) skewX(-2deg);
+    clip-path: inset(45% 0 35% 0);
+  }
+  50% {
+    transform: translate(-2px, 1px);
+    clip-path: inset(75% 0 10% 0);
+  }
+  75% {
+    transform: translate(4px, -2px) skewX(1deg);
+    clip-path: inset(20% 0 60% 0);
+  }
+  100% {
+    transform: translate(0, 0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 @keyframes glitch-anim {
   0% {
     transform: translate(0);

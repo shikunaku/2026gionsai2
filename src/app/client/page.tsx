@@ -116,8 +116,8 @@ function ClientContent() {
       );
 
       if (status === 'APPROVED') {
-        soundEngine.playLowImpact();
-        if ('vibrate' in navigator) navigator.vibrate([100, 50, 200]);
+        soundEngine.playTaskSuccess();
+        if ('vibrate' in navigator) navigator.vibrate([80, 40, 140]);
       } else if (status === 'REJECTED') {
         soundEngine.playBeep(440, 0.2);
         if ('vibrate' in navigator) navigator.vibrate(300);
@@ -240,7 +240,21 @@ function ClientContent() {
       }}
     >
       <div
-        className="win95-window"
+        className={`win95-window ${
+          glitchOptions
+            ? glitchOptions.mode === 'violent'
+              ? 'glitch-violent'
+              : glitchOptions.mode === 'invert'
+              ? 'glitch-invert'
+              : glitchOptions.mode === 'blackout'
+              ? 'glitch-blackout'
+              : glitchOptions.mode === 'redout'
+              ? 'glitch-redout'
+              : glitchOptions.mode === 'static'
+              ? 'glitch-static'
+              : 'glitch-creepy'
+            : ''
+        }`}
         style={{
           position: 'relative',
           width: '100%',

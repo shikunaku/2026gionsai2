@@ -51,7 +51,7 @@ export interface GlitchEffectOptions {
   level: number;
   duration: number;
   vibrate?: boolean;
-  mode?: 'violent' | 'creepy';
+  mode?: 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
 }
 
 export interface TorchEffectOptions {
@@ -62,9 +62,11 @@ export interface TorchEffectOptions {
 }
 
 export interface SoundEffectOptions {
-  soundType: 'beep' | 'shutter' | 'lowImpact' | 'geiger' | 'drone' | 'motor' | 'powerDown';
+  soundType: 'beep' | 'shutter' | 'lowImpact' | 'geiger' | 'drone' | 'motor' | 'powerDown' | 'taskSuccess';
   level?: number;
 }
+
+export type EquipmentProtocol = 'serial' | 'wifi' | 'ble';
 
 export interface EquipmentItem {
   id: string;
@@ -72,6 +74,9 @@ export interface EquipmentItem {
   type: 'relay' | 'servo' | 'light' | 'fan' | 'custom';
   state: boolean | number | string;
   topic?: string;
+  mcuId?: string;       // マイコンID (例: ESP32_MAIN, ESP32_ZONE2, ARDUINO_01)
+  protocol?: EquipmentProtocol; // 通信方式 (有線シリアル / Wi-Fi / Bluetooth)
+  endpoint?: string;    // COMポート名 / IPアドレス / BLEサービスUUID
   updatedAt: string;
 }
 

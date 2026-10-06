@@ -407,6 +407,48 @@ export class SoundEngine {
     osc.stop(now + duration + 0.1);
   }
 
+  /**
+   * Task Success (Industrial terminal high-clarity 2-tone success chime)
+   * 880Hz (A5) -> 1320Hz (E6) clear marimba-style bell chime
+   */
+  public playTaskSuccess(): void {
+    this.init();
+    if (!this.ctx) return;
+
+    const playTone = (freq: number, startDelay: number, duration: number, gainPeak: number) => {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime + startDelay;
+
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      // Sine wave with slight triangle overtone for warm metallic chime
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(freq * 3, t);
+      filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + duration);
+
+      oscGain.gain.setValueAtTime(0.001, t);
+      oscGain.gain.linearRampToValueAtTime(gainPeak, t + 0.012);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+      osc.connect(filter);
+      filter.connect(oscGain);
+      oscGain.connect(this.getDestinationNode());
+
+      osc.start(t);
+      osc.stop(t + duration + 0.05);
+    };
+
+    // First note: 880Hz (A5)
+    playTone(880, 0, 0.22, 0.35);
+    // Second note: 1320Hz (E6, pure fifth harmony)
+    playTone(1320, 0.11, 0.45, 0.45);
+  }
+
   public playSound(soundType: string, level = 3): void {
     switch (soundType) {
       case 'beep':
@@ -417,6 +459,9 @@ export class SoundEngine {
         break;
       case 'lowImpact':
         this.playLowImpact();
+        break;
+      case 'taskSuccess':
+        this.playTaskSuccess();
         break;
       case 'geiger':
         this.playGeiger(level);
