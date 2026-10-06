@@ -189,7 +189,7 @@ export default function AdminPage() {
         style={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: '270px 1fr 500px 350px',
+          gridTemplateColumns: '260px minmax(330px, 1.2fr) minmax(340px, 1fr) 330px',
           gap: '6px',
           padding: '6px',
           overflow: 'hidden',

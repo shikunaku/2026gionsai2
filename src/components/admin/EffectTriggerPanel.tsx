@@ -227,7 +227,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
           <legend className="win95-groupbox-legend">背面トーチ (フラッシュライト) 遠隔制御</legend>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginTop: '4px' }}>
             <button
-              onClick={() => onTriggerTorch({ flicker: true, count: 6, intervalMs: 120 })}
+              onClick={() => onTriggerTorch({ flicker: true, count: 6, intervalMs: 180 })}
               className="win95-btn"
               style={{ fontSize: '11px', padding: '5px 2px', minHeight: '32px' }}
             >

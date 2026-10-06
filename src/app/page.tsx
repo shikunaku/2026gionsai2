@@ -13,14 +13,17 @@ export default function PortalPage() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         minHeight: '100dvh',
-        padding: '20px',
+        height: 'auto',
+        overflowY: 'auto',
+        padding: '24px 16px 40px 16px',
         backgroundColor: '#1f2228',
         color: '#d1d4db',
+        boxSizing: 'border-box',
       }}
     >
-      <div className="win95-window" style={{ maxWidth: '680px', width: '100%' }}>
+      <div className="win95-window" style={{ maxWidth: '680px', width: '100%', marginBottom: '20px' }}>
         <div className="win95-titlebar">
           <span>[SYSTEM] 工場保守演出統合システム ポータル</span>
           <FullscreenButton style={{ padding: '0 6px', fontSize: '11px' }} />

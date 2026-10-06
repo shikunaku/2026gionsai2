@@ -64,7 +64,7 @@ function ClientContent() {
     [socket, connected, deviceId]
   );
 
-  const { torchOn, screenFlashActive, setTorch, toggleTorch, flicker } =
+  const { torchOn, screenFlashActive, setTorch, toggleTorch, flicker, triggerCutoffFlash } =
     useTorch(handleTorchStateChange);
 
   // Battery monitoring synchronization (every 5 seconds)
@@ -145,6 +145,9 @@ function ClientContent() {
         flicker(count || 6, intervalMs || 100);
       } else if (typeof state === 'boolean') {
         setTorch(state);
+        if (!state) {
+          triggerCutoffFlash(260); // 演出：強制消灯時に白く点滅パルス
+        }
       }
     });
 
@@ -175,7 +178,7 @@ function ClientContent() {
       socket.off('effect:volume');
       socket.off('effect:shutdown');
     };
-  }, [socket, deviceId, soundEngine, flicker, setTorch]);
+  }, [socket, deviceId, soundEngine, flicker, setTorch, triggerCutoffFlash]);
 
   // Emit device:ready once connected or deviceId set
   useEffect(() => {

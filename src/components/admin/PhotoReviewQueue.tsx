@@ -97,9 +97,9 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                         )}
                       </div>
 
-                      {/* Action buttons */}
+                      {/* Action buttons (non-wrapping single line) */}
                       {isPending && (
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '3px', marginTop: '6px', flexWrap: 'nowrap', width: '100%' }}>
                           <button
                             onClick={() => onReview(sub.id, 'APPROVED')}
                             className="win95-btn"
@@ -108,8 +108,11 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                               color: '#f0f5f1',
                               fontSize: '11px',
                               fontWeight: 'bold',
-                              padding: '4px 8px',
-                              minHeight: '28px',
+                              padding: '3px 6px',
+                              minHeight: '26px',
+                              whiteSpace: 'nowrap',
+                              flex: 1,
+                              textAlign: 'center',
                             }}
                           >
                             合格 [OK]
@@ -122,8 +125,11 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                               color: '#fdf8f4',
                               fontSize: '11px',
                               fontWeight: 'bold',
-                              padding: '4px 8px',
-                              minHeight: '28px',
+                              padding: '3px 6px',
+                              minHeight: '26px',
+                              whiteSpace: 'nowrap',
+                              flex: 1,
+                              textAlign: 'center',
                             }}
                           >
                             不鮮明
@@ -136,8 +142,11 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                               color: '#fdf4f4',
                               fontSize: '11px',
                               fontWeight: 'bold',
-                              padding: '4px 8px',
-                              minHeight: '28px',
+                              padding: '3px 6px',
+                              minHeight: '26px',
+                              whiteSpace: 'nowrap',
+                              flex: 1,
+                              textAlign: 'center',
                             }}
                           >
                             箇所違い
