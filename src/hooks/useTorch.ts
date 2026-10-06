@@ -12,37 +12,18 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   const pendingStateRef = useRef<boolean | null>(null);
   const flickerTimerRef = useRef<any>(null);
 
-  // Initialize web camera track for torch once and keep pre-warmed if supported
-  const initWebTorch = useCallback(async (): Promise<MediaStreamTrack | null> => {
-    if (trackRef.current && trackRef.current.readyState === 'live') {
-      return trackRef.current;
-    }
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      return null;
-    }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-        },
-      });
-      streamRef.current = stream;
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        trackRef.current = track;
-        return track;
-      }
-    } catch (e) {
-      console.warn('[useTorch] Web Torch getUserMedia error or unsupported:', e);
-    }
-    return null;
-  }, []);
 
-  const applyHardwareTorch = useCallback(async (state: boolean): Promise<boolean> => {
-    // 1. Android Bridge Check (Dedicated App WebView)
-    // Support common method signatures: turnOnFlash/turnOffFlash, setFlashlight, setTorch, toggleFlash
-    const androidObj = (window as any).Android || (window as any).android || (window as any).FlashlightBridge || (window as any).TorchBridge;
+  const desiredTorchStateRef = useRef<boolean>(false);
+
+  // Direct synchronous hardware call helper (zero latency for dedicated app)
+  const invokeNativeFlash = (state: boolean): boolean => {
+    const androidObj =
+      (window as any).Android ||
+      (window as any).android ||
+      (window as any).FlashlightBridge ||
+      (window as any).TorchBridge;
+
     if (androidObj) {
       try {
         if (state) {
@@ -81,44 +62,79 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
           }
         }
       } catch (e) {
-        console.warn('[useTorch] Dedicated App Android Bridge call error:', e);
+        console.warn('[useTorch] Android Bridge execution error:', e);
       }
     }
+    return false;
+  };
 
-    // 2. Web ImageCapture / MediaStreamTrack Torch Fallback
+  // Web MediaStreamTrack Torch Fallback
+  const initWebTorch = useCallback(async (): Promise<MediaStreamTrack | null> => {
+    if (trackRef.current && trackRef.current.readyState === 'live') {
+      return trackRef.current;
+    }
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      return null;
+    }
+
     try {
-      const track = await initWebTorch();
-      if (track && track.readyState === 'live') {
-        await track.applyConstraints({
-          advanced: [{ torch: state } as any],
-        });
-        return true;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+        },
+      });
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        trackRef.current = track;
+        return track;
       }
     } catch (e) {
-      console.warn('[useTorch] Web MediaStreamTrack torch failed:', e);
+      console.warn('[useTorch] Web Torch getUserMedia fallback failed:', e);
     }
+    return null;
+  }, []);
 
-    return false;
-  }, [initWebTorch]);
+  const applyHardwareTorch = useCallback(
+    async (state: boolean): Promise<boolean> => {
+      // 1. Try native dedicated app bridge first (sync, 0ms latency)
+      if (invokeNativeFlash(state)) {
+        return true;
+      }
+
+      // 2. Web ImageCapture / MediaStreamTrack Fallback (async)
+      try {
+        const track = await initWebTorch();
+        if (track && track.readyState === 'live') {
+          await track.applyConstraints({
+            advanced: [{ torch: state } as any],
+          });
+          return true;
+        }
+      } catch (e) {
+        console.warn('[useTorch] Web MediaStreamTrack torch failed:', e);
+      }
+
+      return false;
+    },
+    [initWebTorch]
+  );
 
   const setTorch = useCallback(
-    async (state: boolean) => {
+    (state: boolean) => {
+      desiredTorchStateRef.current = state;
       setTorchOn(state);
       if (onStateChange) onStateChange(state);
 
-      pendingStateRef.current = state;
-      if (isBusyRef.current) return;
-
-      isBusyRef.current = true;
-      try {
-        while (pendingStateRef.current !== null) {
-          const targetState = pendingStateRef.current;
-          pendingStateRef.current = null;
-          await applyHardwareTorch(targetState);
-        }
-      } finally {
-        isBusyRef.current = false;
+      // Instant synchronous execution for native app
+      if (invokeNativeFlash(state)) {
+        return;
       }
+
+      // Non-blocking asynchronous fallback for Web MediaStream
+      applyHardwareTorch(state).catch((e) => {
+        console.warn('[useTorch] Async applyHardwareTorch error:', e);
+      });
     },
     [onStateChange, applyHardwareTorch]
   );
@@ -128,49 +144,77 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   }, [torchOn, setTorch]);
 
   /**
-   * Hardware flicker for native app & web:
-   * Uses clear steps without causing screen flashes.
+   * Fast, non-blocking hardware flicker:
+   * Runs without holding up React main thread or blocking glitch/other effects.
    */
   const flicker = useCallback(
-    (count = 5, intervalMs = 140) => {
+    (count = 6, intervalMs = 70) => {
       if (flickerTimerRef.current) {
         clearInterval(flickerTimerRef.current);
         flickerTimerRef.current = null;
       }
 
+      const speed = Math.max(50, intervalMs);
       let step = 0;
       let currentState = false;
       const totalSteps = count * 2;
 
-      const runFlickerStep = async () => {
+      flickerTimerRef.current = setInterval(() => {
         if (step >= totalSteps) {
           if (flickerTimerRef.current) {
             clearInterval(flickerTimerRef.current);
             flickerTimerRef.current = null;
           }
-          await setTorch(false);
+          setTorch(false);
           return;
         }
 
         currentState = !currentState;
         step++;
-        await setTorch(currentState);
-      };
 
-      runFlickerStep();
-      flickerTimerRef.current = setInterval(runFlickerStep, intervalMs);
+        // Fast native trigger without awaiting
+        desiredTorchStateRef.current = currentState;
+        setTorchOn(currentState);
+        if (onStateChange) onStateChange(currentState);
+
+        if (!invokeNativeFlash(currentState)) {
+          applyHardwareTorch(currentState).catch(() => {});
+        }
+      }, speed);
     },
-    [setTorch]
+    [setTorch, onStateChange, applyHardwareTorch]
   );
 
+  /**
+   * Auto-restore torch after camera capture:
+   * When user returns from taking a photo (<input type="file">), the OS camera app releases
+   * the torch. On window focus / visibilitychange, we re-apply the desired torch state.
+   */
   useEffect(() => {
+    const handleRestoreTorch = () => {
+      if (document.visibilityState === 'visible' && desiredTorchStateRef.current) {
+        // Small delay to let camera hardware release from OS camera intent
+        setTimeout(() => {
+          if (desiredTorchStateRef.current) {
+            console.log('[useTorch] Restoring torch after returning from camera/background...');
+            setTorch(true);
+          }
+        }, 350);
+      }
+    };
+
+    window.addEventListener('focus', handleRestoreTorch);
+    document.addEventListener('visibilitychange', handleRestoreTorch);
+
     return () => {
+      window.removeEventListener('focus', handleRestoreTorch);
+      document.removeEventListener('visibilitychange', handleRestoreTorch);
       if (flickerTimerRef.current) clearInterval(flickerTimerRef.current);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
-  }, []);
+  }, [setTorch]);
 
   return {
     torchOn,

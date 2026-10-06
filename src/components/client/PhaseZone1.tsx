@@ -9,6 +9,7 @@ interface PhaseZone1Props {
   onPhotoSubmit: (taskId: number, taskTitle: string, imageBase64: string) => void;
   onProceedZone2?: () => void;
   playShutterSound?: () => void;
+  onPhotoTaken?: () => void;
 }
 
 export const PhaseZone1: React.FC<PhaseZone1Props> = ({
@@ -17,6 +18,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
   onPhotoSubmit,
   onProceedZone2,
   playShutterSound,
+  onPhotoTaken,
 }) => {
   const [selectedTaskId, setSelectedTaskId] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -69,6 +71,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
             // 3. Compress to image/jpeg (quality: 0.7)
             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
             onPhotoSubmit(currentTask.id, currentTask.title, compressedBase64);
+            if (onPhotoTaken) onPhotoTaken();
           }
           setIsProcessing(false);
         };
@@ -79,6 +82,8 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       console.error('Photo processing error:', err);
       setIsProcessing(false);
     }
+
+    if (onPhotoTaken) onPhotoTaken();
 
     // Reset input so user can re-take if needed
     e.target.value = '';

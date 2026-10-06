@@ -331,6 +331,12 @@ function ClientContent() {
               onPhotoSubmit={handlePhotoSubmit}
               onProceedZone2={() => setPhase('ZONE2')}
               playShutterSound={() => soundEngine.playShutter()}
+              onPhotoTaken={() => {
+                // If torch was meant to be ON, re-activate it after camera app returns
+                if (torchOn) {
+                  setTimeout(() => setTorch(true), 300);
+                }
+              }}
             />
           )}
 

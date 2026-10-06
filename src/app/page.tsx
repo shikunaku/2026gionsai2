@@ -186,6 +186,10 @@ export default function PortalPage() {
                   lineHeight: 1.5,
                   backgroundColor: '#e6e4dc',
                   color: '#282b30',
+                  maxHeight: '320px',
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y',
                 }}
               >
                 <div style={{ fontWeight: 'bold', marginBottom: '6px', borderBottom: '1px solid #9c9a93', paddingBottom: '3px', color: '#1f2530' }}>
