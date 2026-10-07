@@ -50,7 +50,8 @@ export default function AdminPage() {
   };
 
   const handleIndividualTorch = (deviceId: string) => {
-    triggerEffect('torch', { flicker: true, count: 5, intervalMs: 100 }, deviceId);
+    // Eerie horror blink rhythm: "ぴかっ...ぴかっ...ぴかっ..."
+    triggerEffect('torch', { pattern: '1,0,0,1,0,0,1,0,0,0', intervalMs: 120 }, deviceId);
   };
 
   const handleReviewPhoto = (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {

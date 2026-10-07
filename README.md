@@ -128,6 +128,8 @@ Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成�
 │   ├── esp32_relay_hub/         # 有線シリアル 統合ハブ
 │   ├── esp32_wifi_hub/          # Wi-Fi 遠隔ハブ
 │   └── esp32_ble_hub/           # Bluetooth BLE ハブ
+├── docs/                        # 技術ドキュメント
+│   └── FLASHLIGHT_API.md        # 専用Androidアプリ フラッシュライトAPI仕様書
 ├── public/                      # 静的アセット (cast-manual.pdf 等)
 ├── data/                        # 永続化データ (equipments.json)
 └── requirements_definition.md   # システム完全仕様書・要件定義

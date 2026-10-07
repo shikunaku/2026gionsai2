@@ -358,16 +358,21 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   }, [invokeNativeBridge, stopBlink]);
 
   /**
-   * Auto-restore torch after camera capture / app focus:
-   * When user returns from taking a photo via file input, OS camera app releases the hardware LED.
-   * On window focus or visibilitychange, automatically re-apply the desired torch state.
+   * Auto-restore torch after camera capture / app focus and periodic heartbeat:
+   * 1. When user returns from taking a photo via file input, OS camera app releases the hardware LED.
+   *    On focus, visibilitychange, and pageshow events, immediately re-apply.
+   * 2. Periodic watchdog interval (every 1.5s): if torch is intended to be ON, re-assert native/web torch
+   *    to guarantee it never stays turned off in the background or after native camera activity.
    */
   useEffect(() => {
     const handleRestoreTorch = () => {
-      if (document.visibilityState === 'visible' && desiredTorchStateRef.current) {
+      if (desiredTorchStateRef.current) {
+        console.log('[useTorch] Auto-restoring torch after camera return / focus / visibility...');
+        // Immediate attempt
+        setTorch(true);
+        // Follow-up attempt after 300ms (to let camera hardware completely free up)
         setTimeout(() => {
           if (desiredTorchStateRef.current) {
-            console.log('[useTorch] Auto-restoring torch after camera return / focus...');
             setTorch(true);
           }
         }, 300);
@@ -375,14 +380,47 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     };
 
     window.addEventListener('focus', handleRestoreTorch);
+    window.addEventListener('pageshow', handleRestoreTorch);
     document.addEventListener('visibilitychange', handleRestoreTorch);
+
+    // Periodic watchdog timer: check and keep torch ON if intended state is ON
+    const watchdogInterval = setInterval(() => {
+      if (desiredTorchStateRef.current && document.visibilityState === 'visible') {
+        const bridge =
+          (window as any).Android ||
+          (window as any).AndroidBridge ||
+          (window as any).android ||
+          (window as any).FlashlightBridge ||
+          (window as any).TorchBridge;
+
+        if (bridge) {
+          // Check if bridge has isFlashOn / isTorchOn query, else re-assert
+          const isActuallyOn =
+            typeof bridge.isFlashOn === 'function'
+              ? bridge.isFlashOn()
+              : typeof bridge.isTorchOn === 'function'
+              ? bridge.isTorchOn()
+              : null;
+
+          if (isActuallyOn === false || isActuallyOn === null) {
+            invokeNativeBridge(true);
+          }
+        } else if (trackRef.current && trackRef.current.readyState === 'live') {
+          (trackRef.current as any)
+            .applyConstraints({ advanced: [{ torch: true }] })
+            .catch(() => {});
+        }
+      }
+    }, 1500);
 
     return () => {
       window.removeEventListener('focus', handleRestoreTorch);
+      window.removeEventListener('pageshow', handleRestoreTorch);
       document.removeEventListener('visibilitychange', handleRestoreTorch);
+      clearInterval(watchdogInterval);
       releaseTorch();
     };
-  }, [setTorch, releaseTorch]);
+  }, [setTorch, invokeNativeBridge, releaseTorch]);
 
   return {
     torchOn,

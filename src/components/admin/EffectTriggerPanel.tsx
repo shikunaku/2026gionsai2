@@ -185,13 +185,24 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
         {/* Torch & Flashlight Panel */}
         <fieldset className="win95-groupbox">
           <legend className="win95-groupbox-legend">背面トーチ (フラッシュライト) 遠隔制御</legend>
-          <div className="effect-grid cols-3">
+          <div className="effect-grid cols-2">
             <button
-              onClick={() => onTriggerTorch({ flicker: true, count: 5, intervalMs: 100 })}
+              onClick={() => onTriggerTorch({ pattern: '1,0,0,1,0,0,1,0,0,0', intervalMs: 120 })}
               className="win95-btn effect-btn-torch"
+              style={{ fontWeight: 'bold', color: '#f0f3f8', backgroundColor: '#5c3a3a' }}
+              title="怪異調の「ぴかっ…ぴかっ…ぴかっ…」不気味点滅"
             >
-              高速点滅
+              怪異点滅 (ぴかっ...)
             </button>
+            <button
+              onClick={() => onTriggerTorch({ flicker: true, count: 6, intervalMs: 90 })}
+              className="win95-btn effect-btn-torch"
+              title="激しい高速明滅"
+            >
+              激震点滅 (高速)
+            </button>
+          </div>
+          <div className="effect-grid cols-2" style={{ marginTop: '4px' }}>
             <button
               onClick={() => onTriggerTorch({ state: true })}
               className="win95-btn effect-btn-torch"
