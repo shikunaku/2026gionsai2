@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { GlitchEffectOptions } from '../../lib/types';
+import '../../styles/client.css';
 
 interface HorrorCanvasOverlayProps {
   glitchOptions: GlitchEffectOptions | null;
@@ -77,15 +78,7 @@ export const HorrorCanvasOverlay: React.FC<HorrorCanvasOverlayProps> = ({
 
       {/* Dynamic Noise Canvas */}
       {glitchOptions && (
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            pointerEvents: 'none',
-            zIndex: 9500,
-          }}
-        />
+        <canvas ref={canvasRef} className="horror-noise-canvas" />
       )}
     </>
   );

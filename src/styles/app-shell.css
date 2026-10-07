@@ -1,0 +1,81 @@
+/* Shared shell for full-screen console pages (/admin, /equipment) */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100dvh;
+  background-color: #c7c4bd;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Title bar */
+.win95-titlebar.app-titlebar {
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+.app-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-titlebar-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-connection-badge {
+  font-size: 11px;
+  background-color: #8c4242;
+  color: #f4f7f5;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.app-connection-badge.online {
+  background-color: #38694a;
+}
+
+.app-nav-link {
+  text-decoration: none;
+}
+
+/* Compact navigation button (also used by <FullscreenButton />) */
+.win95-btn.app-nav-btn {
+  --btn-padding: 3px 10px;
+  --btn-padding-pressed: 3px 10px;
+  font-size: 11px;
+  min-height: 28px;
+}
+
+.win95-btn.app-nav-btn.active {
+  background-color: #b5b2aa;
+}
+
+/* Column wrapper inside a console workspace */
+.app-column {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Status bar */
+.win95-statusbar.app-statusbar {
+  flex-shrink: 0;
+  padding: 2px 6px;
+}
+
+.app-statusbar-item-wide {
+  flex: 2;
+}
+
+.app-statusbar-item-medium {
+  flex: 1;
+}
+
+.app-titlebar-title {
+  font-weight: bold;
+}

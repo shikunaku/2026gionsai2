@@ -1,0 +1,525 @@
+/* Admin console (/admin) layout.
+   Component-level styles are appended below by each admin component section. */
+
+.admin-workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px minmax(330px, 1.2fr) minmax(340px, 1fr) 330px;
+  gap: 6px;
+  padding: 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ===== Shared admin panel scaffolding ===== */
+.admin-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-empty {
+  text-align: center;
+  color: #5f636c;
+  font-size: 11px;
+}
+
+/* ===== DeviceMonitor ===== */
+.device-monitor-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.device-monitor-body .admin-empty {
+  padding: 16px;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.win95-window.device-card {
+  background-color: #cbc7be;
+  padding: 6px;
+}
+
+.win95-window.device-card.online {
+  background-color: #dedbd4;
+}
+
+.device-card-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.device-card-row.between {
+  justify-content: space-between;
+}
+
+.device-card-row.phase {
+  gap: 4px;
+}
+
+.device-card-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.device-link-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #7d828c;
+  display: inline-block;
+}
+
+.device-link-dot.online {
+  background-color: #4a825e;
+}
+
+.device-id-text {
+  font-size: 12px;
+  color: #27292e;
+}
+
+.device-battery {
+  font-size: 11px;
+  color: #4a4e57;
+}
+
+.device-phase-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #3c3f47;
+  white-space: nowrap;
+}
+
+.win95-inset.device-phase-select {
+  font-size: 11px;
+  padding: 2px 4px;
+  height: 28px;
+  font-weight: bold;
+  flex: 1;
+}
+
+.device-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.win95-btn.device-action-btn {
+  --btn-padding: 4px 0;
+  --btn-padding-pressed: 4px 0;
+  font-size: 11px;
+  min-height: 28px;
+}
+
+.admin-statusbar-item {
+  flex: 1;
+}
+
+/* ===== PhotoReviewQueue ===== */
+.review-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.review-body .admin-empty {
+  padding: 24px;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.win95-window.review-card {
+  background-color: #dedbd4;
+  padding: 8px;
+}
+
+.win95-window.review-card.pending {
+  background-color: #e6e3dc;
+  border: 2px solid #3d5875;
+}
+
+.review-card-row {
+  display: flex;
+  gap: 8px;
+}
+
+.review-thumb {
+  width: 64px;
+  height: 64px;
+  background-color: #262930;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #7a7974;
+}
+
+.review-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.review-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.review-meta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.review-meta-title {
+  font-weight: bold;
+  font-size: 11px;
+  color: #25272b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-meta-badge {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.review-badge {
+  padding: 2px 6px;
+  font-weight: bold;
+}
+
+.review-badge.pending { background-color: #e2d6be; color: #574218; }
+.review-badge.approved { background-color: #c7e0cf; color: #1d4d2b; }
+.review-badge.rejected { background-color: #e6c8c8; color: #5e2424; }
+
+.review-task-title {
+  font-size: 11px;
+  color: #3d4048;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-time {
+  font-size: 10px;
+  color: #6e727a;
+}
+
+.review-reason {
+  font-size: 10px;
+  color: #8f3b3b;
+}
+
+/* Action buttons (non-wrapping single line) */
+.review-actions {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.win95-btn.review-btn {
+  --btn-padding: 3px 6px;
+  --btn-padding-pressed: 3px 6px;
+  font-size: 11px;
+  min-height: 26px;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+}
+
+.win95-btn.review-btn.ok { background-color: #38694a; color: #f0f5f1; }
+.win95-btn.review-btn.blur { background-color: #7d5236; color: #fdf8f4; }
+.win95-btn.review-btn.wrong { background-color: #7d3838; color: #fdf4f4; }
+
+/* Enlarged modal */
+.review-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(25, 28, 33, 0.75);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.win95-window.review-modal {
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.win95-btn.review-modal-close {
+  --btn-padding: 0 6px;
+  --btn-padding-pressed: 0 6px;
+}
+
+.review-modal-body {
+  padding: 10px;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.review-modal-body img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border: 1px solid #64635f;
+}
+
+/* ===== EffectTriggerPanel ===== */
+.win95-titlebar.effect-titlebar {
+  background: linear-gradient(90deg, #4d3535, #634747);
+}
+
+.effect-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.effect-grid {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.effect-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.effect-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+.effect-glitch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.effect-level-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #2b2e34;
+}
+
+.effect-level-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.effect-label {
+  font-weight: bold;
+}
+
+.effect-mode-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #2b2e34;
+}
+
+.effect-mode-block .effect-grid {
+  margin-top: 0;
+}
+
+.win95-btn.effect-btn-phase {
+  --btn-padding: 6px 2px;
+  --btn-padding-pressed: 6px 2px;
+  font-size: 11px;
+  min-height: 32px;
+}
+
+.win95-btn.effect-btn-torch {
+  --btn-padding: 5px 2px;
+  --btn-padding-pressed: 5px 2px;
+  font-size: 11px;
+  min-height: 32px;
+}
+
+.win95-btn.effect-btn-level {
+  --btn-padding: 2px 8px;
+  --btn-padding-pressed: 2px 8px;
+  font-size: 10px;
+  min-height: 26px;
+}
+
+.win95-btn.effect-btn-mode {
+  --btn-padding: 3px 2px;
+  --btn-padding-pressed: 3px 2px;
+  font-size: 10px;
+  min-height: 26px;
+}
+
+.win95-btn.effect-btn-sound {
+  --btn-padding: 5px 6px;
+  --btn-padding-pressed: 5px 6px;
+  font-size: 11px;
+  min-height: 32px;
+}
+
+.win95-btn.effect-btn-sound.success {
+  background-color: #3d6148;
+  color: #f0f8f2;
+}
+
+.win95-btn.effect-btn-volume {
+  --btn-padding: 3px 0;
+  --btn-padding-pressed: 3px 0;
+  font-size: 10px;
+  min-height: 26px;
+}
+
+.win95-btn.effect-btn-volume.boost.active {
+  background-color: #8c4848;
+  color: #fdf8f8;
+}
+
+.win95-btn.effect-btn-execute {
+  --btn-padding: 6px 10px;
+  --btn-padding-pressed: 6px 10px;
+  background-color: #6b4638;
+  color: #f8f4f2;
+  min-height: 36px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.effect-volume {
+  margin-top: 8px;
+  border-top: 1px solid #7a7974;
+  padding-top: 6px;
+}
+
+.effect-volume-title {
+  font-size: 11px;
+  margin-bottom: 4px;
+  color: #2b2e34;
+  font-weight: bold;
+}
+
+.effect-volume .effect-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  margin-top: 0;
+}
+
+.effect-emergency {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.win95-btn.effect-btn-emergency {
+  width: 100%;
+  min-height: 42px;
+  background-color: #823838;
+  color: #f8f1f1;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  border: 2px solid;
+  border-color: #b86b6b #3d1b1b #3d1b1b #b86b6b;
+}
+
+/* ===== CastManualViewer ===== */
+.win95-titlebar.manual-titlebar {
+  background: linear-gradient(90deg, #2b463c, #3d6355);
+}
+
+.manual-title-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.manual-link {
+  text-decoration: none;
+}
+
+.win95-btn.manual-open-btn {
+  --btn-padding: 1px 6px;
+  --btn-padding-pressed: 1px 6px;
+  font-size: 10px;
+  min-height: 22px;
+  color: #1f2228;
+}
+
+.manual-body {
+  flex: 1;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.win95-inset-dark.manual-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.manual-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: #ffffff;
+}
+
+.manual-error {
+  padding: 16px;
+  color: #e8a87c;
+  text-align: center;
+  font-size: 11px;
+}
+
+.manual-error-link-row {
+  margin-top: 8px;
+}
+
+.manual-error a {
+  color: #9cb885;
+}
+
+.manual-footer {
+  font-size: 10px;
+  color: #4e5259;
+  padding: 3px 4px 0 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manual-footer a {
+  color: #2b463c;
+  text-decoration: underline;
+  font-size: 10px;
+}

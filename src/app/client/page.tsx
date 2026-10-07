@@ -19,6 +19,16 @@ import {
   TorchEffectOptions,
   SoundEffectOptions,
 } from '../../lib/types';
+import '../../styles/client.css';
+
+// Root container class per glitch mode (unknown modes fall back to 'glitch-creepy')
+const GLITCH_CLASS: Record<string, string> = {
+  violent: 'glitch-violent',
+  invert: 'glitch-invert',
+  blackout: 'glitch-blackout',
+  redout: 'glitch-redout',
+  static: 'glitch-static',
+};
 
 const INITIAL_TASKS: InspectionTask[] = [
   {
@@ -229,44 +239,11 @@ function ClientContent() {
   };
 
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100dvh',
-        backgroundColor: '#1b1d22',
-        display: 'flex',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="client-root">
       <div
-        className={`win95-window ${
-          glitchOptions
-            ? glitchOptions.mode === 'violent'
-              ? 'glitch-violent'
-              : glitchOptions.mode === 'invert'
-              ? 'glitch-invert'
-              : glitchOptions.mode === 'blackout'
-              ? 'glitch-blackout'
-              : glitchOptions.mode === 'redout'
-              ? 'glitch-redout'
-              : glitchOptions.mode === 'static'
-              ? 'glitch-static'
-              : 'glitch-creepy'
-            : ''
+        className={`win95-window client-window ${
+          glitchOptions ? GLITCH_CLASS[glitchOptions.mode || 'creepy'] ?? 'glitch-creepy' : ''
         }`}
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '480px',
-          height: '100dvh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#c7c4bd',
-          boxSizing: 'border-box',
-          padding: 0,
-        }}
       >
         {/* Horror & Glitch Overlays */}
         <HorrorCanvasOverlay
@@ -275,47 +252,23 @@ function ClientContent() {
         />
 
         {/* Industrial Retro Titlebar Header */}
-        <header
-          className="win95-titlebar"
-          style={{
-            padding: '4px 8px',
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: connected ? '#488c5f' : '#8c4848',
-                flexShrink: 0,
-              }}
-            />
-            <strong style={{ fontSize: '12px', letterSpacing: '0.5px' }}>PDA-ID: {deviceId}</strong>
+        <header className="win95-titlebar client-header">
+          <div className="client-header-group">
+            <span className={`client-link-dot${connected ? ' online' : ''}`} />
+            <strong className="client-device-id">PDA-ID: {deviceId}</strong>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '11px', color: '#d8dee9', whiteSpace: 'nowrap' }}>
+          <div className="client-header-group">
+            <span className="client-battery">
               {charging ? '[CHG]' : '[BAT]'} {batteryLevel}%
             </span>
 
-            <FullscreenButton style={{ padding: '1px 6px', fontSize: '11px', whiteSpace: 'nowrap' }} />
+            <FullscreenButton className="client-fs-btn" />
           </div>
         </header>
 
         {/* Main Phase Container */}
-        <main
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: '#c7c4bd',
-          }}
-        >
+        <main className="client-main">
           {phase === 'INIT' && (
             <PhaseInit
               deviceId={deviceId}
@@ -358,29 +311,11 @@ function ClientContent() {
         </main>
 
         {/* Retro Industrial Statusbar at Bottom */}
-        <footer
-          className="win95-statusbar"
-          style={{
-            flexShrink: 0,
-            margin: 0,
-            padding: '2px 4px',
-            backgroundColor: '#c7c4bd',
-            borderTop: '2px solid #7a7974',
-          }}
-        >
-          <div
-            className="win95-statusbar-item"
-            style={{
-              flex: 1,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontSize: '10px',
-            }}
-          >
+        <footer className="win95-statusbar client-footer">
+          <div className="win95-statusbar-item client-footer-link">
             {connected ? 'LINK: ONLINE' : 'LINK: OFFLINE'} | PDA-OS v3.84
           </div>
-          <div className="win95-statusbar-item" style={{ flexShrink: 0, fontSize: '10px' }}>
+          <div className="win95-statusbar-item client-footer-phase">
             [{phase}]
           </div>
         </footer>
@@ -391,7 +326,7 @@ function ClientContent() {
 
 export default function ClientPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '20px', color: '#fff' }}>Loading PDA Terminal...</div>}>
+    <Suspense fallback={<div className="client-loading">Loading PDA Terminal...</div>}>
       <ClientContent />
     </Suspense>
   );

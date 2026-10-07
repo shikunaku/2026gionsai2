@@ -1,0 +1,601 @@
+/* Client (PDA terminal) page (/client) */
+
+.client-loading {
+  padding: 20px;
+  color: #fff;
+}
+
+.client-root {
+  width: 100vw;
+  height: 100dvh;
+  background-color: #1b1d22;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.win95-window.client-window {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #c7c4bd;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* Header */
+.win95-titlebar.client-header {
+  padding: 4px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.client-header-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.client-link-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #8c4848;
+  flex-shrink: 0;
+}
+
+.client-link-dot.online {
+  background-color: #488c5f;
+}
+
+.client-device-id {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.client-battery {
+  font-size: 11px;
+  color: #d8dee9;
+  white-space: nowrap;
+}
+
+.win95-btn.client-fs-btn {
+  --btn-padding: 1px 6px;
+  --btn-padding-pressed: 1px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Main phase container */
+.client-main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: #c7c4bd;
+}
+
+/* Footer status bar */
+.win95-statusbar.client-footer {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 4px;
+  background-color: #c7c4bd;
+  border-top: 2px solid #7a7974;
+}
+
+.client-footer-link {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+}
+
+.client-footer-phase {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+/* ===== PhaseInit ===== */
+.phase-init {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 12px;
+  background-color: #c7c4bd;
+  color: #27292e;
+  box-sizing: border-box;
+  overflow-y: auto;
+  gap: 10px;
+}
+
+.win95-window.phase-init-window {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.win95-window.phase-init-notice {
+  display: flex;
+  flex-direction: column;
+}
+
+.win95-titlebar.phase-init-titlebar {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.phase-init-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phase-init-title-tag {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.win95-titlebar.phase-init-titlebar-warn {
+  background: linear-gradient(90deg, #633939, #7a4747);
+  white-space: nowrap;
+}
+
+.phase-init-id-panel {
+  padding: 8px 10px;
+}
+
+.phase-init-id-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.phase-init-id-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.phase-init-id-label {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.win95-inset.phase-init-id-input {
+  width: 74px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #2d4b73;
+  padding: 2px 4px;
+}
+
+.phase-init-id-hint {
+  font-size: 11px;
+  color: #686c75;
+  white-space: nowrap;
+}
+
+.win95-inset-dark.phase-init-rules {
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #98bb83;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.phase-init-rules-heading {
+  color: #d07070;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.phase-init-rules p.rule {
+  margin-bottom: 4px;
+}
+
+.phase-init-rules-note {
+  color: #bfa156;
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+.phase-init-agree {
+  padding: 8px 10px;
+  background-color: #c7c4bd;
+  border-top: 2px solid #7a7974;
+}
+
+.phase-init-agree label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #2a2c30;
+  line-height: 1.3;
+}
+
+.phase-init-agree input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.phase-init-start {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.phase-init .win95-btn.phase-start-btn {
+  width: 100%;
+  height: 46px;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  background-color: #c7c4bd;
+  color: #7d8085;
+  cursor: not-allowed;
+  border: 2px solid;
+  border-color: #e2e0d8 #5a5955 #5a5955 #e2e0d8;
+}
+
+.phase-init .win95-btn.phase-start-btn.agreed {
+  background-color: #38694a;
+  color: #f1f5f2;
+  cursor: pointer;
+  border-color: #5d9671 #23422e #23422e #5d9671;
+}
+
+/* ===== PhaseZone1 ===== */
+.phase-zone1 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 12px;
+  background-color: #c7c4bd;
+  color: #27292e;
+  box-sizing: border-box;
+  overflow-y: auto;
+  gap: 8px;
+}
+
+.phase-zone1 .win95-window {
+  flex-shrink: 0;
+}
+
+.phase-zone1 .zone1-detail-window {
+  display: flex;
+  flex-direction: column;
+}
+
+.phase-zone1 .win95-titlebar.zone1-titlebar {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.phase-zone1 .win95-titlebar.zone1-titlebar-detail {
+  background: linear-gradient(90deg, #2b3e54, #3d5875);
+}
+
+.zone1-titlebar-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zone1-titlebar-tag {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.zone1-task-list-body {
+  padding: 6px;
+}
+
+.zone1-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.phase-zone1 .win95-btn.zone1-task-item {
+  --btn-padding: 6px 8px;
+  --btn-padding-pressed: 6px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #dedbd4;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.phase-zone1 .win95-btn.zone1-task-item.selected {
+  background-color: #d1cec7;
+  border: 2px inset #ffffff;
+}
+
+.zone1-task-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.zone1-task-id {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.zone1-task-status {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.zone1-badge {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.zone1-badge.submitting { color: #4a729e; }
+.zone1-badge.pending { color: #a3823d; }
+.zone1-badge.approved { color: #3d7a52; }
+.zone1-badge.rejected { color: #a64d4d; }
+.zone1-badge.idle { color: #7a818c; font-weight: normal; }
+
+.zone1-detail-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zone1-location {
+  font-size: 11px;
+  color: #2d3036;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.win95-inset.zone1-description {
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  background-color: #eae8e1;
+}
+
+.zone1-reject-banner {
+  background-color: #382828;
+  border: 1px solid #7a4444;
+  color: #dca3a3;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: bold;
+}
+
+.zone1-file-input {
+  display: none;
+}
+
+.phase-zone1 .win95-btn.zone1-capture-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 13px;
+  white-space: nowrap;
+  background-color: #38577a;
+  color: #f0f3f8;
+  margin-top: 2px;
+}
+
+.phase-zone1 .win95-btn.zone1-capture-btn.approved {
+  background-color: #c7c4bd;
+  color: #7d8085;
+}
+
+.zone1-proceed {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.phase-zone1 .win95-btn.zone1-proceed-btn {
+  width: 100%;
+  height: 42px;
+  background-color: #366645;
+  color: #eff8f2;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ===== PhaseZone2 ===== */
+.phase-zone2 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 12px;
+  background-color: #c7c4bd;
+  color: #27292e;
+  box-sizing: border-box;
+  overflow-y: auto;
+  gap: 8px;
+}
+
+.phase-zone2 .win95-window {
+  flex-shrink: 0;
+}
+
+.phase-zone2 .win95-titlebar.zone2-titlebar {
+  background: linear-gradient(90deg, #424750, #545a66);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.phase-zone2 .win95-titlebar.zone2-titlebar-header { background: linear-gradient(90deg, #54493b, #6b5c4b); }
+.phase-zone2 .win95-titlebar.zone2-titlebar-conveyor.on { background: linear-gradient(90deg, #32543c, #446e50); }
+.phase-zone2 .win95-titlebar.zone2-titlebar-valve.on { background: linear-gradient(90deg, #6e3939, #8c4b4b); }
+
+.zone2-titlebar-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zone2-titlebar-tag {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.zone2-intro {
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #444850;
+  line-height: 1.4;
+}
+
+.zone2-card-body {
+  padding: 10px;
+}
+
+.zone2-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.zone2-card-info {
+  font-size: 11px;
+  color: #33373e;
+  line-height: 1.4;
+}
+
+.zone2-led {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #6b7280;
+  flex-shrink: 0;
+}
+
+.zone2-led.conveyor.on { background-color: #4d8c63; }
+.zone2-led.valve.on { background-color: #a64d4d; }
+
+.phase-zone2 .win95-btn.zone2-btn {
+  width: 100%;
+  height: 42px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.phase-zone2 .win95-btn.zone2-btn.conveyor {
+  background-color: #38577a;
+  color: #f0f3f8;
+}
+.phase-zone2 .win95-btn.zone2-btn.conveyor.on { background-color: #8f6436; }
+
+.phase-zone2 .win95-btn.zone2-btn.valve {
+  background-color: #7d3838;
+  color: #f8f0f0;
+}
+.phase-zone2 .win95-btn.zone2-btn.valve.on { background-color: #4c525c; }
+
+.win95-inset-dark.zone2-log {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.zone2-log-title {
+  color: #c79c52;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+/* ===== PhaseEnd ===== */
+.shutdown-overlay.phase-end {
+  padding: 16px 12px;
+  text-align: center;
+  background-color: #181b1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-end-box {
+  border: 2px solid #8c4242;
+  padding: 18px 14px;
+  max-width: 420px;
+  width: 100%;
+  background-color: #1f2227;
+  box-shadow: 0 0 20px rgba(140, 66, 66, 0.25);
+  box-sizing: border-box;
+}
+
+.phase-end-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #c76b6b;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.phase-end-box h1 {
+  font-size: 17px;
+  color: #c76b6b;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  white-space: nowrap;
+}
+
+.phase-end-status {
+  color: #d8dadf;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  white-space: nowrap;
+}
+
+.phase-end-log {
+  font-size: 11px;
+  color: #a4a8b2;
+  line-height: 1.6;
+  text-align: left;
+  background-color: #262a32;
+  padding: 10px;
+  border: 1px solid #3c404a;
+  margin-bottom: 12px;
+  font-family: monospace;
+}
+
+.phase-end-note {
+  font-size: 10px;
+  color: #7a7e88;
+  line-height: 1.3;
+}
+
+/* ===== HorrorCanvasOverlay ===== */
+.horror-noise-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9500;
+}

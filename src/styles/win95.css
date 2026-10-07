@@ -40,7 +40,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: bold;
-  padding: 5px 12px;
+  padding: var(--btn-padding, 5px 12px);
   min-height: 30px;
   cursor: pointer;
   outline: none;
@@ -58,7 +58,7 @@
   border-left: 2px solid #5a5955;
   border-right: 2px solid #e2e0d8;
   border-bottom: 2px solid #e2e0d8;
-  padding: 6px 11px 4px 13px;
+  padding: var(--btn-padding-pressed, 6px 11px 4px 13px);
 }
 
 .win95-btn:disabled {

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { EquipmentItem } from '../../lib/types';
+import '../../styles/equipment.css';
 
 interface EquipmentGridProps {
   equipments: EquipmentItem[];
@@ -65,26 +66,25 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
   const getProtocolBadge = (protocol?: string) => {
     switch (protocol) {
       case 'wifi':
-        return <span style={{ backgroundColor: '#2d4d6e', color: '#edf4fb', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>Wi-Fi</span>;
+        return <span className="equipment-protocol wifi">Wi-Fi</span>;
       case 'ble':
-        return <span style={{ backgroundColor: '#3f386b', color: '#f3f0fb', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>Bluetooth</span>;
+        return <span className="equipment-protocol ble">Bluetooth</span>;
       default:
-        return <span style={{ backgroundColor: '#385d42', color: '#edfbf0', padding: '1px 5px', borderRadius: '2px', fontSize: '10px', fontWeight: 'bold' }}>有線シリアル</span>;
+        return <span className="equipment-protocol">有線シリアル</span>;
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="equipment-grid-root">
       {/* Action Toolbar */}
-      <div className="win95-window" style={{ marginBottom: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#27292e' }}>
+      <div className="win95-window equipment-toolbar">
+        <div className="equipment-toolbar-row">
+          <div className="equipment-toolbar-title">
             登録設備・マルチMCU演出制御盤 ({equipments.length}系統)
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="win95-btn"
-            style={{ fontSize: '12px', padding: '6px 14px', minHeight: '32px' }}
+            className="win95-btn equipment-add-btn"
           >
             + 新規機器登録 [ADD]
           </button>
@@ -92,62 +92,38 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
       </div>
 
       {/* Grid */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-          gap: '10px',
-          alignContent: 'start',
-        }}
-      >
+      <div className="equipment-cards">
         {equipments.map((eq) => {
           const isOn = !!eq.state;
           return (
-            <div key={eq.id} className="win95-window" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div
-                className="win95-titlebar"
-                style={{
-                  background: isOn
-                    ? 'linear-gradient(90deg, #2c4159, #3f5d7d)'
-                    : 'linear-gradient(90deg, #464a52, #585d66)',
-                }}
-              >
+            <div key={eq.id} className={`win95-window equipment-card${isOn ? ' on' : ''}`}>
+              <div className="win95-titlebar equipment-card-titlebar">
                 <span>
                   {getEquipmentTag(eq.type)} {eq.name}
                 </span>
-                <span style={{ fontSize: '11px' }}>{isOn ? 'ACTIVE' : 'IDLE'}</span>
+                <span className="equipment-card-state">{isOn ? 'ACTIVE' : 'IDLE'}</span>
               </div>
 
-              <div style={{ padding: '10px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '12px', color: '#27292e', lineHeight: 1.6, marginBottom: '8px' }}>
+              <div className="equipment-card-body">
+                <div className="equipment-card-info">
                   <div><strong>ID:</strong> {eq.id}</div>
                   <div><strong>種別:</strong> {eq.type.toUpperCase()}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="equipment-card-mcu-row">
                     <strong>担当マイコン:</strong>
-                    <span style={{ fontWeight: 'bold', color: '#2c4159' }}>{eq.mcuId || 'ESP32_MAIN'}</span>
+                    <span className="equipment-card-mcu">{eq.mcuId || 'ESP32_MAIN'}</span>
                     {getProtocolBadge(eq.protocol)}
                   </div>
                   {eq.endpoint && (
-                    <div><strong>接続先:</strong> <span style={{ fontFamily: 'monospace' }}>{eq.endpoint}</span></div>
+                    <div><strong>接続先:</strong> <span className="equipment-card-endpoint">{eq.endpoint}</span></div>
                   )}
                   <div><strong>トピック:</strong> {eq.topic || 'N/A'}</div>
                   <div><strong>最終同期:</strong> {new Date(eq.updatedAt).toLocaleTimeString()}</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <div className="equipment-card-actions">
                   <button
                     onClick={() => onControl(eq.id, 'toggle', !isOn)}
-                    className="win95-btn"
-                    style={{
-                      flex: 1,
-                      minHeight: '38px',
-                      backgroundColor: isOn ? '#38694a' : '#c7c4bd',
-                      color: isOn ? '#f0f5f1' : '#27292e',
-                      fontWeight: 'bold',
-                      fontSize: '12px',
-                    }}
+                    className={`win95-btn equipment-toggle-btn${isOn ? ' on' : ''}`}
                   >
                     {isOn ? '通電中 (ON) -> 切断' : '停止中 (OFF) -> 起動'}
                   </button>
@@ -158,8 +134,7 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
                         onRemove(eq.id);
                       }
                     }}
-                    className="win95-btn win95-btn-danger"
-                    style={{ padding: '0 12px', minHeight: '38px', fontSize: '12px' }}
+                    className="win95-btn win95-btn-danger equipment-remove-btn"
                     title="設備削除"
                   >
                     削除
@@ -175,61 +150,51 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
       {showAddModal && (
         <div
           onClick={() => setShowAddModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(25, 28, 33, 0.7)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-          }}
+          className="equipment-modal-backdrop"
         >
           <div
-            className="win95-window"
+            className="win95-window equipment-modal"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '460px', width: '100%' }}
           >
             <div className="win95-titlebar">
               <span>新規機器・演出ギミック登録 (マルチMCU対応)</span>
-              <button onClick={() => setShowAddModal(false)} className="win95-btn" style={{ padding: '0 6px', fontWeight: 'bold' }}>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="win95-btn equipment-modal-close"
+              >
                 [X]
               </button>
             </div>
-            <form onSubmit={handleAddSubmit} style={{ padding: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+            <form onSubmit={handleAddSubmit} className="equipment-form">
+              <div className="equipment-form-fields">
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>機器ID (例: eq_valve_02):</label>
+                  <label>機器ID (例: eq_valve_02):</label>
                   <input
                     type="text"
                     required
                     value={newId}
                     onChange={(e) => setNewId(e.target.value)}
-                    className="win95-inset"
-                    style={{ width: '100%' }}
+                    className="win95-inset equipment-form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>機器表示名称:</label>
+                  <label>機器表示名称:</label>
                   <input
                     type="text"
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="win95-inset"
-                    style={{ width: '100%' }}
+                    className="win95-inset equipment-form-input"
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div className="equipment-form-row">
                   <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>制御種別:</label>
+                    <label>制御種別:</label>
                     <select
                       value={newType}
                       onChange={(e) => setNewType(e.target.value as any)}
-                      className="win95-inset"
-                      style={{ width: '100%' }}
+                      className="win95-inset equipment-form-input"
                     >
                       <option value="relay">リレー (Relay)</option>
                       <option value="servo">サーボ (Servo)</option>
@@ -240,12 +205,11 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>通信方式 (プロトコル):</label>
+                    <label>通信方式 (プロトコル):</label>
                     <select
                       value={newProtocol}
                       onChange={(e) => setNewProtocol(e.target.value as any)}
-                      className="win95-inset"
-                      style={{ width: '100%' }}
+                      className="win95-inset equipment-form-input"
                     >
                       <option value="serial">有線シリアル (USB/COM)</option>
                       <option value="wifi">Wi-Fi (WebSocket/TCP)</option>
@@ -254,49 +218,53 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div className="equipment-form-row">
                   <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>担当マイコンID:</label>
+                    <label>担当マイコンID:</label>
                     <input
                       type="text"
                       value={newMcuId}
                       placeholder="ESP32_MAIN / ESP32_02"
                       onChange={(e) => setNewMcuId(e.target.value)}
-                      className="win95-inset"
-                      style={{ width: '100%' }}
+                      className="win95-inset equipment-form-input"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>接続先 / ポート (任意):</label>
+                    <label>接続先 / ポート (任意):</label>
                     <input
                       type="text"
                       value={newEndpoint}
                       placeholder="COM4 / 192.168.1.10 / BLE_ID"
                       onChange={(e) => setNewEndpoint(e.target.value)}
-                      className="win95-inset"
-                      style={{ width: '100%' }}
+                      className="win95-inset equipment-form-input"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '2px', color: '#27292e' }}>トピック:</label>
+                  <label>トピック:</label>
                   <input
                     type="text"
                     value={newTopic}
                     placeholder="mcu/device/topic"
                     onChange={(e) => setNewTopic(e.target.value)}
-                    className="win95-inset"
-                    style={{ width: '100%' }}
+                    className="win95-inset equipment-form-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} className="win95-btn">
+              <div className="equipment-form-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="win95-btn"
+                >
                   キャンセル
                 </button>
-                <button type="submit" className="win95-btn" style={{ fontWeight: 'bold', backgroundColor: '#38577a', color: '#f0f3f8' }}>
+                <button
+                  type="submit"
+                  className="win95-btn equipment-submit-btn"
+                >
                   登録保存
                 </button>
               </div>
@@ -307,4 +275,3 @@ export const EquipmentGrid: React.FC<EquipmentGridProps> = ({
     </div>
   );
 };
-

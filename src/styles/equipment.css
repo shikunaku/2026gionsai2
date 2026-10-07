@@ -1,0 +1,194 @@
+/* Equipment console (/equipment) */
+
+.equipment-main {
+  flex: 1;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* ===== EquipmentGrid ===== */
+.equipment-grid-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.win95-window.equipment-toolbar {
+  margin-bottom: 10px;
+}
+
+.equipment-toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px;
+}
+
+.equipment-toolbar-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #27292e;
+}
+
+.win95-btn.equipment-add-btn {
+  --btn-padding: 6px 14px;
+  --btn-padding-pressed: 6px 14px;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+.equipment-cards {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.win95-window.equipment-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.win95-titlebar.equipment-card-titlebar {
+  background: linear-gradient(90deg, #464a52, #585d66);
+}
+
+.equipment-card.on .win95-titlebar.equipment-card-titlebar {
+  background: linear-gradient(90deg, #2c4159, #3f5d7d);
+}
+
+.equipment-card-state {
+  font-size: 11px;
+}
+
+.equipment-card-body {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.equipment-card-info {
+  font-size: 12px;
+  color: #27292e;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.equipment-card-mcu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.equipment-card-mcu {
+  font-weight: bold;
+  color: #2c4159;
+}
+
+.equipment-card-endpoint {
+  font-family: monospace;
+}
+
+.equipment-protocol {
+  color: #edfbf0;
+  background-color: #385d42;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.equipment-protocol.wifi { background-color: #2d4d6e; color: #edf4fb; }
+.equipment-protocol.ble { background-color: #3f386b; color: #f3f0fb; }
+
+.equipment-card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.win95-btn.equipment-toggle-btn {
+  flex: 1;
+  min-height: 38px;
+  background-color: #c7c4bd;
+  color: #27292e;
+  font-size: 12px;
+}
+
+.win95-btn.equipment-toggle-btn.on {
+  background-color: #38694a;
+  color: #f0f5f1;
+}
+
+.win95-btn.equipment-remove-btn {
+  --btn-padding: 0 12px;
+  --btn-padding-pressed: 0 12px;
+  min-height: 38px;
+  font-size: 12px;
+}
+
+/* Add modal */
+.equipment-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(25, 28, 33, 0.7);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.win95-window.equipment-modal {
+  max-width: 460px;
+  width: 100%;
+}
+
+.win95-btn.equipment-modal-close {
+  --btn-padding: 0 6px;
+  --btn-padding-pressed: 0 6px;
+}
+
+.equipment-form {
+  padding: 12px;
+}
+
+.equipment-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.equipment-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.equipment-form label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 2px;
+  color: #27292e;
+}
+
+.win95-inset.equipment-form-input {
+  width: 100%;
+}
+
+.equipment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.win95-btn.equipment-submit-btn {
+  background-color: #38577a;
+  color: #f0f3f8;
+}

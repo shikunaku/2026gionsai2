@@ -1,0 +1,160 @@
+/* Portal page (/) */
+
+.portal-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100dvh;
+  height: auto;
+  overflow-y: auto;
+  padding: 24px 16px 40px 16px;
+  background-color: #1f2228;
+  color: #d1d4db;
+  box-sizing: border-box;
+}
+
+.win95-window.portal-window {
+  max-width: 680px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.win95-btn.portal-fs-btn {
+  --btn-padding: 0 6px;
+  --btn-padding-pressed: 0 6px;
+  font-size: 11px;
+}
+
+.portal-body {
+  padding: 20px;
+}
+
+.portal-heading {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.portal-heading h1 {
+  font-size: 18px;
+  color: #2c3545;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.portal-heading p {
+  font-size: 12px;
+  color: #555861;
+}
+
+.portal-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.win95-window.portal-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: #d8d5ce;
+}
+
+.portal-card-title {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.portal-card-title.client { color: #2d4b73; }
+.portal-card-title.admin { color: #6e3535; }
+.portal-card-title.equipment { color: #2d5b3d; }
+
+.portal-card-desc {
+  font-size: 11px;
+  color: #3d4048;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.portal-link {
+  text-decoration: none;
+}
+
+.win95-btn.portal-launch-btn {
+  width: 100%;
+  height: 40px;
+  font-size: 12px;
+}
+
+.win95-btn.portal-launch-btn.client { background-color: #3b5a80; color: #f0f3f8; }
+.win95-btn.portal-launch-btn.admin { background-color: #6e3535; color: #f8f0f0; }
+.win95-btn.portal-launch-btn.equipment { background-color: #2d5b3d; color: #eff8f2; }
+
+.win95-inset-dark.portal-status {
+  margin-top: 18px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* License panel */
+.portal-license {
+  margin-top: 12px;
+}
+
+.portal-license-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.win95-btn.portal-license-toggle {
+  --btn-padding: 3px 8px;
+  --btn-padding-pressed: 3px 8px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.win95-inset.portal-license-box {
+  padding: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  background-color: #e6e4dc;
+  color: #282b30;
+  max-height: 320px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.portal-license-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #9c9a93;
+  padding-bottom: 3px;
+  color: #1f2530;
+}
+
+.portal-license-section {
+  margin-bottom: 8px;
+}
+
+.portal-license-section ul {
+  padding-left: 18px;
+  margin: 4px 0;
+}
+
+.portal-license-note {
+  font-size: 10px;
+  color: #666a73;
+  border-top: 1px dotted #aaa;
+  padding-top: 4px;
+}
+
+.portal-statusbar-main {
+  flex: 1;
+}

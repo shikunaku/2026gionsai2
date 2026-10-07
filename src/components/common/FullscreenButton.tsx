@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react';
 
 interface FullscreenButtonProps {
   className?: string;
-  style?: React.CSSProperties;
 }
 
-export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = '', style }) => {
+export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = '' }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
     <button
       onClick={toggleFullscreen}
       className={`win95-btn ${className}`}
-      style={style}
       title="全画面表示切替"
     >
       {isFullscreen ? '[通常表示]' : '[全画面]'}

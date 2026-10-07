@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { InspectionTask, ReviewStatus } from '../../lib/types';
+import '../../styles/client.css';
 
 interface PhaseZone1Props {
   deviceId: string;
@@ -92,78 +93,44 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
   const getStatusBadge = (status: ReviewStatus) => {
     switch (status) {
       case 'SUBMITTING':
-        return <span style={{ color: '#4a729e', fontWeight: 'bold', whiteSpace: 'nowrap' }}>[送信中]</span>;
+        return <span className="zone1-badge submitting">[送信中]</span>;
       case 'PENDING':
-        return <span style={{ color: '#a3823d', fontWeight: 'bold', whiteSpace: 'nowrap' }}>[審査中]</span>;
+        return <span className="zone1-badge pending">[審査中]</span>;
       case 'APPROVED':
-        return <span style={{ color: '#3d7a52', fontWeight: 'bold', whiteSpace: 'nowrap' }}>[合格 済]</span>;
+        return <span className="zone1-badge approved">[合格 済]</span>;
       case 'REJECTED':
-        return <span style={{ color: '#a64d4d', fontWeight: 'bold', whiteSpace: 'nowrap' }}>[要再点検]</span>;
+        return <span className="zone1-badge rejected">[要再点検]</span>;
       default:
-        return <span style={{ color: '#7a818c', whiteSpace: 'nowrap' }}>[未実施]</span>;
+        return <span className="zone1-badge idle">[未実施]</span>;
     }
   };
 
   const allApproved = tasks.length > 0 && tasks.every((t) => t.status === 'APPROVED');
+  const isCurrentApproved = currentTask.status === 'APPROVED';
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '10px 12px',
-        backgroundColor: '#c7c4bd',
-        color: '#27292e',
-        boxSizing: 'border-box',
-        overflowY: 'auto',
-        gap: '8px',
-      }}
-    >
+    <div className="phase-zone1">
       {/* Task List Window */}
-      <div className="win95-window" style={{ flexShrink: 0 }}>
-        <div className="win95-titlebar" style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>[ZONE 1] 品質管理室 - 点検対象選択</span>
-          <span style={{ fontSize: '11px', flexShrink: 0, marginLeft: '6px' }}>ID: {deviceId}</span>
+      <div className="win95-window">
+        <div className="win95-titlebar zone1-titlebar">
+          <span className="zone1-titlebar-text">[ZONE 1] 品質管理室 - 点検対象選択</span>
+          <span className="zone1-titlebar-tag">ID: {deviceId}</span>
         </div>
-        <div style={{ padding: '6px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div className="zone1-task-list-body">
+          <div className="zone1-task-list">
             {tasks.map((task) => {
               const isSelected = task.id === selectedTaskId;
               return (
                 <div
                   key={task.id}
                   onClick={() => setSelectedTaskId(task.id)}
-                  className={`win95-btn ${isSelected ? 'active' : ''}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '6px 8px',
-                    backgroundColor: isSelected ? '#d1cec7' : '#dedbd4',
-                    border: isSelected ? '2px inset #ffffff' : undefined,
-                    cursor: 'pointer',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                  }}
+                  className={`win95-btn zone1-task-item${isSelected ? ' active selected' : ''}`}
                 >
-                  <div
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      textAlign: 'left',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      fontSize: '11px',
-                    }}
-                  >
-                    <span style={{ fontWeight: 'bold', marginRight: '4px' }}>#{task.id}</span>
+                  <div className="zone1-task-label">
+                    <span className="zone1-task-id">#{task.id}</span>
                     <span>{task.title}</span>
                   </div>
-                  <div style={{ fontSize: '11px', flexShrink: 0, marginLeft: '6px' }}>
-                    {getStatusBadge(task.status)}
-                  </div>
+                  <div className="zone1-task-status">{getStatusBadge(task.status)}</div>
                 </div>
               );
             })}
@@ -172,46 +139,19 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       </div>
 
       {/* Selected Task Details & Immediate Camera Action (no excessive vertical stretch) */}
-      <div
-        className="win95-window"
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #2b3e54, #3d5875)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>点検詳細: #{currentTask.id} {currentTask.title}</span>
+      <div className="win95-window zone1-detail-window">
+        <div className="win95-titlebar zone1-titlebar zone1-titlebar-detail">
+          <span className="zone1-titlebar-text">点検詳細: #{currentTask.id} {currentTask.title}</span>
         </div>
-        <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '11px', color: '#2d3036', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div className="zone1-detail-body">
+          <div className="zone1-location">
             <strong>位置:</strong> {currentTask.location}
           </div>
-          <div
-            className="win95-inset"
-            style={{
-              padding: '6px 8px',
-              fontSize: '11px',
-              lineHeight: 1.4,
-              backgroundColor: '#eae8e1',
-            }}
-          >
-            {currentTask.targetDescription}
-          </div>
+          <div className="win95-inset zone1-description">{currentTask.targetDescription}</div>
 
           {/* Rejection alert banner */}
           {currentTask.status === 'REJECTED' && (
-            <div
-              style={{
-                backgroundColor: '#382828',
-                border: '1px solid #7a4444',
-                color: '#dca3a3',
-                padding: '6px 8px',
-                fontSize: '11px',
-                lineHeight: 1.3,
-                fontWeight: 'bold',
-              }}
-            >
+            <div className="zone1-reject-banner">
               [差戻し理由] {currentTask.rejectionReason || '不鮮明または指定箇所と異なります。再撮影してください。'}
             </div>
           )}
@@ -222,29 +162,19 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
             type="file"
             accept="image/*"
             capture="environment"
-            style={{ display: 'none' }}
+            className="zone1-file-input"
             onChange={handleFileChange}
           />
 
           {/* Camera Button placed directly under description for easy thumb reach */}
           <button
             onClick={handleCaptureClick}
-            disabled={isProcessing || currentTask.status === 'APPROVED'}
-            className="win95-btn"
-            style={{
-              width: '100%',
-              height: '44px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap',
-              backgroundColor: currentTask.status === 'APPROVED' ? '#c7c4bd' : '#38577a',
-              color: currentTask.status === 'APPROVED' ? '#7d8085' : '#f0f3f8',
-              marginTop: '2px',
-            }}
+            disabled={isProcessing || isCurrentApproved}
+            className={`win95-btn zone1-capture-btn${isCurrentApproved ? ' approved' : ''}`}
           >
             {isProcessing
               ? '画像圧縮・送信処理中...'
-              : currentTask.status === 'APPROVED'
+              : isCurrentApproved
                 ? '点検完了 [合格確認済]'
                 : currentTask.status === 'PENDING'
                   ? '再撮影して提出 [審査待ち上書き]'
@@ -255,20 +185,8 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
 
       {/* When all tasks are approved, show Proceed button */}
       {allApproved && onProceedZone2 && (
-        <div style={{ flexShrink: 0, marginTop: '2px' }}>
-          <button
-            onClick={onProceedZone2}
-            className="win95-btn"
-            style={{
-              width: '100%',
-              height: '42px',
-              backgroundColor: '#366645',
-              color: '#eff8f2',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap',
-            }}
-          >
+        <div className="zone1-proceed">
+          <button onClick={onProceedZone2} className="win95-btn zone1-proceed-btn">
             全点検合格: ZONE 2 (第零製造ライン) 進む -&gt;
           </button>
         </div>

@@ -6,6 +6,8 @@ import { useSocket } from '../../hooks/useSocket';
 import { FullscreenButton } from '../../components/common/FullscreenButton';
 import { EquipmentGrid } from '../../components/equipment/EquipmentGrid';
 import { EquipmentItem } from '../../lib/types';
+import '../../styles/app-shell.css';
+import '../../styles/equipment.css';
 
 export default function EquipmentPage() {
   const { socket, connected } = useSocket();
@@ -62,65 +64,38 @@ export default function EquipmentPage() {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100vw',
-        height: '100dvh',
-        backgroundColor: '#c7c4bd',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="app-shell">
       {/* Title bar */}
-      <div
-        className="win95-titlebar"
-        style={{
-          padding: '4px 8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: 'bold' }}>[機材制御] 機材演出制御盤</span>
-          <span
-            style={{
-              fontSize: '11px',
-              backgroundColor: connected ? '#38694a' : '#8c4242',
-              color: '#f4f7f5',
-              padding: '2px 6px',
-              borderRadius: '2px',
-            }}
-          >
+      <div className="win95-titlebar app-titlebar">
+        <div className="app-titlebar-left">
+          <span className="app-titlebar-title">[機材制御] 機材演出制御盤</span>
+          <span className={`app-connection-badge${connected ? ' online' : ''}`}>
             {connected ? 'ONLINE' : 'OFFLINE'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータル移動">
+        <div className="app-titlebar-nav">
+          <Link href="/" className="app-nav-link">
+            <button className="win95-btn app-nav-btn" title="ポータル移動">
               [ポータル]
             </button>
           </Link>
-          <Link href="/admin" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold' }} title="管理コンソール移動">
+          <Link href="/admin" className="app-nav-link">
+            <button className="win95-btn app-nav-btn" title="管理コンソール移動">
               [管理コンソール]
             </button>
           </Link>
-          <Link href="/equipment" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn active" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold', backgroundColor: '#b5b2aa' }} title="機材制御盤（現在の画面）">
+          <Link href="/equipment" className="app-nav-link">
+            <button className="win95-btn app-nav-btn active" title="機材制御盤（現在の画面）">
               [機材制御盤]
             </button>
           </Link>
-          <FullscreenButton style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} />
+          <FullscreenButton className="app-nav-btn" />
         </div>
       </div>
 
       {/* Main Grid Area */}
-      <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
+      <div className="equipment-main">
         <EquipmentGrid
           equipments={equipments}
           onControl={handleControl}
@@ -130,11 +105,11 @@ export default function EquipmentPage() {
       </div>
 
       {/* Status Bar */}
-      <div className="win95-statusbar" style={{ flexShrink: 0, padding: '2px 6px' }}>
-        <div className="win95-statusbar-item" style={{ flex: 2 }}>
+      <div className="win95-statusbar app-statusbar">
+        <div className="win95-statusbar-item app-statusbar-item-wide">
           機材ステータス: 正常同期中 (equipments.json 永続化有効)
         </div>
-        <div className="win95-statusbar-item" style={{ flex: 1 }}>
+        <div className="win95-statusbar-item app-statusbar-item-medium">
           稼働設備: {equipments.filter((e) => !!e.state).length} / {equipments.length}
         </div>
         <div className="win95-statusbar-item">

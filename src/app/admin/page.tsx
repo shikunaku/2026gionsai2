@@ -9,6 +9,10 @@ import { PhotoReviewQueue } from '../../components/admin/PhotoReviewQueue';
 import { EffectTriggerPanel } from '../../components/admin/EffectTriggerPanel';
 import { CastManualViewer } from '../../components/admin/CastManualViewer';
 import { DeviceInfo, DevicePhase, PhotoSubmission, EquipmentItem } from '../../lib/types';
+import '../../styles/app-shell.css';
+import '../../styles/admin.css';
+
+type EffectType = 'glitch' | 'torch' | 'sound' | 'volume' | 'shutdown';
 
 export default function AdminPage() {
   const { socket, connected } = useSocket();
@@ -33,171 +37,79 @@ export default function AdminPage() {
   }, [socket]);
 
   // Handlers
+  const triggerEffect = (effectType: EffectType, options: any, targetDeviceId?: string) => {
+    socket?.emit('admin:trigger_effect', { targetDeviceId, effectType, options });
+  };
+
   const handleDevicePhaseChange = (deviceId: string, phase: DevicePhase) => {
-    if (socket) {
-      socket.emit('admin:override_phase', { targetDeviceId: deviceId, phase });
-    }
+    socket?.emit('admin:override_phase', { targetDeviceId: deviceId, phase });
   };
 
   const handleIndividualGlitch = (deviceId: string) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        targetDeviceId: deviceId,
-        effectType: 'glitch',
-        options: { level: 2, duration: 2500, mode: 'creepy', vibrate: true },
-      });
-    }
+    triggerEffect('glitch', { level: 2, duration: 2500, mode: 'creepy', vibrate: true }, deviceId);
   };
 
   const handleIndividualTorch = (deviceId: string) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        targetDeviceId: deviceId,
-        effectType: 'torch',
-        options: { flicker: true, count: 5, intervalMs: 120 },
-      });
-    }
+    triggerEffect('torch', { flicker: true, count: 5, intervalMs: 120 }, deviceId);
   };
 
   const handleReviewPhoto = (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
-    if (socket) {
-      socket.emit('admin:review_photo', {
-        submissionId,
-        status,
-        reason,
-      });
-    }
+    socket?.emit('admin:review_photo', { submissionId, status, reason });
   };
 
   const handleOverrideAllPhase = (phase: DevicePhase) => {
-    if (socket) {
-      socket.emit('admin:override_phase', { phase });
-    }
+    socket?.emit('admin:override_phase', { phase });
   };
 
-  const handleTriggerGlitch = (options: any) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        effectType: 'glitch',
-        options,
-      });
-    }
-  };
+  const handleTriggerGlitch = (options: any) => triggerEffect('glitch', options);
 
-  const handleTriggerSound = (soundType: string, level?: number) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        effectType: 'sound',
-        options: { soundType, level },
-      });
-    }
-  };
+  const handleTriggerSound = (soundType: string, level?: number) =>
+    triggerEffect('sound', { soundType, level });
 
-  const handleTriggerTorch = (options: any) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        effectType: 'torch',
-        options,
-      });
-    }
-  };
+  const handleTriggerTorch = (options: any) => triggerEffect('torch', options);
 
-  const handleSetVolume = (volume: number) => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        effectType: 'volume',
-        options: { volume },
-      });
-    }
-  };
+  const handleSetVolume = (volume: number) => triggerEffect('volume', { volume });
 
   const handleEmergencyAllLight = () => {
-    if (socket) {
-      socket.emit('admin:emergency_all_light');
-    }
+    socket?.emit('admin:emergency_all_light');
   };
 
-  const handleTriggerShutdown = () => {
-    if (socket) {
-      socket.emit('admin:trigger_effect', {
-        effectType: 'shutdown',
-        options: {},
-      });
-    }
-  };
+  const handleTriggerShutdown = () => triggerEffect('shutdown', {});
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100vw',
-        height: '100dvh',
-        backgroundColor: '#c7c4bd',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="app-shell">
       {/* Top Application Bar */}
-      <div
-        className="win95-titlebar"
-        style={{
-          padding: '4px 8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: 'bold' }}>[統括管理] 集中管理コンソール</span>
-          <span
-            style={{
-              fontSize: '11px',
-              backgroundColor: connected ? '#38694a' : '#8c4242',
-              color: '#f4f7f5',
-              padding: '2px 6px',
-              borderRadius: '2px',
-            }}
-          >
+      <div className="win95-titlebar app-titlebar">
+        <div className="app-titlebar-left">
+          <span>[統括管理] 集中管理コンソール</span>
+          <span className={`app-connection-badge ${connected ? 'online' : ''}`}>
             {connected ? 'ONLINE' : 'OFFLINE'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="ポータル">
+        <div className="app-titlebar-nav">
+          <Link href="/" className="app-nav-link">
+            <button className="win95-btn app-nav-btn" title="ポータル">
               [ポータル]
             </button>
           </Link>
-          <Link href="/admin" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn active" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px', fontWeight: 'bold', backgroundColor: '#b5b2aa' }} title="管理コンソール移動（現在の画面）">
+          <Link href="/admin" className="app-nav-link">
+            <button className="win95-btn app-nav-btn active" title="管理コンソール移動（現在の画面）">
               [管理コンソール]
             </button>
           </Link>
-          <Link href="/equipment" style={{ textDecoration: 'none' }}>
-            <button className="win95-btn" style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} title="機材制御盤">
+          <Link href="/equipment" className="app-nav-link">
+            <button className="win95-btn app-nav-btn" title="機材制御盤">
               [機材制御盤]
             </button>
           </Link>
-          <FullscreenButton style={{ padding: '3px 10px', fontSize: '11px', minHeight: '28px' }} />
+          <FullscreenButton className="app-nav-btn" />
         </div>
       </div>
 
       {/* Main 4-Column Working Area */}
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '260px minmax(330px, 1.2fr) minmax(340px, 1fr) 330px',
-          gap: '6px',
-          padding: '6px',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Column 1: Device Monitor */}
-        <div style={{ height: '100%', overflow: 'hidden' }}>
+      <div className="admin-workspace">
+        <div className="app-column">
           <DeviceMonitor
             devices={devices}
             onPhaseChange={handleDevicePhaseChange}
@@ -206,21 +118,15 @@ export default function AdminPage() {
           />
         </div>
 
-        {/* Column 2: Photo Review Queue (Narrowed/Optimized) */}
-        <div style={{ height: '100%', overflow: 'hidden' }}>
-          <PhotoReviewQueue
-            submissions={submissions}
-            onReview={handleReviewPhoto}
-          />
+        <div className="app-column">
+          <PhotoReviewQueue submissions={submissions} onReview={handleReviewPhoto} />
         </div>
 
-        {/* Column 3: Cast & Operator Manual (PDF Viewer) */}
-        <div style={{ height: '100%', overflow: 'hidden' }}>
+        <div className="app-column">
           <CastManualViewer pdfUrl="/cast-manual.pdf" />
         </div>
 
-        {/* Column 4: Master Effects & Remote Control */}
-        <div style={{ height: '100%', overflow: 'hidden' }}>
+        <div className="app-column">
           <EffectTriggerPanel
             onOverrideAllPhase={handleOverrideAllPhase}
             onTriggerGlitch={handleTriggerGlitch}
@@ -234,16 +140,14 @@ export default function AdminPage() {
       </div>
 
       {/* Status Bar */}
-      <div className="win95-statusbar" style={{ flexShrink: 0, padding: '2px 6px' }}>
-        <div className="win95-statusbar-item" style={{ flex: 2 }}>
-          システム正常稼働中 | 端末総数: {devices.length}台 (審査中: {submissions.filter(s => s.status === 'PENDING').length}件)
+      <div className="win95-statusbar app-statusbar">
+        <div className="win95-statusbar-item app-statusbar-item-wide">
+          システム正常稼働中 | 端末総数: {devices.length}台 (審査中: {submissions.filter((s) => s.status === 'PENDING').length}件)
         </div>
-        <div className="win95-statusbar-item" style={{ flex: 1 }}>
+        <div className="win95-statusbar-item app-statusbar-item-medium">
           機材登録数: {equipments.length}系統
         </div>
-        <div className="win95-statusbar-item">
-          SECURE PROTOCOL v2.0
-        </div>
+        <div className="win95-statusbar-item">SECURE PROTOCOL v2.0</div>
       </div>
     </div>
   );

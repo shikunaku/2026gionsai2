@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import '../../styles/admin.css';
 
 interface CastManualViewerProps {
   pdfUrl?: string;
@@ -13,55 +13,37 @@ export const CastManualViewer: React.FC<CastManualViewerProps> = ({
   const [loadError, setLoadError] = useState(false);
 
   return (
-    <div className="win95-window" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #2b463c, #3d6355)' }}>
+    <div className="win95-window admin-panel">
+      <div className="win95-titlebar manual-titlebar">
         <span>[運営資料] キャスト運用マニュアル (PDF)</span>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="manual-title-actions">
           <a
             href={pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ textDecoration: 'none' }}
+            className="manual-link"
           >
-            <button
-              className="win95-btn"
-              style={{ padding: '1px 6px', fontSize: '10px', minHeight: '22px', color: '#1f2228' }}
-              title="別タブで開く"
-            >
+            <button className="win95-btn manual-open-btn" title="別タブで開く">
               [別窓]
             </button>
           </a>
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div
-          className="win95-inset-dark"
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
+      <div className="manual-body">
+        <div className="win95-inset-dark manual-viewport">
           {!loadError ? (
             <iframe
               src={`${pdfUrl}#toolbar=0&navpanes=0`}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                backgroundColor: '#ffffff',
-              }}
+              className="manual-iframe"
               title="キャスト運用マニュアル"
               onError={() => setLoadError(true)}
             />
           ) : (
-            <div style={{ padding: '16px', color: '#e8a87c', textAlign: 'center', fontSize: '11px' }}>
+            <div className="manual-error">
               PDFビューアの表示に失敗しました。
-              <div style={{ marginTop: '8px' }}>
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#9cb885' }}>
+              <div className="manual-error-link-row">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
                   マニュアルを直接開く
                 </a>
               </div>
@@ -69,22 +51,9 @@ export const CastManualViewer: React.FC<CastManualViewerProps> = ({
           )}
         </div>
 
-        <div
-          style={{
-            fontSize: '10px',
-            color: '#4e5259',
-            padding: '3px 4px 0 4px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        <div className="manual-footer">
           <span>緊急時: [EMERGENCY LIGHT] 押下で全点灯</span>
-          <a
-            href={pdfUrl}
-            download="cast-manual.pdf"
-            style={{ color: '#2b463c', textDecoration: 'underline', fontSize: '10px' }}
-          >
+          <a href={pdfUrl} download="cast-manual.pdf">
             PDFダウンロード
           </a>
         </div>
