@@ -59,6 +59,8 @@ export interface TorchEffectOptions {
   flicker?: boolean;
   count?: number;
   intervalMs?: number;
+  pattern?: string;
+  stop?: boolean;
 }
 
 export interface SoundEffectOptions {

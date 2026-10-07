@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DevicePhase } from '../../lib/types';
+import { DevicePhase, TorchEffectOptions } from '../../lib/types';
 import '../../styles/admin.css';
 
 type GlitchMode = 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
@@ -15,7 +15,7 @@ interface EffectTriggerPanelProps {
     vibrate: boolean;
   }) => void;
   onTriggerSound: (soundType: string, level?: number) => void;
-  onTriggerTorch: (options: { state?: boolean; flicker?: boolean; count?: number; intervalMs?: number }) => void;
+  onTriggerTorch: (options: TorchEffectOptions) => void;
   onSetVolume: (volume: number) => void;
   onEmergencyAllLight: () => void;
   onTriggerShutdown: () => void;
@@ -187,7 +187,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
           <legend className="win95-groupbox-legend">背面トーチ (フラッシュライト) 遠隔制御</legend>
           <div className="effect-grid cols-3">
             <button
-              onClick={() => onTriggerTorch({ flicker: true, count: 6, intervalMs: 180 })}
+              onClick={() => onTriggerTorch({ flicker: true, count: 5, intervalMs: 100 })}
               className="win95-btn effect-btn-torch"
             >
               高速点滅
@@ -199,7 +199,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               常時点灯
             </button>
             <button
-              onClick={() => onTriggerTorch({ state: false })}
+              onClick={() => onTriggerTorch({ state: false, stop: true })}
               className="win95-btn effect-btn-torch"
             >
               強制消灯

@@ -74,7 +74,7 @@ function ClientContent() {
     [socket, connected, deviceId]
   );
 
-  const { torchOn, screenFlashActive, setTorch, toggleTorch, flicker } =
+  const { torchOn, screenFlashActive, setTorch, toggleTorch, flicker, blinkPattern, stopBlink } =
     useTorch(handleTorchStateChange);
 
   // Battery monitoring synchronization (every 5 seconds)
@@ -149,10 +149,15 @@ function ClientContent() {
     });
 
     // Torch effect
-    socket.on('effect:torch', ({ state, flicker: shouldFlicker, count, intervalMs }) => {
-      console.log('[Client] Torch effect received:', { state, shouldFlicker });
-      if (shouldFlicker) {
-        flicker(count || 6, intervalMs || 100);
+    socket.on('effect:torch', ({ state, flicker: shouldFlicker, count, intervalMs, pattern, stop }) => {
+      console.log('[Client] Torch effect received:', { state, shouldFlicker, pattern, stop });
+      if (stop) {
+        stopBlink();
+        setTorch(false);
+      } else if (pattern) {
+        blinkPattern(pattern, intervalMs || 100);
+      } else if (shouldFlicker) {
+        flicker(count || 5, intervalMs || 100);
       } else if (typeof state === 'boolean') {
         setTorch(state);
       }
@@ -185,7 +190,7 @@ function ClientContent() {
       socket.off('effect:volume');
       socket.off('effect:shutdown');
     };
-  }, [socket, deviceId, soundEngine, flicker, setTorch]);
+  }, [socket, deviceId, soundEngine, flicker, blinkPattern, stopBlink, setTorch]);
 
   // Emit device:ready once connected or deviceId set
   useEffect(() => {

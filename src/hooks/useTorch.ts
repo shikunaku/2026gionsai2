@@ -150,22 +150,40 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   }, [torchOn, setTorch]);
 
   /**
+   * Stop any active blinking (both native Android and web fallback timer)
+   */
+  const stopBlink = useCallback(() => {
+    if (flickerTimerRef.current) {
+      clearInterval(flickerTimerRef.current);
+      flickerTimerRef.current = null;
+    }
+
+    const bridge =
+      (window as any).Android ||
+      (window as any).AndroidBridge ||
+      (window as any).android ||
+      (window as any).FlashlightBridge ||
+      (window as any).TorchBridge;
+
+    if (bridge && typeof bridge.stopBlink === 'function') {
+      try {
+        bridge.stopBlink();
+      } catch (e) {
+        console.warn('[useTorch] bridge.stopBlink error:', e);
+      }
+    }
+  }, []);
+
+  /**
    * High-speed non-blocking flicker:
-   * Runs on a decoupled interval so it never stalls React render or Socket glitch effects.
+   * 1. If native Android.blink is available, delegates directly to native hardware loop (0 lag, zero JS timer stall).
+   * 2. Otherwise falls back to old bridge / Web MediaStreamTrack loop.
    */
   const flicker = useCallback(
-    (count = 6, intervalMs = 80, finalState = false) => {
-      if (flickerTimerRef.current) {
-        clearInterval(flickerTimerRef.current);
-        flickerTimerRef.current = null;
-      }
+    (count = 5, intervalMs = 100, finalState = false) => {
+      // Cancel previous blink / timers
+      stopBlink();
 
-      let step = 0;
-      let currentState = false;
-      const totalSteps = count * 2;
-      const speed = Math.max(50, intervalMs);
-
-      // Check if native bridge exists for optimized tight loop
       const bridge =
         (window as any).Android ||
         (window as any).AndroidBridge ||
@@ -173,9 +191,37 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
         (window as any).FlashlightBridge ||
         (window as any).TorchBridge;
 
+      // 1. Android App New Native API: blink(count, intervalMs)
+      if (bridge && typeof bridge.blink === 'function') {
+        try {
+          bridge.blink(count, intervalMs);
+          desiredTorchStateRef.current = finalState;
+          if (finalState) {
+            // Schedule final state if true, since blink ends turned off
+            setTimeout(() => {
+              if (desiredTorchStateRef.current) {
+                setTorch(true);
+              }
+            }, count * 2 * intervalMs + 50);
+          } else {
+            setTorchOn(false);
+            if (onStateChange) onStateChange(false);
+          }
+          return;
+        } catch (e) {
+          console.warn('[useTorch] bridge.blink error, falling back to timer:', e);
+        }
+      }
+
+      // 2. Web / Legacy Native Fallback Loop
+      let current = 0;
+      let currentState = false;
+      const totalSteps = count * 2;
+      const speed = Math.max(50, intervalMs);
+
       flickerTimerRef.current = setInterval(() => {
-        step++;
-        if (step > totalSteps) {
+        current++;
+        if (current > totalSteps) {
           if (flickerTimerRef.current) {
             clearInterval(flickerTimerRef.current);
             flickerTimerRef.current = null;
@@ -184,7 +230,7 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
           return;
         }
 
-        currentState = step % 2 === 1;
+        currentState = current % 2 === 1;
         desiredTorchStateRef.current = currentState;
         setTorchOn(currentState);
         if (onStateChange) onStateChange(currentState);
@@ -207,7 +253,89 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
         }
       }, speed);
     },
-    [setTorch, onStateChange]
+    [stopBlink, setTorch, onStateChange]
+  );
+
+  /**
+   * Custom rhythm / pattern blink:
+   * 1. If Android.blinkPattern is available, delegates to native Android.blinkPattern(pattern, intervalMs).
+   * 2. Otherwise runs a web fallback timer with the parsed pattern steps.
+   */
+  const blinkPattern = useCallback(
+    (pattern: string, intervalMs = 100, finalState = false) => {
+      stopBlink();
+
+      const bridge =
+        (window as any).Android ||
+        (window as any).AndroidBridge ||
+        (window as any).android ||
+        (window as any).FlashlightBridge ||
+        (window as any).TorchBridge;
+
+      // 1. Android App New Native API: blinkPattern(pattern, intervalMs)
+      if (bridge && typeof bridge.blinkPattern === 'function') {
+        try {
+          bridge.blinkPattern(pattern, intervalMs);
+          desiredTorchStateRef.current = finalState;
+          if (finalState) {
+            // Estimate duration based on pattern tokens
+            const stepsCount = pattern.includes(',') ? pattern.split(',').length : pattern.length;
+            setTimeout(() => {
+              if (desiredTorchStateRef.current) {
+                setTorch(true);
+              }
+            }, stepsCount * intervalMs + 50);
+          } else {
+            setTorchOn(false);
+            if (onStateChange) onStateChange(false);
+          }
+          return;
+        } catch (e) {
+          console.warn('[useTorch] bridge.blinkPattern error, falling back to timer:', e);
+        }
+      }
+
+      // 2. Parse pattern for fallback timer ("1,0,1,0" or "1010" or "true,false")
+      const tokens: boolean[] = pattern.includes(',')
+        ? pattern.split(',').map((t) => {
+            const s = t.trim().toLowerCase();
+            return s === '1' || s === 'true' || s === 'on';
+          })
+        : pattern.split('').map((char) => char === '1');
+
+      if (tokens.length === 0) return;
+
+      let idx = 0;
+      flickerTimerRef.current = setInterval(() => {
+        if (idx >= tokens.length) {
+          if (flickerTimerRef.current) {
+            clearInterval(flickerTimerRef.current);
+            flickerTimerRef.current = null;
+          }
+          setTorch(finalState);
+          return;
+        }
+
+        const state = tokens[idx];
+        desiredTorchStateRef.current = state;
+        setTorchOn(state);
+        if (onStateChange) onStateChange(state);
+
+        if (bridge) {
+          if (state) {
+            bridge.turnOnFlash?.() || bridge.turnOnTorch?.() || bridge.setFlashlight?.(true);
+          } else {
+            bridge.turnOffFlash?.() || bridge.turnOffTorch?.() || bridge.setFlashlight?.(false);
+          }
+        } else if (trackRef.current && trackRef.current.readyState === 'live') {
+          (trackRef.current as any)
+            .applyConstraints({ advanced: [{ torch: state }] })
+            .catch(() => {});
+        }
+        idx++;
+      }, Math.max(50, intervalMs));
+    },
+    [stopBlink, setTorch, onStateChange]
   );
 
   /**
@@ -216,10 +344,7 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
   const releaseTorch = useCallback(() => {
     desiredTorchStateRef.current = false;
     setTorchOn(false);
-    if (flickerTimerRef.current) {
-      clearInterval(flickerTimerRef.current);
-      flickerTimerRef.current = null;
-    }
+    stopBlink();
 
     invokeNativeBridge(false);
 
@@ -230,7 +355,7 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
       trackRef.current.stop();
       trackRef.current = null;
     }
-  }, [invokeNativeBridge]);
+  }, [invokeNativeBridge, stopBlink]);
 
   /**
    * Auto-restore torch after camera capture / app focus:
@@ -265,6 +390,8 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     setTorch,
     toggleTorch,
     flicker,
+    blinkPattern,
+    stopBlink,
     releaseTorch,
   };
 }
