@@ -9,9 +9,12 @@ import { EquipmentItem } from '../../lib/types';
 import '../../styles/app-shell.css';
 import '../../styles/equipment.css';
 
+import { SerialDeviceManager } from '../../components/equipment/SerialDeviceManager';
+
 export default function EquipmentPage() {
   const { socket, connected } = useSocket();
   const [equipments, setEquipments] = useState<EquipmentItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'network' | 'serial'>('serial');
 
   useEffect(() => {
     if (!socket) return;
@@ -94,14 +97,34 @@ export default function EquipmentPage() {
         </div>
       </div>
 
-      {/* Main Grid Area */}
+      {/* Navigation Sub-Tabs */}
+      <div className="equipment-tab-bar win95-window">
+        <button
+          className={`win95-btn equipment-subtab-btn ${activeTab === 'serial' ? 'active' : ''}`}
+          onClick={() => setActiveTab('serial')}
+        >
+          🔌 USBマイコン端末管理・シリアル制御 (Web Serial)
+        </button>
+        <button
+          className={`win95-btn equipment-subtab-btn ${activeTab === 'network' ? 'active' : ''}`}
+          onClick={() => setActiveTab('network')}
+        >
+          📡 ネットワーク機材同期盤 (Socket.io / Wi-Fi / BLE)
+        </button>
+      </div>
+
+      {/* Main Area */}
       <div className="equipment-main">
-        <EquipmentGrid
-          equipments={equipments}
-          onControl={handleControl}
-          onAdd={handleAdd}
-          onRemove={handleRemove}
-        />
+        {activeTab === 'serial' ? (
+          <SerialDeviceManager />
+        ) : (
+          <EquipmentGrid
+            equipments={equipments}
+            onControl={handleControl}
+            onAdd={handleAdd}
+            onRemove={handleRemove}
+          />
+        )}
       </div>
 
       {/* Status Bar */}

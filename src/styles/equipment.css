@@ -6,6 +6,27 @@
   overflow: hidden;
 }
 
+.equipment-tab-bar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #c0c0c0;
+  border-bottom: 2px groove #fff;
+  margin: 0 8px;
+}
+
+.win95-btn.equipment-subtab-btn {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 14px;
+}
+
+.win95-btn.equipment-subtab-btn.active {
+  background: #2a527a;
+  color: #fff;
+  border: 2px inset #ffffff;
+}
+
 /* ===== EquipmentGrid ===== */
 .equipment-grid-root {
   display: flex;

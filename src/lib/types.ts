@@ -70,6 +70,35 @@ export interface SoundEffectOptions {
 
 export type EquipmentProtocol = 'serial' | 'wifi' | 'ble';
 
+export interface SerialSwitchConfig {
+  id: string;
+  name: string;
+  action: string;      // e.g. "conveyor", "fan", "light"
+  state: boolean;      // current state
+  onPayload?: Record<string, any>; // optional custom payload
+  offPayload?: Record<string, any>;
+}
+
+export interface SerialButtonConfig {
+  id: string;
+  name: string;
+  action: string;      // e.g. "emergency", "all_off", "reset"
+  payload?: Record<string, any>; // optional custom payload
+}
+
+export interface SerialDeviceConfig {
+  id: string;
+  name: string;               // 端末名/表示名
+  portName?: string;          // 検出されたCOMポート/端末情報 (例: "COM3 - USB-SERIAL CH340")
+  usbVendorId?: number;
+  usbProductId?: number;
+  baudRate: number;           // 9600, 115200, etc.
+  switches: SerialSwitchConfig[];
+  buttons: SerialButtonConfig[];
+  connected: boolean;
+  createdAt: string;
+}
+
 export interface EquipmentItem {
   id: string;
   name: string;

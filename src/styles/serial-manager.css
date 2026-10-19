@@ -1,0 +1,488 @@
+/* Styles for Serial Device Manager (Web Serial) */
+
+.serial-manager-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background-color: #c0c0c0;
+}
+
+.serial-header-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #1c3b57, #3a628a);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.serial-browser-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.serial-manager-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 2px groove #fff;
+  background: #d8d8d8;
+}
+
+.serial-summary-text {
+  font-size: 12px;
+  color: #222;
+}
+
+.serial-add-btn {
+  font-weight: bold;
+  padding: 4px 12px;
+  color: #0b3d16;
+}
+
+/* Compact Workspace: Top grid + Bottom log console */
+.serial-compact-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 8px;
+  padding: 8px;
+}
+
+.serial-devices-compact-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.serial-empty-message {
+  padding: 16px;
+  text-align: center;
+  color: #555;
+  font-size: 12px;
+  background: #eee;
+  grid-column: 1 / -1;
+}
+
+/* Compact Device Card */
+.serial-device-card {
+  display: flex;
+  flex-direction: column;
+  border: 2px outset #ffffff;
+  background: #c0c0c0;
+}
+
+.serial-device-card.is-connected {
+  border-color: #3b7b3b;
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.4);
+}
+
+.serial-device-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #3d4652, #555e6d);
+  padding: 2px 6px;
+}
+
+.serial-device-card.is-connected .serial-device-titlebar {
+  background: linear-gradient(90deg, #1e4d2b, #2d7340);
+}
+
+.serial-device-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  max-width: 75%;
+}
+
+.serial-device-name {
+  font-weight: bold;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.serial-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #888;
+  display: inline-block;
+  border: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.serial-device-card.is-connected .serial-status-dot {
+  background: #00ff44;
+  box-shadow: 0 0 5px #00ff44;
+}
+
+.serial-baud-badge {
+  font-size: 9px;
+  background: #222;
+  color: #00ff88;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.serial-device-titlebar-right {
+  display: flex;
+  gap: 4px;
+}
+
+.serial-mini-btn {
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.serial-delete-btn {
+  color: #8b0000;
+}
+
+.serial-device-body.compact {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Port Bar Slim */
+.serial-port-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 6px;
+  background: #e8e8e8;
+  font-size: 11px;
+}
+
+.serial-port-info {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 230px;
+}
+
+.serial-info-value {
+  font-family: monospace;
+  color: #0d3257;
+  font-size: 11px;
+}
+
+.serial-connect-btn {
+  background: #c3e6cb;
+  font-weight: bold;
+  color: #155724;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.serial-disconnect-btn {
+  background: #f8d7da;
+  font-weight: bold;
+  color: #721c24;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+/* Compact Controls */
+.serial-controls-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.serial-control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.serial-group-tag {
+  font-size: 10px;
+  font-weight: bold;
+  color: #555;
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.serial-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.win95-btn.serial-switch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.win95-btn.serial-switch-chip.is-on {
+  background: #2a527a;
+  color: #ffffff;
+  border: 2px inset #ffffff;
+}
+
+.win95-btn.serial-switch-chip .chip-state {
+  font-size: 9px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  background: #666;
+  color: #fff;
+}
+
+.win95-btn.serial-switch-chip.is-on .chip-state {
+  background: #00ff66;
+  color: #000;
+  font-weight: bold;
+}
+
+.win95-btn.serial-button-chip {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  background: #d8d8d8;
+  color: #111;
+}
+
+.win95-btn.serial-button-chip:active {
+  background: #b5b5b5;
+}
+
+.serial-no-controls {
+  font-size: 10px;
+  color: #777;
+  font-style: italic;
+  padding: 3px 0;
+}
+
+/* Global Unified Log Console (Bottom Window) */
+.serial-global-log-window {
+  height: 140px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  border: 2px outset #ffffff;
+  background: #c0c0c0;
+  flex-shrink: 0;
+}
+
+.serial-global-log-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #1c3b57, #2f5379);
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.serial-clear-btn {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+.serial-global-log-console {
+  flex: 1;
+  background: #0d1117;
+  color: #00ff66;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  padding: 6px;
+  overflow-y: auto;
+  line-height: 1.35;
+}
+
+.serial-log-placeholder {
+  color: #666;
+  font-style: italic;
+}
+
+.serial-log-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Modal Backdrop & Popup Window */
+.win95-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.serial-modal-content {
+  width: 600px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 100000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.serial-modal-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.serial-close-modal-btn {
+  font-size: 11px;
+  padding: 0 5px;
+}
+
+.serial-modal-body {
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.serial-detect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.serial-detect-action-btn {
+  font-weight: bold;
+  padding: 5px 12px;
+  background: #d4edda;
+  color: #155724;
+}
+
+.serial-detect-success {
+  font-weight: bold;
+  color: #155724;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.serial-detect-waiting {
+  color: #777;
+  font-size: 11px;
+}
+
+.serial-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.serial-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.serial-form-group.flex-1 { flex: 1; }
+.serial-form-group.flex-2 { flex: 2; }
+
+.serial-form-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #333;
+}
+
+.serial-input, .serial-select {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.serial-form-section {
+  padding: 8px;
+  border: 2px groove #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.serial-legend {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 0 4px;
+}
+
+.serial-builder-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.serial-items-preview-list {
+  background: #fff;
+  padding: 6px;
+  min-height: 50px;
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.serial-preview-empty {
+  font-size: 11px;
+  color: #999;
+  padding: 8px;
+}
+
+.serial-item-preview-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+}
+
+.serial-badge-del {
+  font-size: 10px;
+  padding: 0 4px;
+  color: #dc3545;
+}
+
+.serial-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #ccc;
+}
+
+.serial-modal-save-btn {
+  font-weight: bold;
+  background: #c3e6cb;
+  color: #155724;
+  padding: 4px 16px;
+}
