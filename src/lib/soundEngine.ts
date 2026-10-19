@@ -1,6 +1,7 @@
 /**
  * Web Audio API SoundEngine
  * Procedural horror & industrial audio generator with master gain amplification up to 250%.
+ * Optimized & lightweight implementation.
  */
 
 export class SoundEngine {
@@ -11,7 +12,6 @@ export class SoundEngine {
   private reverbNode: ConvolverNode | null = null;
   private unlocked = false;
   private currentVolume = 1.0;
-  private activeDroneOscs: OscillatorNode[] = [];
   private activeGeigerTimer: any = null;
 
   private constructor() {}
@@ -49,11 +49,9 @@ export class SoundEngine {
   private setupMasterBus(): void {
     if (!this.ctx) return;
 
-    // Master Gain Node (supports up to 2.5x amplification)
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.setValueAtTime(this.currentVolume, this.ctx.currentTime);
 
-    // Dynamics Compressor to avoid harsh distortion when boosted to 250%
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
     this.compressor.knee.setValueAtTime(20, this.ctx.currentTime);
@@ -61,11 +59,9 @@ export class SoundEngine {
     this.compressor.attack.setValueAtTime(0.002, this.ctx.currentTime);
     this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
 
-    // Convolver Reverb (2.7s factory hall impulse response)
     this.reverbNode = this.ctx.createConvolver();
     this.reverbNode.buffer = this.createImpulseResponse(2.7, 2.0);
 
-    // Chain: MasterBus -> Compressor -> MasterGain -> Destination
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
   }
@@ -79,8 +75,7 @@ export class SoundEngine {
     const right = impulse.getChannelData(1);
 
     for (let i = 0; i < length; i++) {
-      const t = i / length;
-      const env = Math.exp(-t * decay);
+      const env = Math.exp((-i / length) * decay);
       left[i] = (Math.random() * 2 - 1) * env;
       right[i] = (Math.random() * 2 - 1) * env;
     }
@@ -88,7 +83,6 @@ export class SoundEngine {
   }
 
   public setVolume(vol: number): void {
-    // Range 0.0 to 2.5
     this.currentVolume = Math.max(0, Math.min(2.5, vol));
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setTargetAtTime(this.currentVolume, this.ctx.currentTime, 0.05);
@@ -99,52 +93,56 @@ export class SoundEngine {
     return this.currentVolume;
   }
 
-  private getDestinationNode(): AudioNode {
-    if (!this.ctx) {
-      this.init();
-    }
-    if (!this.compressor && this.ctx) {
-      this.setupMasterBus();
-    }
+  private getDest(): AudioNode {
+    if (!this.ctx) this.init();
+    if (!this.compressor && this.ctx) this.setupMasterBus();
     return this.compressor || this.ctx!.destination;
   }
 
-  /**
-   * Beep (Operation confirmation sound)
-   * 880Hz, 0.06s, attack 0.003s, bandpass filtered
-   */
-  public playBeep(freq = 880, duration = 0.06): void {
-    this.init();
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
+  // Helper to construct a standard oscillator chain with envelope
+  private createTone(
+    type: OscillatorType,
+    freq: number,
+    startDelay = 0,
+    duration = 0.1,
+    gainPeak = 0.4
+  ): { osc: OscillatorNode; gain: GainNode; now: number } | null {
+    if (!this.ctx) return null;
+    const now = this.ctx.currentTime + startDelay;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
 
-    osc.type = 'sine';
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
 
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(freq, now);
-    filter.Q.setValueAtTime(3.0, now);
-
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.4, now + 0.003);
+    gain.gain.linearRampToValueAtTime(gainPeak, now + Math.min(0.015, duration * 0.1));
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.getDestinationNode());
-
+    osc.connect(gain);
     osc.start(now);
     osc.stop(now + duration + 0.05);
+    return { osc, gain, now };
   }
 
-  /**
-   * Shutter (Camera mechanical shutter sound)
-   * Two distinct white-noise burst clicks with bandpass filtering (1700-2900Hz)
-   */
+  /** Beep (Operation confirmation sound) */
+  public playBeep(freq = 880, duration = 0.06): void {
+    this.init();
+    const tone = this.createTone('sine', freq, 0, duration, 0.4);
+    if (!tone || !this.ctx) return;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(freq, tone.now);
+    filter.Q.setValueAtTime(3.0, tone.now);
+
+    tone.osc.disconnect();
+    tone.osc.connect(filter);
+    filter.connect(tone.gain);
+    tone.gain.connect(this.getDest());
+  }
+
+  /** Shutter (Camera mechanical shutter sound) */
   public playShutter(): void {
     this.init();
     if (!this.ctx) return;
@@ -152,12 +150,10 @@ export class SoundEngine {
     const playClick = (timeOffset: number, clickDuration: number, freq: number) => {
       if (!this.ctx) return;
       const t = this.ctx.currentTime + timeOffset;
-      const bufferSize = this.ctx.sampleRate * clickDuration;
+      const bufferSize = Math.floor(this.ctx.sampleRate * clickDuration);
       const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
       const noise = this.ctx.createBufferSource();
       noise.buffer = buffer;
@@ -168,51 +164,41 @@ export class SoundEngine {
       filter.Q.setValueAtTime(2.5, t);
 
       const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.6, t);
+      gain.gain.setValueAtTime(0.7, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + clickDuration);
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(this.getDestinationNode());
-
+      gain.connect(this.getDest());
       noise.start(t);
-      noise.stop(t + clickDuration);
     };
 
-    playClick(0, 0.025, 2600);
-    playClick(0.045, 0.035, 1900);
+    playClick(0, 0.038, 2600);
+    playClick(0.065, 0.045, 1850);
   }
 
-  /**
-   * Low Impact (Deep horror subsonic thud)
-   * Pitch drop 74Hz -> 27Hz + brown noise lowpass 145Hz
-   */
+  /** Low Impact (Deep bass sub-boom) */
   public playLowImpact(): void {
     this.init();
     if (!this.ctx) return;
-
     const now = this.ctx.currentTime;
+
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(74, now);
     osc.frequency.exponentialRampToValueAtTime(27, now + 0.9);
-
     oscGain.gain.setValueAtTime(0.9, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
     osc.connect(oscGain);
-    oscGain.connect(this.getDestinationNode());
+    oscGain.connect(this.getDest());
 
-    // Brown noise lowpass sub-blast
-    const bufLen = this.ctx.sampleRate * 0.8;
+    const bufLen = Math.floor(this.ctx.sampleRate * 0.8);
     const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
     const output = buf.getChannelData(0);
     let lastOut = 0.0;
     for (let i = 0; i < bufLen; i++) {
-      const white = Math.random() * 2 - 1;
-      lastOut = (lastOut + 0.02 * white) / 1.02;
+      lastOut = (lastOut + 0.02 * (Math.random() * 2 - 1)) / 1.02;
       output[i] = lastOut * 3.5;
     }
 
@@ -228,7 +214,7 @@ export class SoundEngine {
 
     noiseSrc.connect(filter);
     filter.connect(noiseGain);
-    noiseGain.connect(this.getDestinationNode());
+    noiseGain.connect(this.getDest());
 
     osc.start(now);
     osc.stop(now + 1.3);
@@ -236,120 +222,85 @@ export class SoundEngine {
     noiseSrc.stop(now + 0.9);
   }
 
-  /**
-   * Geiger (Irregular radiation ticks)
-   * Density level 1 to 5
-   */
+  /** Geiger (Irregular radiation ticks) */
   public playGeiger(level = 3, durationMs = 2000): void {
     this.init();
     if (!this.ctx) return;
-
-    if (this.activeGeigerTimer) {
-      clearInterval(this.activeGeigerTimer);
-      this.activeGeigerTimer = null;
-    }
+    if (this.activeGeigerTimer) clearInterval(this.activeGeigerTimer);
 
     const interval = Math.max(25, 250 - level * 40);
     const endTime = Date.now() + durationMs;
 
-    const playClick = () => {
+    this.activeGeigerTimer = setInterval(() => {
       if (!this.ctx || Date.now() > endTime) {
         clearInterval(this.activeGeigerTimer);
         this.activeGeigerTimer = null;
         return;
       }
-      if (Math.random() < 0.25) return; // Irregularity
+      if (Math.random() < 0.25) return;
 
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      const tone = this.createTone('sawtooth', 2200 + Math.random() * 800, 0, 0.008, 0.4);
+      if (!tone || !this.ctx) return;
       const filter = this.ctx.createBiquadFilter();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(2200 + Math.random() * 800, now);
-
       filter.type = 'highpass';
-      filter.frequency.setValueAtTime(1500, now);
+      filter.frequency.setValueAtTime(1500, tone.now);
 
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.getDestinationNode());
-
-      osc.start(now);
-      osc.stop(now + 0.01);
-    };
-
-    this.activeGeigerTimer = setInterval(playClick, interval);
+      tone.osc.disconnect();
+      tone.osc.connect(filter);
+      filter.connect(tone.gain);
+      tone.gain.connect(this.getDest());
+    }, interval);
   }
 
-  /**
-   * Drone (Creepy metallic space resonance)
-   */
+  /** Drone (Metallic resonance) */
   public playDrone(duration = 3.0): void {
     this.init();
     if (!this.ctx) return;
-
     const now = this.ctx.currentTime;
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const osc3 = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
 
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(55, now); // A1
+    const freqs = [
+      { type: 'sawtooth' as OscillatorType, freq: 55 },
+      { type: 'triangle' as OscillatorType, freq: 57.5 },
+      { type: 'sawtooth' as OscillatorType, freq: 110.8 },
+    ];
 
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(57.5, now); // Slight dissonance
-
-    osc3.type = 'sawtooth';
-    osc3.frequency.setValueAtTime(110.8, now); // Detuned octave
-
-    // Filter
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(260, now);
     filter.frequency.exponentialRampToValueAtTime(700, now + duration * 0.5);
     filter.frequency.exponentialRampToValueAtTime(180, now + duration);
 
+    const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.01, now);
     gain.gain.linearRampToValueAtTime(0.35, now + 0.6);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
-    osc1.connect(filter);
-    osc2.connect(filter);
-    osc3.connect(filter);
-    filter.connect(gain);
+    freqs.forEach(({ type, freq }) => {
+      const osc = this.ctx!.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.connect(filter);
+      osc.start(now);
+      osc.stop(now + duration + 0.2);
+    });
 
-    // Send through Reverb if available
+    filter.connect(gain);
     if (this.reverbNode) {
       const revGain = this.ctx.createGain();
       revGain.gain.setValueAtTime(0.4, now);
       gain.connect(this.reverbNode);
       this.reverbNode.connect(revGain);
-      revGain.connect(this.getDestinationNode());
+      revGain.connect(this.getDest());
     }
-
-    gain.connect(this.getDestinationNode());
-
-    osc1.start(now);
-    osc2.start(now);
-    osc3.start(now);
-    osc1.stop(now + duration + 0.2);
-    osc2.stop(now + duration + 0.2);
-    osc3.stop(now + duration + 0.2);
+    gain.connect(this.getDest());
   }
 
-  /**
-   * Motor (Industrial conveyor & valve motor sound)
-   */
+  /** Motor (Industrial sound) */
   public playMotor(duration = 1.2): void {
     this.init();
     if (!this.ctx) return;
-
     const now = this.ctx.currentTime;
+
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     const filter = this.ctx.createBiquadFilter();
@@ -368,25 +319,21 @@ export class SoundEngine {
 
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(this.getDestinationNode());
+    gain.connect(this.getDest());
 
     osc.start(now);
     osc.stop(now + duration + 0.1);
   }
 
-  /**
-   * Power Down (Horror shutdown pitch dive)
-   */
+  /** Power Down (Horror shutdown pitch dive) */
   public playPowerDown(): void {
     this.init();
     if (!this.ctx) return;
-
     const now = this.ctx.currentTime;
     const duration = 2.5;
 
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
-
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(380, now);
     osc.frequency.exponentialRampToValueAtTime(15, now + duration);
@@ -401,83 +348,47 @@ export class SoundEngine {
 
     osc.connect(filter);
     filter.connect(oscGain);
-    oscGain.connect(this.getDestinationNode());
+    oscGain.connect(this.getDest());
 
     osc.start(now);
     osc.stop(now + duration + 0.1);
   }
 
-  /**
-   * Task Success (Industrial terminal high-clarity 2-tone success chime)
-   * 880Hz (A5) -> 1320Hz (E6) clear marimba-style bell chime
-   */
+  /** Task Success (Clear 2-tone success chime) */
   public playTaskSuccess(): void {
     this.init();
     if (!this.ctx) return;
 
     const playTone = (freq: number, startDelay: number, duration: number, gainPeak: number) => {
-      if (!this.ctx) return;
-      const t = this.ctx.currentTime + startDelay;
+      const tone = this.createTone('triangle', freq, startDelay, duration, gainPeak);
+      if (!tone || !this.ctx) return;
 
-      const osc = this.ctx.createOscillator();
-      const oscGain = this.ctx.createGain();
       const filter = this.ctx.createBiquadFilter();
-
-      // Sine wave with slight triangle overtone for warm metallic chime
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
-
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(freq * 3, t);
-      filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + duration);
+      filter.frequency.setValueAtTime(freq * 3, tone.now);
+      filter.frequency.exponentialRampToValueAtTime(freq * 1.5, tone.now + duration);
 
-      oscGain.gain.setValueAtTime(0.001, t);
-      oscGain.gain.linearRampToValueAtTime(gainPeak, t + 0.012);
-      oscGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-
-      osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(this.getDestinationNode());
-
-      osc.start(t);
-      osc.stop(t + duration + 0.05);
+      tone.osc.disconnect();
+      tone.osc.connect(filter);
+      filter.connect(tone.gain);
+      tone.gain.connect(this.getDest());
     };
 
-    // First note: 880Hz (A5)
     playTone(880, 0, 0.22, 0.35);
-    // Second note: 1320Hz (E6, pure fifth harmony)
     playTone(1320, 0.11, 0.45, 0.45);
   }
 
   public playSound(soundType: string, level = 3): void {
     switch (soundType) {
-      case 'beep':
-        this.playBeep();
-        break;
-      case 'shutter':
-        this.playShutter();
-        break;
-      case 'lowImpact':
-        this.playLowImpact();
-        break;
-      case 'taskSuccess':
-        this.playTaskSuccess();
-        break;
-      case 'geiger':
-        this.playGeiger(level);
-        break;
-      case 'drone':
-        this.playDrone();
-        break;
-      case 'motor':
-        this.playMotor();
-        break;
-      case 'powerDown':
-        this.playPowerDown();
-        break;
-      default:
-        this.playBeep();
-        break;
+      case 'beep': return this.playBeep();
+      case 'shutter': return this.playShutter();
+      case 'lowImpact': return this.playLowImpact();
+      case 'taskSuccess': return this.playTaskSuccess();
+      case 'geiger': return this.playGeiger(level);
+      case 'drone': return this.playDrone();
+      case 'motor': return this.playMotor();
+      case 'powerDown': return this.playPowerDown();
+      default: return this.playBeep();
     }
   }
 }

@@ -152,18 +152,7 @@
   font-size: 12px;
 }
 
-/* Add modal */
-.equipment-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(25, 28, 33, 0.7);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
+/* Add modal (backdrop styled in win95.css) */
 .win95-window.equipment-modal {
   max-width: 460px;
   width: 100%;
