@@ -53,10 +53,11 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                       onChange={(e) => onPhaseChange(dev.deviceId, e.target.value as DevicePhase)}
                       className="win95-inset device-phase-select"
                     >
-                      <option value="INIT">INIT (待機)</option>
-                      <option value="ZONE1">ZONE 1 (写真)</option>
-                      <option value="ZONE2">ZONE 2 (機器)</option>
-                      <option value="END">END (遮断)</option>
+                      <option value="STANDBY">1: STANDBY (待機)</option>
+                      <option value="AREA_1_PHOTO">2: AREA 1 (撮影)</option>
+                      <option value="ELEVATOR">3: ELEVATOR (昇降)</option>
+                      <option value="AREA_2_CONVEYOR">4: AREA 2 (コンベア)</option>
+                      <option value="AREA_3_VIDEO">5: AREA 3 (映像)</option>
                     </select>
                   </div>
 

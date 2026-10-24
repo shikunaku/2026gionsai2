@@ -66,6 +66,7 @@ async function main() {
       devices: store.getAllDevices(),
       submissions: store.getSubmissions(),
       equipments: store.getEquipments(),
+      currentElevatorState: store.getElevatorState(),
     });
   };
 
@@ -75,13 +76,15 @@ async function main() {
       socket.join(`device:${deviceId}`);
       const dev = store.registerDevice(deviceId, socket.id, phase, location);
       console.log(`[Socket] Device ready: ${deviceId} (Phase: ${dev.phase}, Loc: ${location || 'N/A'})`);
+      // Send initial elevator state
+      socket.emit('elevator:state', store.getElevatorState());
       broadcastAdminState();
     });
 
     socket.on('device:start_inspection', ({ deviceId }) => {
       console.log(`[Socket] Device start inspection: ${deviceId}`);
-      const updated = store.updateDevice(deviceId, { phase: 'ZONE1' });
-      io.to(`device:${deviceId}`).emit('phase:update', { phase: 'ZONE1', deviceId });
+      const updated = store.updateDevice(deviceId, { phase: 'AREA_1_PHOTO' });
+      io.to(`device:${deviceId}`).emit('phase:update', { phase: 'AREA_1_PHOTO', deviceId });
       broadcastAdminState();
     });
 
@@ -115,6 +118,63 @@ async function main() {
       broadcastAdminState();
     });
 
+    // Conveyor Direct Control
+    socket.on('conveyor:control', ({ action, speed, deviceId }) => {
+      console.log(`[Socket] Conveyor control received: ${action} (from: ${deviceId || socket.id})`);
+      mcuManager.handleConveyorControl(action, speed);
+      const eq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+      if (eq) {
+        io.emit('equipment:updated', eq);
+      }
+      broadcastAdminState();
+    });
+
+    // Elevator Display & Movement
+    socket.on('elevator:set_floor', ({ floor, glitch }) => {
+      console.log(`[Socket] Elevator floor set: ${floor}`);
+      store.setElevatorState({ floor, glitch });
+      io.emit('elevator:state', { floor, glitch });
+      if (floor === 'FLOOR_1' || floor === 'FLOOR_B1' || floor === 'MOVING') {
+        mcuManager.handleElevatorMove(floor);
+      }
+      broadcastAdminState();
+    });
+
+    socket.on('elevator:trigger_move', ({ from = 'FLOOR_1', to = 'FLOOR_B1', deviceId }) => {
+      console.log(`[Socket] Elevator sequence triggered from ${from} -> ${to} (by: ${deviceId || socket.id})`);
+      // 1. Start moving: Notify MCU and Elevator Display
+      mcuManager.handleElevatorMove('MOVING');
+      store.setElevatorState({ floor: 'MOVING' });
+      io.emit('elevator:state', { floor: 'MOVING' });
+      broadcastAdminState();
+
+      // 2. Schedule arrival at B1 with flicker glitch
+      setTimeout(() => {
+        io.emit('elevator:glitch', { duration: 1200 });
+        store.setElevatorState({ floor: to, glitch: true });
+        io.emit('elevator:state', { floor: to, glitch: true });
+        mcuManager.handleElevatorMove(to);
+        broadcastAdminState();
+      }, 3500);
+    });
+
+    socket.on('elevator:trigger_glitch', ({ duration = 1500 } = {}) => {
+      console.log(`[Socket] Elevator glitch triggered (${duration}ms)`);
+      io.emit('elevator:glitch', { duration });
+    });
+
+    // Video Player & Trigger
+    socket.on('video:trigger_play', (payload) => {
+      console.log('[Socket] Video play triggered!', payload);
+      io.emit('video:trigger_play', payload || {});
+    });
+
+    socket.on('video:ended', ({ deviceId } = {}) => {
+      console.log(`[Socket] Video ended on player terminal (reporter: ${deviceId || socket.id})`);
+      // Can notify admin or log
+      broadcastAdminState();
+    });
+
     // Admin handlers
     socket.on('admin:join', () => {
       socket.join('admin_room');
@@ -122,6 +182,7 @@ async function main() {
         devices: store.getAllDevices(),
         submissions: store.getSubmissions(),
         equipments: store.getEquipments(),
+        currentElevatorState: store.getElevatorState(),
       });
     });
 
@@ -130,6 +191,7 @@ async function main() {
         devices: store.getAllDevices(),
         submissions: store.getSubmissions(),
         equipments: store.getEquipments(),
+        currentElevatorState: store.getElevatorState(),
       });
     });
 
@@ -148,6 +210,7 @@ async function main() {
     });
 
     socket.on('admin:override_phase', ({ targetDeviceId, phase }) => {
+      console.log(`[Admin] Override phase: ${phase} -> ${targetDeviceId || 'ALL'}`);
       if (targetDeviceId) {
         store.updateDevice(targetDeviceId, { phase });
         io.to(`device:${targetDeviceId}`).emit('phase:update', { phase, deviceId: targetDeviceId });
@@ -162,11 +225,11 @@ async function main() {
     });
 
     socket.on('admin:trigger_effect', ({ targetDeviceId, effectType, options }) => {
-      console.log(`[Admin] Trigger effect: ${effectType} -> target: ${targetDeviceId || 'ALL_EXCEPT_INIT'}`);
+      console.log(`[Admin] Trigger effect: ${effectType} -> target: ${targetDeviceId || 'ALL_EXCEPT_STANDBY'}`);
 
       const emitToTarget = (targetDev: { deviceId: string; phase: DevicePhase }) => {
-        // Prevent spoilers: Skip effect for devices in INIT phase unless targeted directly
-        if (!targetDeviceId && targetDev.phase === 'INIT') {
+        // Prevent spoilers: Skip effect for devices in STANDBY phase unless targeted directly
+        if (!targetDeviceId && targetDev.phase === 'STANDBY') {
           return;
         }
 
@@ -204,9 +267,9 @@ async function main() {
       console.log('[Admin] EMERGENCY ALL LIGHT triggered!');
       mcuManager.handleEmergencyAllLight();
 
-      // Turn on torch for all active devices (exclude INIT)
+      // Turn on torch for all active devices (exclude STANDBY)
       for (const dev of store.getAllDevices()) {
-        if (dev.phase !== 'INIT') {
+        if (dev.phase !== 'STANDBY') {
           io.to(`device:${dev.deviceId}`).emit('effect:torch', { state: true });
         }
       }

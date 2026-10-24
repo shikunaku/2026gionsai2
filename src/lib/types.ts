@@ -1,4 +1,24 @@
-export type DevicePhase = 'INIT' | 'ZONE1' | 'ZONE2' | 'END';
+export type DevicePhase =
+  | 'STANDBY'
+  | 'AREA_1_PHOTO'
+  | 'ELEVATOR'
+  | 'AREA_2_CONVEYOR'
+  | 'AREA_3_VIDEO';
+
+export type ElevatorFloorState = 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF';
+
+export interface ElevatorStatePayload {
+  floor: ElevatorFloorState;
+  glitch?: boolean;
+}
+
+export type ConveyorAction = 'forward' | 'reverse' | 'stop';
+
+export interface ConveyorControlPayload {
+  action: ConveyorAction;
+  speed?: number;
+  deviceId?: string;
+}
 
 declare global {
   interface Navigator {
@@ -128,10 +148,19 @@ export interface ServerToClientEvents {
     devices: DeviceInfo[];
     submissions: PhotoSubmission[];
     equipments: EquipmentItem[];
+    currentElevatorState?: ElevatorStatePayload;
   }) => void;
   'equipment:init': (equipments: EquipmentItem[]) => void;
   'equipment:updated': (equipment: EquipmentItem) => void;
   'equipment:removed': (payload: { id: string }) => void;
+
+  // New Elevator Display Events
+  'elevator:state': (payload: ElevatorStatePayload) => void;
+  'elevator:glitch': (payload?: { duration?: number }) => void;
+
+  // New Area 3 Video Display Events
+  'video:trigger_play': (payload?: { videoSrc?: string; title?: string }) => void;
+  'video:reset': () => void;
 }
 
 export interface ClientToServerEvents {
@@ -150,6 +179,20 @@ export interface ClientToServerEvents {
     imageBase64: string;
   }) => void;
   'machine:control': (payload: { machineId: string; state: boolean; deviceId: string }) => void;
+
+  // Conveyor Direct Control from Participant or Admin
+  'conveyor:control': (payload: ConveyorControlPayload) => void;
+
+  // Elevator Action Trigger
+  'elevator:trigger_move': (payload?: { from?: ElevatorFloorState; to?: ElevatorFloorState; deviceId?: string }) => void;
+  'elevator:set_floor': (payload: ElevatorStatePayload) => void;
+  'elevator:trigger_glitch': (payload?: { duration?: number }) => void;
+
+  // Video Trigger & Status
+  'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
+  'video:ended': (payload?: { deviceId?: string }) => void;
+
+  // Admin handlers
   'admin:join': () => void;
   'admin:get_state': () => void;
   'admin:review_photo': (payload: {

@@ -27,6 +27,20 @@ const PORTAL_CARDS = [
     description: '物理設備（ESP32有線/Wi-Fi/Bluetooth対応リレー・サーボ・ライト・ファン）の個別登録と遠隔制御。',
     launchLabel: '機材制御盤を起動 (/equipment) ->',
   },
+  {
+    key: 'elevator',
+    href: '/elevator-display',
+    title: '[演出] エレベータ内 階数表示端末',
+    description: '段ボール切り抜き用バックライト電照パネル画面。縦横切替、キャリブレーション、フリッカー演出対応。',
+    launchLabel: 'エレベータ表示を起動 (/elevator-display) ->',
+  },
+  {
+    key: 'video',
+    href: '/display/video',
+    title: '[演出] エリア3 映像再生用端末',
+    description: '別置き大型モニター/タブレット用フルスクリーン再生プレイヤー。自動再生アンロック＆ノイズ待機画面。',
+    launchLabel: '映像プレイヤーを起動 (/display/video) ->',
+  },
 ];
 
 export default function PortalPage() {

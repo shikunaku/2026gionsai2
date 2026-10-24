@@ -77,6 +77,27 @@ export default function AdminPage() {
 
   const handleTriggerShutdown = () => triggerEffect('shutdown', {});
 
+  // New Equipment & Display Direct Handlers
+  const handleElevatorSetFloor = (floor: 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF') => {
+    socket?.emit('elevator:set_floor', { floor });
+  };
+
+  const handleElevatorTriggerMove = () => {
+    socket?.emit('elevator:trigger_move', {});
+  };
+
+  const handleElevatorGlitch = () => {
+    socket?.emit('elevator:trigger_glitch', { duration: 1500 });
+  };
+
+  const handleConveyorControl = (action: 'forward' | 'reverse' | 'stop') => {
+    socket?.emit('conveyor:control', { action, speed: 100 });
+  };
+
+  const handleTriggerVideoPlay = () => {
+    socket?.emit('video:trigger_play', {});
+  };
+
   return (
     <div className="app-shell">
       {/* Top Application Bar */}
@@ -97,6 +118,16 @@ export default function AdminPage() {
           <Link href="/admin" className="app-nav-link">
             <button className="win95-btn app-nav-btn active" title="管理コンソール移動（現在の画面）">
               [管理コンソール]
+            </button>
+          </Link>
+          <Link href="/elevator-display" className="app-nav-link" target="_blank">
+            <button className="win95-btn app-nav-btn" title="エレベータ階数表示画面">
+              [エレベータ画面]
+            </button>
+          </Link>
+          <Link href="/display/video" className="app-nav-link" target="_blank">
+            <button className="win95-btn app-nav-btn" title="エリア3映像再生端末">
+              [エリア3映像画面]
             </button>
           </Link>
           <Link href="/equipment" className="app-nav-link">
@@ -136,6 +167,11 @@ export default function AdminPage() {
             onSetVolume={handleSetVolume}
             onEmergencyAllLight={handleEmergencyAllLight}
             onTriggerShutdown={handleTriggerShutdown}
+            onElevatorSetFloor={handleElevatorSetFloor}
+            onElevatorTriggerMove={handleElevatorTriggerMove}
+            onElevatorGlitch={handleElevatorGlitch}
+            onConveyorControl={handleConveyorControl}
+            onTriggerVideoPlay={handleTriggerVideoPlay}
           />
         </div>
       </div>

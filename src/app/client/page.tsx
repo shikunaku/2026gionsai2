@@ -10,8 +10,9 @@ import { FullscreenButton } from '../../components/common/FullscreenButton';
 import { HorrorCanvasOverlay } from '../../components/client/HorrorCanvasOverlay';
 import { PhaseInit } from '../../components/client/PhaseInit';
 import { PhaseZone1 } from '../../components/client/PhaseZone1';
-import { PhaseZone2 } from '../../components/client/PhaseZone2';
-import { PhaseEnd } from '../../components/client/PhaseEnd';
+import { PhaseElevator } from '../../components/client/PhaseElevator';
+import { PhaseArea2Conveyor } from '../../components/client/PhaseArea2Conveyor';
+import { PhaseArea3Video } from '../../components/client/PhaseArea3Video';
 import {
   DevicePhase,
   InspectionTask,
@@ -34,21 +35,21 @@ const INITIAL_TASKS: InspectionTask[] = [
   {
     id: 1,
     title: '冷却塔メインバルブの腐食状況',
-    location: '1F 品質管理室 北側区画',
+    location: '1F エリア1 北側区画',
     targetDescription: '冷却配管下部のバルブジョイント部を撮影し、赤錆または液漏れの有無を記録してください。',
     status: 'SUBMITTING',
   },
   {
     id: 2,
     title: '高圧電気制御盤の計器指示値',
-    location: '1F 品質管理室 主配電盤',
+    location: '1F エリア1 主配電盤',
     targetDescription: '計器盤の中央アナログ電圧計の針の位置を撮影し、目盛りが適正範囲内にあるか記録してください。',
     status: 'SUBMITTING',
   },
   {
     id: 3,
     title: '第2地下通路 排気ダクトの異音確認',
-    location: '1F 管理室奥 地下排気孔',
+    location: '1F エリア1 地下排気孔',
     targetDescription: '排気ダクトの金網フィルターを撮影し、異物の引っ掛かりや損傷がないか記録してください。',
     status: 'SUBMITTING',
   },
@@ -57,7 +58,7 @@ const INITIAL_TASKS: InspectionTask[] = [
 function ClientContent() {
   const searchParams = useSearchParams();
   const [deviceId, setDeviceId] = useState<string>('0001');
-  const [phase, setPhase] = useState<DevicePhase>('INIT');
+  const [phase, setPhase] = useState<DevicePhase>('STANDBY');
   const [tasks, setTasks] = useState<InspectionTask[]>(INITIAL_TASKS);
   const [glitchOptions, setGlitchOptions] = useState<GlitchEffectOptions | null>(null);
 
@@ -178,7 +179,7 @@ function ClientContent() {
     // Emergency shutdown
     socket.on('effect:shutdown', () => {
       console.log('[Client] Shutdown signal received!');
-      setPhase('END');
+      setPhase('STANDBY');
     });
 
     return () => {
@@ -196,13 +197,15 @@ function ClientContent() {
   useEffect(() => {
     if (socket && connected) {
       const location =
-        phase === 'INIT'
-          ? 'エントランス待機所'
-          : phase === 'ZONE1'
-          ? '1F 品質管理室 (写真点検)'
-          : phase === 'ZONE2'
-          ? '1F 第零製造ライン (機器操作)'
-          : '出口・電源遮断区画';
+        phase === 'STANDBY'
+          ? '待機室 (オープニング)'
+          : phase === 'AREA_1_PHOTO'
+          ? 'エリア1 (3枚撮影・提出)'
+          : phase === 'ELEVATOR'
+          ? 'エレベータ (昇降機移動)'
+          : phase === 'AREA_2_CONVEYOR'
+          ? 'エリア2 (コンベア操作)'
+          : 'エリア3 (映像再生トリガー)';
       socket.emit('device:ready', { deviceId, phase, location });
     }
   }, [socket, connected, deviceId, phase]);
@@ -211,14 +214,13 @@ function ClientContent() {
   const handleStartInspection = () => {
     soundEngine.unlockAudio();
     soundEngine.playBeep(880, 0.1);
-    setPhase('ZONE1');
+    setPhase('AREA_1_PHOTO');
     if (socket) {
       socket.emit('device:start_inspection', { deviceId });
     }
   };
 
   const handlePhotoSubmit = (taskId: number, taskTitle: string, imageBase64: string) => {
-    // Set status to PENDING
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: 'PENDING' } : t))
     );
@@ -233,13 +235,30 @@ function ClientContent() {
     }
   };
 
-  const handleMachineControl = (machineId: string, state: boolean) => {
+  // Elevator triggers
+  const handleElevatorTriggerMove = () => {
     if (socket) {
-      socket.emit('machine:control', {
-        machineId,
-        state,
-        deviceId,
-      });
+      socket.emit('elevator:trigger_move', { deviceId });
+    }
+  };
+
+  const handleElevatorGlitch = () => {
+    if (socket) {
+      socket.emit('elevator:trigger_glitch', { duration: 1500 });
+    }
+  };
+
+  // Conveyor controls
+  const handleConveyorControl = (action: 'forward' | 'reverse' | 'stop') => {
+    if (socket) {
+      socket.emit('conveyor:control', { action, speed: 100, deviceId });
+    }
+  };
+
+  // Video trigger
+  const handleTriggerVideo = () => {
+    if (socket) {
+      socket.emit('video:trigger_play', { deviceId });
     }
   };
 
@@ -274,7 +293,7 @@ function ClientContent() {
 
         {/* Main Phase Container */}
         <main className="client-main">
-          {phase === 'INIT' && (
+          {phase === 'STANDBY' && (
             <PhaseInit
               deviceId={deviceId}
               onDeviceIdChange={setDeviceId}
@@ -282,15 +301,14 @@ function ClientContent() {
             />
           )}
 
-          {phase === 'ZONE1' && (
+          {phase === 'AREA_1_PHOTO' && (
             <PhaseZone1
               deviceId={deviceId}
               tasks={tasks}
               onPhotoSubmit={handlePhotoSubmit}
-              onProceedZone2={() => setPhase('ZONE2')}
+              onProceedZone2={() => setPhase('ELEVATOR')}
               playShutterSound={() => soundEngine.playShutter()}
               onPhotoTaken={() => {
-                // If torch was meant to be ON, re-activate it after camera app returns
                 if (torchOn) {
                   setTimeout(() => setTorch(true), 300);
                 }
@@ -298,19 +316,30 @@ function ClientContent() {
             />
           )}
 
-          {phase === 'ZONE2' && (
-            <PhaseZone2
+          {phase === 'ELEVATOR' && (
+            <PhaseElevator
               deviceId={deviceId}
-              onMachineControl={handleMachineControl}
+              onTriggerMove={handleElevatorTriggerMove}
+              onFloorGlitch={handleElevatorGlitch}
+              onProceedNext={() => setPhase('AREA_2_CONVEYOR')}
               playMotorSound={() => soundEngine.playMotor()}
             />
           )}
 
-          {phase === 'END' && (
-            <PhaseEnd
+          {phase === 'AREA_2_CONVEYOR' && (
+            <PhaseArea2Conveyor
               deviceId={deviceId}
-              onShutdownSound={() => soundEngine.playPowerDown()}
-              onTurnOffFlash={() => setTorch(false)}
+              onConveyorControl={handleConveyorControl}
+              onProceedNext={() => setPhase('AREA_3_VIDEO')}
+              playMotorSound={() => soundEngine.playMotor()}
+            />
+          )}
+
+          {phase === 'AREA_3_VIDEO' && (
+            <PhaseArea3Video
+              deviceId={deviceId}
+              onTriggerVideo={handleTriggerVideo}
+              playHorrorSound={() => soundEngine.playSound('lowImpact')}
             />
           )}
         </main>

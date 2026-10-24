@@ -1,4 +1,4 @@
-import { DeviceInfo, DevicePhase, EquipmentItem, PhotoSubmission } from '../src/lib/types';
+import { DeviceInfo, DevicePhase, ElevatorFloorState, ElevatorStatePayload, EquipmentItem, PhotoSubmission } from '../src/lib/types';
 import { persistence } from './persistence';
 
 export class AppStore {
@@ -7,6 +7,7 @@ export class AppStore {
   private devices = new Map<string, DeviceInfo>();
   private submissions: PhotoSubmission[] = [];
   private equipments: EquipmentItem[] = [];
+  private currentElevatorState: ElevatorStatePayload = { floor: 'FLOOR_1' };
   // 10-second deduplication map: key = `${deviceId}:${taskId}` => timestamp
   private recentSubmissions = new Map<string, number>();
 
@@ -21,7 +22,15 @@ export class AppStore {
     return AppStore.instance;
   }
 
-  public registerDevice(deviceId: string, socketId: string, phase: DevicePhase = 'INIT', location?: string): DeviceInfo {
+  public getElevatorState(): ElevatorStatePayload {
+    return this.currentElevatorState;
+  }
+
+  public setElevatorState(state: ElevatorStatePayload): void {
+    this.currentElevatorState = { ...state };
+  }
+
+  public registerDevice(deviceId: string, socketId: string, phase: DevicePhase = 'STANDBY', location?: string): DeviceInfo {
     const existing = this.devices.get(deviceId);
     const device: DeviceInfo = {
       deviceId,

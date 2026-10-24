@@ -1,0 +1,172 @@
+/* Area 3 Video Display Player Styles */
+
+.video-player-root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Standby container */
+.video-standby-screen {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #0a0c10 0%, #000000 80%);
+}
+
+/* Analog TV scanlines & creepy noise */
+.video-noise-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.video-scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.4) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.video-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* Audio unlock prompt overlay */
+.video-unlock-prompt {
+  position: absolute;
+  z-index: 30;
+  background: rgba(15, 20, 25, 0.92);
+  border: 2px solid #583333;
+  padding: 30px 40px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 0 40px rgba(180, 40, 40, 0.4);
+  animation: promptPulse 2s infinite ease-in-out;
+}
+
+@keyframes promptPulse {
+  0% { transform: scale(1); box-shadow: 0 0 20px rgba(180, 40, 40, 0.3); }
+  50% { transform: scale(1.02); box-shadow: 0 0 50px rgba(220, 50, 50, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 0 20px rgba(180, 40, 40, 0.3); }
+}
+
+.video-unlock-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ff6e6e;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.video-unlock-desc {
+  font-size: 13px;
+  color: #c0c6ce;
+  line-height: 1.6;
+}
+
+.video-unlock-btn {
+  margin-top: 18px;
+  background: #7a2828;
+  color: #fff;
+  border: 1px solid #ff8888;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* Standby Idle Terminal Text */
+.video-standby-text {
+  text-align: center;
+  z-index: 15;
+  color: #4a5568;
+}
+
+.video-standby-title {
+  font-size: 24px;
+  letter-spacing: 4px;
+  color: #616e7d;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(100, 150, 200, 0.2);
+}
+
+.video-standby-sub {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #384252;
+}
+
+/* Fullscreen playing video element */
+.video-fullscreen-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 20;
+  background: #000;
+}
+
+/* Procedural Video / Canvas Visualizer mode (when videoSrc is generative/synthesizer) */
+.video-procedural-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+}
+
+/* Status HUD Badge */
+.video-hud {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #555;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 10px;
+}
+
+.video-hud.ready {
+  color: #48bb78;
+}
