@@ -131,9 +131,7 @@ export default function ElevatorDisplayPage() {
           isFloor1Active && flickering ? 'flicker' : ''
         }`}
         style={boxStyle}
-      >
-        <span className="elevator-floor-watermark">1</span>
-      </div>
+      />
     </div>
   );
 
@@ -144,9 +142,7 @@ export default function ElevatorDisplayPage() {
           isFloorB1Active && flickering ? 'flicker' : ''
         }`}
         style={boxStyle}
-      >
-        <span className="elevator-floor-watermark">B1</span>
-      </div>
+      />
     </div>
   );
 

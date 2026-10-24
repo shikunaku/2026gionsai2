@@ -37,3 +37,10 @@ next-env.d.ts
 
 # Scratch & Temporary
 /scratch/
+
+# Large Video Files (Exclude media while keeping folder)
+public/videos/*
+!public/videos/.gitkeep
+*.mp4
+*.webm
+*.mov

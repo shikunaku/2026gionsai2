@@ -28,7 +28,7 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}>
-          <span>[フェーズ 5] エリア3: 主電算モニター機動ギミック</span>
+          <span>[エリア 5] エリア3: 主電算モニター機動ギミック</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>

@@ -13,6 +13,7 @@ import { PhaseZone1 } from '../../components/client/PhaseZone1';
 import { PhaseElevator } from '../../components/client/PhaseElevator';
 import { PhaseArea2Conveyor } from '../../components/client/PhaseArea2Conveyor';
 import { PhaseArea3Video } from '../../components/client/PhaseArea3Video';
+import { PhaseReturn } from '../../components/client/PhaseReturn';
 import {
   DevicePhase,
   InspectionTask,
@@ -202,10 +203,12 @@ function ClientContent() {
           : phase === 'AREA_1_PHOTO'
           ? 'エリア1 (3枚撮影・提出)'
           : phase === 'ELEVATOR'
-          ? 'エレベータ (昇降機移動)'
+          ? 'エレベータ'
           : phase === 'AREA_2_CONVEYOR'
           ? 'エリア2 (コンベア操作)'
-          : 'エリア3 (映像再生トリガー)';
+          : phase === 'AREA_3_VIDEO'
+          ? 'エリア3 (映像再生トリガー)'
+          : '受付 (端末返却所)';
       socket.emit('device:ready', { deviceId, phase, location });
     }
   }, [socket, connected, deviceId, phase]);
@@ -232,19 +235,6 @@ function ClientContent() {
         taskTitle,
         imageBase64,
       });
-    }
-  };
-
-  // Elevator triggers
-  const handleElevatorTriggerMove = () => {
-    if (socket) {
-      socket.emit('elevator:trigger_move', { deviceId });
-    }
-  };
-
-  const handleElevatorGlitch = () => {
-    if (socket) {
-      socket.emit('elevator:trigger_glitch', { duration: 1500 });
     }
   };
 
@@ -317,13 +307,7 @@ function ClientContent() {
           )}
 
           {phase === 'ELEVATOR' && (
-            <PhaseElevator
-              deviceId={deviceId}
-              onTriggerMove={handleElevatorTriggerMove}
-              onFloorGlitch={handleElevatorGlitch}
-              onProceedNext={() => setPhase('AREA_2_CONVEYOR')}
-              playMotorSound={() => soundEngine.playMotor()}
-            />
+            <PhaseElevator deviceId={deviceId} />
           )}
 
           {phase === 'AREA_2_CONVEYOR' && (
@@ -341,6 +325,10 @@ function ClientContent() {
               onTriggerVideo={handleTriggerVideo}
               playHorrorSound={() => soundEngine.playSound('lowImpact')}
             />
+          )}
+
+          {phase === 'RETURN' && (
+            <PhaseReturn deviceId={deviceId} />
           )}
         </main>
 

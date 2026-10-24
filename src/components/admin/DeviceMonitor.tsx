@@ -58,6 +58,7 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                       <option value="ELEVATOR">3: ELEVATOR (昇降)</option>
                       <option value="AREA_2_CONVEYOR">4: AREA 2 (コンベア)</option>
                       <option value="AREA_3_VIDEO">5: AREA 3 (映像)</option>
+                      <option value="RETURN">6: RETURN (返却)</option>
                     </select>
                   </div>
 

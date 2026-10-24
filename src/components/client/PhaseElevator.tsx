@@ -1,151 +1,77 @@
 'use client';
 
-import React, { useState } from 'react';
-import '../../styles/client.css';
+import React from 'react';
+import '../../styles/elevator-display.css';
 
 interface PhaseElevatorProps {
   deviceId: string;
-  onTriggerMove: () => void;
-  onFloorGlitch: () => void;
-  onProceedNext: () => void;
-  playMotorSound?: () => void;
 }
 
-export const PhaseElevator: React.FC<PhaseElevatorProps> = ({
-  deviceId,
-  onTriggerMove,
-  onFloorGlitch,
-  onProceedNext,
-  playMotorSound,
-}) => {
-  const [elevatorStatus, setElevatorStatus] = useState<'IDLE' | 'MOVING' | 'ARRIVED'>('IDLE');
-
-  const handleStartElevator = () => {
-    if (elevatorStatus !== 'IDLE') return;
-    setElevatorStatus('MOVING');
-    if (playMotorSound) playMotorSound();
-    onTriggerMove();
-
-    // 3.5s sequence
-    setTimeout(() => {
-      setElevatorStatus('ARRIVED');
-    }, 3800);
-  };
-
+export const PhaseElevator: React.FC<PhaseElevatorProps> = ({ deviceId }) => {
   return (
     <div className="phase-elevator">
       {/* Title window */}
       <div className="win95-window">
-        <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #37474f, #455a64)' }}>
-          <span>[フェーズ 3] 地下昇降機 (ELEVATOR) 運行制御</span>
+        <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1f2429, #37474f)' }}>
+          <span>[フェーズ 3] エレベータ移動</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          全員が搭乗したことを確認し、昇降機運行を開始してください。
+          安全装置作動中。現場の運行指示に従ってください。
         </div>
       </div>
 
-      {/* Status Box */}
-      <div className="win95-window" style={{ marginTop: '8px' }}>
+      {/* Creepy Instruction & Moving Notice Card */}
+      <div className="win95-window" style={{ marginTop: '10px' }}>
         <div className="win95-titlebar" style={{ background: '#263238' }}>
-          <span>昇降機 運行ステータスモニター</span>
+          <span>運行指示アナウンス</span>
         </div>
-        <div style={{ padding: '12px', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#555', marginBottom: '6px' }}>現在運行ステータス</div>
+        <div style={{ padding: '20px 16px', textAlign: 'center' }}>
           <div
             style={{
-              fontSize: '20px',
+              fontSize: '17px',
               fontWeight: 'bold',
-              color: elevatorStatus === 'MOVING' ? '#e65100' : elevatorStatus === 'ARRIVED' ? '#2e7d32' : '#37474f',
+              color: '#d32f2f',
+              lineHeight: '1.7',
               letterSpacing: '1px',
+              marginBottom: '16px',
             }}
           >
-            {elevatorStatus === 'IDLE' && '【地上1階 待機中 (1F)】'}
-            {elevatorStatus === 'MOVING' && '【地下へ降下移動中... (MOVING)】'}
-            {elevatorStatus === 'ARRIVED' && '【地下1階 到着完了 (B1)】'}
+            エレベータに乗って
+            <br />
+            地下（エリア2）に移動してください。
           </div>
 
           <div
             className="win95-inset-dark"
             style={{
-              marginTop: '12px',
-              padding: '8px',
+              padding: '12px',
               fontSize: '11px',
-              textAlign: 'left',
               color: '#81c784',
-              lineHeight: '1.6',
+              lineHeight: '1.8',
+              textAlign: 'left',
             }}
           >
-            <div>[LINK] ESP32昇降リレーおよびバックライト表示端末と同期中</div>
-            <div>[GATE] ドアインターロック: 正常遮断</div>
-            <div>[DEPTH] 目標地点: 地下1階 第零製造所</div>
+            <div>[STATUS] 昇降ケージ遠隔制御モード（搭乗者操作不要）</div>
+            <div>[SECTOR] 地上1階 ➔ 地下1階 第零製造区画</div>
+            <div>[CAUTION] 移動中の急な揺れ・照明の明滅にご注意ください。</div>
           </div>
         </div>
       </div>
 
-      {/* Action Trigger Buttons */}
-      <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {elevatorStatus === 'IDLE' && (
-          <button
-            onClick={handleStartElevator}
-            className="win95-btn"
-            style={{
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              backgroundColor: '#bf360c',
-              color: '#ffffff',
-            }}
-          >
-            エレベータ降下開始 [START DESCENT]
-          </button>
-        )}
-
-        {elevatorStatus === 'MOVING' && (
-          <button
-            disabled
-            className="win95-btn"
-            style={{
-              padding: '12px',
-              fontSize: '13px',
-              backgroundColor: '#546e7a',
-              color: '#cfd8dc',
-            }}
-          >
-            地下へ降下中... (振動に注意してください)
-          </button>
-        )}
-
-        {elevatorStatus === 'ARRIVED' && (
-          <>
-            <div
-              className="win95-inset"
-              style={{
-                padding: '8px',
-                textAlign: 'center',
-                backgroundColor: '#e8f5e9',
-                color: '#1b5e20',
-                fontWeight: 'bold',
-                fontSize: '12px',
-              }}
-            >
-              地下1階 到着。扉を開けてエリア2（コンベア区画）へ進んでください。
-            </div>
-            <button
-              onClick={onProceedNext}
-              className="win95-btn"
-              style={{
-                padding: '12px',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                backgroundColor: '#2e7d32',
-                color: '#ffffff',
-              }}
-            >
-              エリア2 (コンベア操作) へ進む -&gt;
-            </button>
-          </>
-        )}
+      {/* Non-interactive Guidance Notice */}
+      <div
+        className="win95-inset"
+        style={{
+          marginTop: '12px',
+          padding: '10px',
+          fontSize: '11px',
+          color: '#5f6368',
+          textAlign: 'center',
+          backgroundColor: '#e0ded8',
+        }}
+      >
+        ※ 昇降機の起動およびエリア2への移行は、運行管理システムにより遠隔で行われます。手元の端末操作は不要です。
       </div>
     </div>
   );

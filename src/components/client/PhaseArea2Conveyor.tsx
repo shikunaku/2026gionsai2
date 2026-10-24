@@ -31,7 +31,7 @@ export const PhaseArea2Conveyor: React.FC<PhaseArea2ConveyorProps> = ({
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}>
-          <span>[フェーズ 4] エリア2: 第零搬送コンベア制御</span>
+          <span>[エリア 4] エリア2: 第零搬送コンベア制御</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>

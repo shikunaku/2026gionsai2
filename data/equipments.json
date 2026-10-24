@@ -3,12 +3,12 @@
     "id": "eq_conveyor_01",
     "name": "第零搬送コンベア (Conveyor A-01)",
     "type": "relay",
-    "state": true,
+    "state": false,
     "topic": "mcu/conveyor/power",
     "mcuId": "ESP32_MAIN",
     "protocol": "serial",
     "endpoint": "COM3 / USB",
-    "updatedAt": "2026-10-06T06:34:56.584Z"
+    "updatedAt": "2026-10-24T15:03:17.886Z"
   },
   {
     "id": "eq_valve_01",

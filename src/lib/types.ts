@@ -3,7 +3,8 @@ export type DevicePhase =
   | 'AREA_1_PHOTO'
   | 'ELEVATOR'
   | 'AREA_2_CONVEYOR'
-  | 'AREA_3_VIDEO';
+  | 'AREA_3_VIDEO'
+  | 'RETURN';
 
 export type ElevatorFloorState = 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF';
 

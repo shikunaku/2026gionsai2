@@ -78,10 +78,10 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
       </div>
 
       <div className="effect-body">
-        {/* Phase Overrides (5 stages) */}
+        {/* Phase Overrides (6 stages) */}
         <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">全端末 進行フェーズ手動切替 (5段階)</legend>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '3px', marginTop: '4px' }}>
+          <legend className="win95-groupbox-legend">全端末 進行フェーズ手動切替</legend>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3px', marginTop: '4px' }}>
             <button
               onClick={() => onOverrideAllPhase('STANDBY')}
               className="win95-btn effect-btn-phase"
@@ -99,7 +99,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             <button
               onClick={() => onOverrideAllPhase('ELEVATOR')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ3: エレベータ昇降機"
+              title="フェーズ3: エレベータ"
             >
               3.昇降
             </button>
@@ -116,6 +116,14 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               title="フェーズ5: エリア3 映像トリガー"
             >
               5.映像
+            </button>
+            <button
+              onClick={() => onOverrideAllPhase('RETURN')}
+              className="win95-btn effect-btn-phase"
+              style={{ backgroundColor: '#2e5b3e', color: '#fff', fontWeight: 'bold' }}
+              title="フェーズ6: 業務完了・端末返却案内"
+            >
+              6.返却
             </button>
           </div>
         </fieldset>

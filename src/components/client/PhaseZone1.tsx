@@ -187,7 +187,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       {allApproved && onProceedZone2 && (
         <div className="zone1-proceed">
           <button onClick={onProceedZone2} className="win95-btn zone1-proceed-btn">
-            全点検合格: フェーズ3 (昇降機 ELEVATOR) へ進む -&gt;
+            全点検合格: エリア3 エレベータ へ進む -&gt;
           </button>
         </div>
       )}

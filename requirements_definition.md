@@ -74,8 +74,8 @@ graph TB
 
 ### 3.2 参加者用 PDA 端末 (`/client`)
 
-#### 画面構成 & フェーズ遷移
-1. **`INIT` フェーズ（待機・初期化画面）**:
+#### 画面構成 & エリア遷移
+1. **`INIT` エリア（待機・初期化画面）**:
    - 4桁のランダム端末ID生成（URLクエリ `?deviceId=XXXX` があれば優先）。
    - 「安全規定への同意」チェックボックス（ONにしないと開始ボタンが押せないバリデーション）。
    - 「点検業務を開始」ボタン押下時に以下を同時実行:
@@ -84,16 +84,16 @@ graph TB
      - WakeLock（スリープ防止）取得。
      - サーバーへ `device:ready` / `device:start_inspection` を送信。
    - **注意点**: `INIT` 中の端末は、管理者が一斉演出（`gm:trigger_effect`, `gm:emergency_all_light`）を発火しても、ネタバレ防止のためエフェクト受信対象から除外（スキップ）する。
-2. **`ZONE1` フェーズ（品質管理室 - 写真点検）**:
+2. **`ZONE1` エリア（品質管理室 - 写真点検）**:
    - 3箇所の点検タスクリスト（タスク1〜3）。
    - 各タスク選択 → 「📷 写真を撮影して提出」ボタン。
    - 提出後のステータスバッジ（`[送信中]` / `[審査中]` / `[合格]` / `[要再点検]`）。
    - 合格時に不穏な画面ノイズ・バイブレーション・怪音が発生。
-3. **`ZONE2` フェーズ（第零製造ライン - 機器操作）**:
+3. **`ZONE2` エリア（第零製造ライン - 機器操作）**:
    - 搬送コンベア制御ボタン（ON/OFF トグル）。
    - 蒸気バルブ減圧ボタン（ON/OFF トグル）。
    - 操作時に Socket 経由で ESP32 の物理リレー/サーボと即時連動。
-4. **`END` フェーズ（業務終了・怪異シャットダウン）**:
+4. **`END` エリア（業務終了・怪異シャットダウン）**:
    - 「システム異常」「緊急停止」全画面赤/黒暗転オーバーレイ。
    - 電源遮断音（Power Down）再生、フラッシュライト強制消灯、操作受付停止。
 
@@ -112,7 +112,7 @@ graph TB
    - 入力フィールドフォーカス時に `scrollIntoView({ behavior: 'smooth', block: 'center' })` を実行し、ソフトウェアキーボードによる入力隠れを防止。
 4. **オーディオ音量ブースト**:
    - Web Audio API の `MasterGainNode` を使用し、端末の物理音量限界を超えて **最大 2.5倍 (250%)** までゲイン増幅（管理側から `effect:volume` で一括ブースト可能）。
-   - オーディオ初期化は `pointerdown` / `keydown` の最初のキャプチャフェーズで確実にアンロック。
+   - オーディオ初期化は `pointerdown` / `keydown` の最初のキャプチャエリアで確実にアンロック。
 5. **バッテリー残量監視**:
    - `navigator.getBattery()` または `window.Android.getBatteryLevel()` を監視し、5秒ごとにサーバーへ同期（管理コンソールに `%` 表示）。
 
@@ -123,7 +123,7 @@ graph TB
 #### 3カラム構成
 1. **左カラム: 接続端末監視 (Device Monitor)**:
    - オンライン端末を上位に自動ソート。
-   - 端末ごとの「フェーズ切替ドロップダウン (`INIT`, `ZONE1`, `ZONE2`, `END`)」。
+   - 端末ごとの「エリア切替ドロップダウン (`INIT`, `ZONE1`, `ZONE2`, `END`)」。
    - バッテリー残量・充電状態アイコン。
    - 個別グリッチボタン、個別初期化ボタン（初期化でランダムIDを再割り当て）。
 2. **中央カラム: 点検写真レビューキュー (Photo Review Queue)**:
@@ -134,7 +134,7 @@ graph TB
      - `[ 不合格 (不鮮明) ]`: 「画像が不鮮明（ブレ・暗所）」理由で差し戻し。
      - `[ 不合格 (箇所違い) ]`: 「指定された点検箇所と異なります」理由で差し戻し。
 3. **右カラム: 演出トリガー・機材制御 (Master Effects & Hardware Control)**:
-   - 一括フェーズ強制切替（全端末 `ZONE1`, `ZONE2`, `END`）。
+   - 一括エリア強制切替（全端末 `ZONE1`, `ZONE2`, `END`）。
    - グリッチ演出（Level 1〜3 / 時間指定 / モード: `violent` 激しい, `creepy` 不穏）。
    - プロシージャル音響トリガー（ビープ、ガイガーカウンター、異常音、環境ドローン、モーター音、電源遮断音）。
    - 音量一括制御（100%, 150%, 200%, 250%）。
@@ -180,7 +180,7 @@ graph TB
 | `device:flash_state` | Client | `{ deviceId: string, flashState: boolean }` | トーチ点灯状態報告 |
 | `task:photo_submit` | Client | `{ deviceId: string, taskId: number, taskTitle: string, imageBase64: string }` | 点検写真提出 |
 | `machine:control` | Client | `{ machineId: string, state: boolean, deviceId: string }` | 機器操作（コンベア/バルブ） |
-| `phase:update` | Server | `{ phase: string, deviceId: string }` | フェーズ強制変更 |
+| `phase:update` | Server | `{ phase: string, deviceId: string }` | エリア強制変更 |
 | `task:review_result` | Server | `{ submissionId: string, taskId: number, status: 'APPROVED'\|'REJECTED', reason?: string }` | 写真審査結果 |
 | `effect:glitch` | Server | `{ level: number, duration: number, vibrate: boolean, mode: 'violent'\|'creepy' }` | 画面グリッチ・ノイズ |
 | `effect:torch` | Server | `{ state: boolean, flicker: boolean, count: number, intervalMs: number }` | トーチ点灯・点滅指令 |
@@ -195,7 +195,7 @@ graph TB
 | `admin:join` | Admin | `{}` | 管理コンソール入室 |
 | `admin:get_state` | Admin | `{}` | 全端末・設備状態の即時取得 |
 | `admin:review_photo` | Admin | `{ submissionId: string, status: 'APPROVED'\|'REJECTED', reason?: string }` | 写真合否判定 |
-| `admin:override_phase` | Admin | `{ targetDeviceId?: string, phase: string }` | フェーズ個別/一括変更 |
+| `admin:override_phase` | Admin | `{ targetDeviceId?: string, phase: string }` | エリア個別/一括変更 |
 | `admin:trigger_effect` | Admin | `{ targetDeviceId?: string, effectType: string, options: any }` | 演出トリガー |
 | `admin:emergency_all_light`| Admin| `{}` | 全照明・全トーチ一斉点灯 |
 | `equipment:get_all` | Equip | `{}` | 設備一覧取得 |
@@ -262,21 +262,21 @@ Next.js 14+ (App Router) + TypeScript + カスタム Node.js サーバー構成�
 
 ---
 
-## 7. 実装・移行フェーズ計画
+## 7. 実装・移行エリア計画
 
-1. **フェーズ 1: 型定義 & コアライブラリの TypeScript 化**
+1. **エリア 1: 型定義 & コアライブラリの TypeScript 化**
    - Socket イベントペイロード、機器ステータス、タスク型を `types.ts` に定義。
    - `SoundEngine` を TypeScript クラスとして移植。
-2. **フェーズ 2: リアルタイムサーバー構築**
+2. **エリア 2: リアルタイムサーバー構築**
    - Next.js と同居可能な Node.js カスタムサーバー、またはスタンドアロン Socket.io サーバーの実装。
    - `mcu-manager.ts` の移植と `equipments.json` 永続化の確実化。
-3. **フェーズ 3: PDA クライアント (`/client`) の React/Next.js 実装**
+3. **エリア 3: PDA クライアント (`/client`) の React/Next.js 実装**
    - `useTorch`, `useBattery`, `useSoundEngine` フックの実装。
    - `<input type="file">` + Canvas リサイズコンポーネントの実装。
    - 各ゾーンのステートマシン構築（`INIT` → `ZONE1` → `ZONE2` → `END`）。
-4. **フェーズ 4: 管理画面 (`/admin`) & 設備画面 (`/equipment`) の実装**
+4. **エリア 4: 管理画面 (`/admin`) & 設備画面 (`/equipment`) の実装**
    - Windows 95/98 Classic UI の再現。
    - 共通化せず独立コンポーネントとして保守性高く構築。
-5. **フェーズ 5: 実機テスト & 結合検証**
+5. **エリア 5: 実機テスト & 結合検証**
    - Android/iOS 実機でのカメラ撮影・トーチ点滅・音量増幅テスト。
    - 複数端末同時接続時の負荷検証・写真審査レイテンシ確認。
