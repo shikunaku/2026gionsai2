@@ -2,9 +2,8 @@
 
 /**
  * @file DeviceMonitor.tsx
- * @description 管理画面における接続端末（参加者PDAおよびサウンドノード）のリアルタイム監視コンポーネント。
- * 通常のPDA端末とサウンド再生専用端末（SOUND_NODE）をタブまたは視覚バッジで区別し、
- * 個別テストトーンのトリガーやフェーズ強制変更を提供します。
+ * @description 管理画面における接続端末（参加者PDA、サウンドノード、エレベーター電照端末）のリアルタイム監視コンポーネント。
+ * 各種端末のロール判定バッジ、バッテリー残量・充電状態、20%未満の警告表示、個別テストアクションを提供します。
  */
 
 import React, { useState } from 'react';
@@ -27,42 +26,51 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
   onIndividualTorch,
   onIndividualSound,
 }) => {
-  const [filterRole, setFilterRole] = useState<'all' | 'client' | 'sound_node'>('all');
+  const [filterRole, setFilterRole] = useState<'all' | 'client' | 'sound_node' | 'elevator'>('all');
 
   const filteredDevices = devices.filter((dev) => {
     if (filterRole === 'client') return !dev.role || dev.role === 'client';
     if (filterRole === 'sound_node') return dev.role === 'sound_node';
+    if (filterRole === 'elevator') return dev.role === 'elevator_display' || dev.deviceId.includes('ELEVATOR');
     return true;
   });
 
   const clientCount = devices.filter((d) => !d.role || d.role === 'client').length;
   const soundNodeCount = devices.filter((d) => d.role === 'sound_node').length;
+  const elevatorCount = devices.filter((d) => d.role === 'elevator_display' || d.deviceId.includes('ELEVATOR')).length;
 
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar" style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>[接続端末監視] Device &amp; Sound Monitor ({devices.length}台)</span>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <span>[接続端末監視] Device &amp; Battery Monitor ({devices.length}台)</span>
+        <div style={{ display: 'flex', gap: '3px' }}>
           <button
             onClick={() => setFilterRole('all')}
             className={`win95-btn ${filterRole === 'all' ? 'active' : ''}`}
-            style={{ fontSize: '0.75rem', padding: '1px 6px' }}
+            style={{ fontSize: '0.72rem', padding: '1px 5px' }}
           >
             ALL ({devices.length})
           </button>
           <button
             onClick={() => setFilterRole('client')}
             className={`win95-btn ${filterRole === 'client' ? 'active' : ''}`}
-            style={{ fontSize: '0.75rem', padding: '1px 6px' }}
+            style={{ fontSize: '0.72rem', padding: '1px 5px' }}
           >
             PDA ({clientCount})
           </button>
           <button
             onClick={() => setFilterRole('sound_node')}
             className={`win95-btn ${filterRole === 'sound_node' ? 'active' : ''}`}
-            style={{ fontSize: '0.75rem', padding: '1px 6px' }}
+            style={{ fontSize: '0.72rem', padding: '1px 5px' }}
           >
-             音響 ({soundNodeCount})
+            音響 ({soundNodeCount})
+          </button>
+          <button
+            onClick={() => setFilterRole('elevator')}
+            className={`win95-btn ${filterRole === 'elevator' ? 'active' : ''}`}
+            style={{ fontSize: '0.72rem', padding: '1px 5px' }}
+          >
+            昇降 ({elevatorCount})
           </button>
         </div>
       </div>
@@ -75,31 +83,45 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
             {filteredDevices.map((dev) => {
               const onlineClass = dev.socketId ? ' online' : '';
               const isSoundNode = dev.role === 'sound_node';
+              const isElevator = dev.role === 'elevator_display' || dev.deviceId.includes('ELEVATOR');
+              const numericBattery = Number(dev.batteryLevel);
+              const isLowBattery = !isNaN(numericBattery) && numericBattery <= 20 && !dev.charging;
+
+              // ロールに応じた枠線強調
+              let borderStyle: React.CSSProperties | undefined;
+              if (isLowBattery) {
+                borderStyle = { border: '2px solid #ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)' };
+              } else if (isSoundNode) {
+                borderStyle = { border: '2px solid #0284c7' };
+              } else if (isElevator) {
+                borderStyle = { border: '2px solid #f59e0b' };
+              }
 
               return (
                 <div
                   key={dev.deviceId}
                   className={`win95-window device-card${onlineClass}`}
-                  style={isSoundNode ? { border: '2px solid #0284c7' } : undefined}
+                  style={borderStyle}
                 >
                   {/* Row 1: ID, Role Badge & Battery/Status */}
                   <div className="device-card-row between">
                     <div className="device-card-id" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span className={`device-link-dot${onlineClass}`} />
                       <strong className="device-id-text">
-                        {isSoundNode ? '[SOUND] ' : ''}ID: {dev.deviceId}
+                        {isSoundNode ? '[SOUND] ' : isElevator ? '[ELEVATOR] ' : ''}
+                        ID: {dev.deviceId}
                       </strong>
                     </div>
 
-                    <div className="device-battery">
-                      {isSoundNode ? (
-                        <span style={{ color: '#0284c7', fontWeight: 'bold' }}>SOUND NODE</span>
-                      ) : (
-                        <>
-                          {dev.charging ? 'CHG ' : 'BAT '}
-                          {dev.batteryLevel}%
-                        </>
-                      )}
+                    {/* バッテリー残量・充電状態（20%以下は赤色警告） */}
+                    <div
+                      className="device-battery"
+                      style={isLowBattery ? { color: '#ef4444', fontWeight: 'bold' } : undefined}
+                      title={dev.charging ? '電源接続中 (充電中)' : 'バッテリー駆動中'}
+                    >
+                      {dev.charging ? '[CHG] ' : '[BAT] '}
+                      {dev.batteryLevel}%
+                      {isLowBattery && ' (!)'}
                     </div>
                   </div>
 
@@ -110,8 +132,8 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                     </div>
                   )}
 
-                  {/* Row 2: PDAフェーズ切り替え or サウンドノード情報 */}
-                  {!isSoundNode ? (
+                  {/* Row 2: 端末種別に応じた詳細情報 / 操作 */}
+                  {!isSoundNode && !isElevator ? (
                     <div className="device-card-row phase">
                       <span className="device-phase-label">Phase:</span>
                       <select
@@ -127,6 +149,10 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                         <option value="RETURN">6: RETURN (返却)</option>
                       </select>
                     </div>
+                  ) : isElevator ? (
+                    <div style={{ fontSize: '0.8rem', color: '#f59e0b', margin: '4px 0' }}>
+                      エレベーター発光電照端末 (全画面均等発光中)
+                    </div>
                   ) : (
                     <div style={{ fontSize: '0.8rem', color: '#38bdf8', margin: '4px 0' }}>
                       専用音響待機中 (自動再生アンロック済)
@@ -135,7 +161,7 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
 
                   {/* Row 3: アクションボタン */}
                   <div className="device-actions">
-                    {!isSoundNode ? (
+                    {!isSoundNode && !isElevator ? (
                       <>
                         <button
                           onClick={() => onIndividualGlitch(dev.deviceId)}
@@ -153,7 +179,7 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                           点滅 [T]
                         </button>
                       </>
-                    ) : (
+                    ) : isSoundNode ? (
                       <>
                         <button
                           onClick={() => onIndividualSound?.(dev.deviceId, 'beep')}
@@ -177,6 +203,10 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                           ガイガー
                         </button>
                       </>
+                    ) : (
+                      <div style={{ fontSize: '0.72rem', color: '#78716c' }}>
+                        画面側は発光専用・遠隔バッテリー監視稼働中
+                      </div>
                     )}
                   </div>
                 </div>
@@ -188,7 +218,7 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
 
       <div className="win95-statusbar">
         <div className="win95-statusbar-item admin-statusbar-item">
-          オンライン: {devices.filter((d) => !!d.socketId).length} / {devices.length} 台 (PDA:{clientCount} / 音響:{soundNodeCount})
+          オンライン: {devices.filter((d) => !!d.socketId).length} / {devices.length} 台 (PDA:{clientCount} / 音響:{soundNodeCount} / 昇降:{elevatorCount})
         </div>
       </div>
     </div>

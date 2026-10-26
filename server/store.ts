@@ -1,4 +1,4 @@
-import { DeviceInfo, DevicePhase, ElevatorFloorState, ElevatorStatePayload, EquipmentItem, PhotoSubmission } from '../src/lib/types';
+import { DeviceInfo, DevicePhase, DeviceRole, ElevatorFloorState, ElevatorStatePayload, EquipmentItem, PhotoSubmission } from '../src/lib/types';
 import { persistence } from './persistence';
 
 export class AppStore {
@@ -35,7 +35,7 @@ export class AppStore {
     socketId: string,
     phase: DevicePhase = 'STANDBY',
     location?: string,
-    role?: 'client' | 'sound_node' | 'display' | 'admin'
+    role?: DeviceRole
   ): DeviceInfo {
     const existing = this.devices.get(deviceId);
     const device: DeviceInfo = {

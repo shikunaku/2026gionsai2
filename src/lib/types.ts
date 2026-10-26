@@ -19,7 +19,7 @@ export type DevicePhase =
   | 'RETURN';
 
 /** 端末の運用ロール種別 */
-export type DeviceRole = 'client' | 'sound_node' | 'display' | 'admin';
+export type DeviceRole = 'client' | 'sound_node' | 'elevator_display' | 'display' | 'admin';
 
 /** エレベーター階層状態 */
 export type ElevatorFloorState = 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF';
