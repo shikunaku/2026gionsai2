@@ -68,7 +68,7 @@ declare global {
 // 3. 端末・審査・ミッション型定義
 // ============================================================================
 
-export type ReviewStatus = 'SUBMITTING' | 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ReviewStatus = 'UNINSPECTED' | 'SUBMITTING' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
 /** 接続端末（PDA / Sound Node等）のテレメトリ情報 */
 export interface DeviceInfo {

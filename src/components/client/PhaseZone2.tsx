@@ -36,7 +36,7 @@ export const PhaseZone2: React.FC<PhaseZone2Props> = ({
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar zone2-titlebar zone2-titlebar-header">
-          <span className="zone2-titlebar-text">[ZONE 2] 第零製造ライン - 機器制御</span>
+          <span className="zone2-titlebar-text">第零製造ライン - 機器制御</span>
           <span className="zone2-titlebar-tag">ID: {deviceId}</span>
         </div>
         <div className="zone2-intro">

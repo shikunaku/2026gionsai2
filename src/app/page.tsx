@@ -50,14 +50,13 @@ export default function PortalPage() {
     <div className="portal-root">
       <div className="win95-window portal-window">
         <div className="win95-titlebar">
-          <span>[SYSTEM] 工場保守演出統合システム ポータル</span>
+          <span>工場保守演出統合システム ポータル</span>
           <FullscreenButton className="portal-fs-btn" />
         </div>
 
         <div className="portal-body">
           <div className="portal-heading">
             <h1>第零製造所 設備点検・演出統合コンソール</h1>
-            <p>Next.js 14+ App Router &amp; WebSocket (Socket.io) リアルタイム演出基盤</p>
           </div>
 
           <div className="portal-cards">

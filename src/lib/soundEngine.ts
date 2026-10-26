@@ -8,6 +8,29 @@
 import { SoundEffectOptions } from './types';
 
 // ============================================================================
+// 0. プリセット音源一覧の定義
+// ============================================================================
+
+export interface SoundPresetItem {
+  type: SoundEffectOptions['soundType'];
+  label: string;
+  description: string;
+  level?: number;
+}
+
+/** システム内蔵のプロシージャル合成音プリセット一覧 */
+export const SOUND_PRESETS: SoundPresetItem[] = [
+  { type: 'beep', label: '操作確認ビープ', description: '高域短音' },
+  { type: 'lowImpact', label: '衝撃重低音', description: 'ドカンという重低音衝撃' },
+  { type: 'geiger', label: 'ガイガー異変音', description: '放射線量急上昇クラック音', level: 4 },
+  { type: 'drone', label: '不穏ドローン', description: '低域の持続的唸り音' },
+  { type: 'motor', label: 'モーター駆動音', description: '機械のうなり・低速回転' },
+  { type: 'powerDown', label: '電源降下音', description: '非常停止・電圧降下音' },
+  { type: 'shutter', label: 'メカシャッター', description: 'カメラシャッター・絞り音' },
+  { type: 'taskSuccess', label: 'タスク完了音', description: '点検合格・認証成功サイン' },
+];
+
+// ============================================================================
 // 1. 音響エンジン クラス定義
 // ============================================================================
 

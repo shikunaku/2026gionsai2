@@ -27,8 +27,24 @@ export default function VideoDisplayPlayerPage() {
     let running = true;
     const renderNoise = () => {
       if (!running) return;
-      const w = (canvas.width = canvas.clientWidth / 2);
-      const h = (canvas.height = canvas.clientHeight / 2);
+
+      const clientW = canvas.clientWidth;
+      const clientH = canvas.clientHeight;
+      if (!clientW || !clientH || isNaN(clientW) || isNaN(clientH)) {
+        // まだ要素がレイアウトされていないか非表示の場合は次フレームで再試行
+        requestAnimationFrame(renderNoise);
+        return;
+      }
+
+      const w = Math.floor(clientW / 2);
+      const h = Math.floor(clientH / 2);
+      if (w <= 0 || h <= 0) {
+        requestAnimationFrame(renderNoise);
+        return;
+      }
+
+      canvas.width = w;
+      canvas.height = h;
 
       const imgData = ctx.createImageData(w, h);
       const buffer = new Uint32Array(imgData.data.buffer);
@@ -49,29 +65,74 @@ export default function VideoDisplayPlayerPage() {
     };
   }, []);
 
+  const [availableVideos, setAvailableVideos] = useState<string[]>([]);
+
+  // サーバー上の利用可能な動画ファイル一覧を取得
+  useEffect(() => {
+    fetch('/api/video-files')
+      .then((res) => (res.ok ? res.json() : { files: [] }))
+      .then((data) => {
+        if (Array.isArray(data.files) && data.files.length > 0) {
+          setAvailableVideos(data.files);
+          console.log('[Video Player] Available video files in /videos:', data.files);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Video Player] Failed to fetch /api/video-files:', err);
+      });
+  }, []);
+
   // Listen to WebSocket events
   useEffect(() => {
     if (!socket) return;
 
     const handleTriggerPlay = (payload?: { videoSrc?: string; title?: string }) => {
       console.log('[Video Player] TRIGGER_VIDEO_PLAY received:', payload);
-      const src = payload?.videoSrc || '/sample_horror.mp4';
+
+      // 優先度: payload指定 > public/videos内の最初の実在ファイル > 既定フォールバック
+      let src = payload?.videoSrc;
+      if (!src) {
+        if (availableVideos.length > 0) {
+          src = `/videos/${availableVideos[0]}`;
+        } else {
+          src = '/videos/area3.mp4';
+        }
+      }
+
       setVideoSrc(src);
       setIsPlaying(true);
+      setUseProcedural(false);
 
-      // Attempt playing video element
       if (videoRef.current) {
         videoRef.current.src = src;
         videoRef.current.currentTime = 0;
+
+        // 音声アンロック状態に応じて音声を有効化（未アンロック時はブラウザポリシー制限回避のためmutedで確実に再生）
+        videoRef.current.muted = !audioUnlocked;
+
         videoRef.current
           .play()
           .then(() => {
-            console.log('[Video Player] Video playback started successfully.');
+            console.log(`[Video Player] Video playback started successfully for: ${src} (muted: ${videoRef.current?.muted})`);
           })
           .catch((err) => {
-            console.warn('[Video Player] Video element failed, falling back to procedural synthesizer horror presentation:', err);
-            setUseProcedural(true);
-            playProceduralHorrorShow();
+            console.warn(`[Video Player] Video playback failed for ${src}, trying muted autoPlay fallback:`, err);
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current
+                .play()
+                .then(() => {
+                  console.log('[Video Player] Muted fallback playback succeeded.');
+                })
+                .catch((e2) => {
+                  console.warn('[Video Player] Both direct and muted video failed. Falling back to procedural horror synth:', e2);
+                  setUseProcedural(true);
+                  playProceduralHorrorShow();
+                });
+            } else {
+              setUseProcedural(true);
+              playProceduralHorrorShow();
+            }
           });
       } else {
         setUseProcedural(true);
@@ -96,7 +157,7 @@ export default function VideoDisplayPlayerPage() {
       socket.off('video:trigger_play', handleTriggerPlay);
       socket.off('video:reset', handleVideoReset);
     };
-  }, [socket]);
+  }, [socket, availableVideos, audioUnlocked]);
 
   // Audio unlock click handler
   const handleUnlockAudio = async () => {
@@ -265,6 +326,8 @@ export default function VideoDisplayPlayerPage() {
         style={{ display: isPlaying && !useProcedural ? 'block' : 'none' }}
         onEnded={handleVideoEnded}
         playsInline
+        autoPlay
+        preload="auto"
       />
 
       {/* Procedural visualizer canvas fallback */}

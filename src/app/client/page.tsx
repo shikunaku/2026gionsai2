@@ -37,23 +37,23 @@ const INITIAL_TASKS: InspectionTask[] = [
   {
     id: 1,
     title: '冷却塔メインバルブの腐食状況',
-    location: '1F エリア1 北側区画',
+    location: '1F 北側区画 (品質管理室)',
     targetDescription: '冷却配管下部のバルブジョイント部を撮影し、赤錆または液漏れの有無を記録してください。',
-    status: 'SUBMITTING',
+    status: 'UNINSPECTED',
   },
   {
     id: 2,
     title: '高圧電気制御盤の計器指示値',
-    location: '1F エリア1 主配電盤',
+    location: '1F 主配電盤室',
     targetDescription: '計器盤の中央アナログ電圧計の針の位置を撮影し、目盛りが適正範囲内にあるか記録してください。',
-    status: 'SUBMITTING',
+    status: 'UNINSPECTED',
   },
   {
     id: 3,
     title: '第2地下通路 排気ダクトの異音確認',
-    location: '1F エリア1 地下排気孔',
+    location: '1F 地下排気孔ダクト',
     targetDescription: '排気ダクトの金網フィルターを撮影し、異物の引っ掛かりや損傷がないか記録してください。',
-    status: 'SUBMITTING',
+    status: 'UNINSPECTED',
   },
 ];
 
@@ -210,13 +210,13 @@ function ClientContent() {
         phase === 'STANDBY'
           ? '待機室 (オープニング)'
           : phase === 'AREA_1_PHOTO'
-          ? 'エリア1 (3枚撮影・提出)'
+          ? '品質管理室 (3箇所点検)'
           : phase === 'ELEVATOR'
           ? 'エレベータ'
           : phase === 'AREA_2_CONVEYOR'
-          ? 'エリア2 (コンベア操作)'
+          ? '第零搬送室 (コンベア制御)'
           : phase === 'AREA_3_VIDEO'
-          ? 'エリア3 (映像再生トリガー)'
+          ? 'モニター室 (主電算モニター)'
           : '受付 (端末返却所)';
       socket.emit('device:ready', { deviceId, phase, location });
     }

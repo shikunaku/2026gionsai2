@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { getSoundEngine } from '../lib/soundEngine';
+import { getSoundEngine, SOUND_PRESETS, SoundPresetItem } from '../lib/soundEngine';
+
+export { SOUND_PRESETS };
+export type { SoundPresetItem };
 
 export function useSoundEngine() {
   const engine = getSoundEngine();

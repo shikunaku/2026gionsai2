@@ -29,7 +29,7 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar">
-        <span>[点検写真レビュー] Photo Review Queue ({submissions.length}件)</span>
+        <span>[点検写真レビュー] ({submissions.length}件)</span>
       </div>
 
       <div className="review-body">

@@ -90,12 +90,25 @@ export class AppStore {
   }
 
   public getAllDevices(): DeviceInfo[] {
+    const rolePriority: Record<string, number> = {
+      client: 1,
+      sound_node: 2,
+      elevator_display: 3,
+    };
+
     return Array.from(this.devices.values()).sort((a, b) => {
-      // Online first (socketId !== ''), then by lastSeen desc
+      // 1. 接続状態: オンラインを常に先頭、オフラインは末尾
       const aOnline = a.socketId ? 1 : 0;
       const bOnline = b.socketId ? 1 : 0;
       if (aOnline !== bOnline) return bOnline - aOnline;
-      return b.lastSeen - a.lastSeen;
+
+      // 2. ロール順 (PDA -> 音響 -> 昇降)
+      const aPriority = rolePriority[a.role || 'client'] || 99;
+      const bPriority = rolePriority[b.role || 'client'] || 99;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      // 3. 端末IDの自然昇順ソート (端末入れ替わり防止)
+      return a.deviceId.localeCompare(b.deviceId, undefined, { numeric: true, sensitivity: 'base' });
     });
   }
 

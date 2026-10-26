@@ -17,8 +17,8 @@ import { SoundNodePlayPayload } from '../../../lib/types';
 
 function SoundNodeContent() {
   const searchParams = useSearchParams();
-  const nodeId = searchParams.get('id') || 'SOUND_NODE_01';
-  const locationName = searchParams.get('loc') || '未設定エリア';
+  const [nodeId, setNodeId] = useState<string>('SOUND_NODE_01');
+  const [locationName, setLocationName] = useState<string>('未設定エリア');
 
   const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
   const { engine, unlockAudio } = useSoundEngine();
@@ -31,6 +31,36 @@ function SoundNodeContent() {
   const [isPlayingVisual, setIsPlayingVisual] = useState(false);
   const visualTimerRef = useRef<NodeJS.Timeout | number | null>(null);
 
+  // 端末IDの初期化: URLクエリ優先、無ければlocalStorage、無ければユニーク採番
+  useEffect(() => {
+    const qId = searchParams.get('id');
+    const qLoc = searchParams.get('loc');
+
+    if (qLoc) {
+      setLocationName(qLoc);
+    }
+
+    if (qId) {
+      setNodeId(qId);
+    } else {
+      // localStorage から既存の永続化IDを取得、無ければ新規生成 (例: SOUND_NODE_8421)
+      try {
+        const storedId = localStorage.getItem('sound_node_id');
+        if (storedId) {
+          setNodeId(storedId);
+        } else {
+          const rand = Math.floor(1000 + Math.random() * 9000);
+          const newId = `SOUND_NODE_${rand}`;
+          localStorage.setItem('sound_node_id', newId);
+          setNodeId(newId);
+        }
+      } catch (_) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        setNodeId(`SOUND_NODE_${rand}`);
+      }
+    }
+  }, [searchParams]);
+
   // 1. 待機開始・Autoplay制限解除ハンドラー
   const handleStartListening = useCallback(() => {
     unlockAudio();
@@ -42,7 +72,7 @@ function SoundNodeContent() {
 
   // 2. サーバーへの登録
   useEffect(() => {
-    if (!socket || !connected) return;
+    if (!socket || !connected || !nodeId) return;
 
     socket.emit('sound:register_node', {
       deviceId: nodeId,
@@ -56,6 +86,11 @@ function SoundNodeContent() {
     if (!socket) return;
 
     const handleSoundPlay = (payload: SoundNodePlayPayload) => {
+      // 個別端末指定があり、かつ自身宛てでない場合は無視
+      if (payload.targetDeviceId && payload.targetDeviceId !== nodeId) {
+        return;
+      }
+
       console.log('[SoundNode] Received sound:play command:', payload);
 
       // 音量調整

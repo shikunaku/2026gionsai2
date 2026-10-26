@@ -6,8 +6,9 @@
  * 各種端末のロール判定バッジ、バッテリー残量・充電状態、20%未満の警告表示、個別テストアクションを提供します。
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DeviceInfo, DevicePhase, SoundEffectOptions } from '../../lib/types';
+import { SOUND_PRESETS } from '../../lib/soundEngine';
 import '../../styles/admin.css';
 
 interface DeviceMonitorProps {
@@ -15,8 +16,13 @@ interface DeviceMonitorProps {
   onPhaseChange: (deviceId: string, phase: DevicePhase) => void;
   onIndividualGlitch: (deviceId: string) => void;
   onIndividualTorch: (deviceId: string) => void;
-  /** サウンドノード宛ての個別効果音テストトリガー */
-  onIndividualSound?: (deviceId: string, soundType: SoundEffectOptions['soundType']) => void;
+  /** サウンドノード宛ての個別効果音・ファイル再生トリガー */
+  onIndividualSound?: (
+    deviceId: string,
+    soundType: SoundEffectOptions['soundType'],
+    filename?: string,
+    volume?: number
+  ) => void;
 }
 
 export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
@@ -27,13 +33,60 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
   onIndividualSound,
 }) => {
   const [filterRole, setFilterRole] = useState<'all' | 'client' | 'sound_node' | 'elevator'>('all');
+  const [audioFiles, setAudioFiles] = useState<string[]>([]);
+  // サウンドノードごとの選択音源 (キー: deviceId, 値: "preset:beep" または "file:siren.mp3")
+  const [selectedSounds, setSelectedSounds] = useState<Record<string, string>>({});
 
-  const filteredDevices = devices.filter((dev) => {
-    if (filterRole === 'client') return !dev.role || dev.role === 'client';
-    if (filterRole === 'sound_node') return dev.role === 'sound_node';
-    if (filterRole === 'elevator') return dev.role === 'elevator_display' || dev.deviceId.includes('ELEVATOR');
-    return true;
-  });
+  useEffect(() => {
+    fetch('/api/audio-files')
+      .then((res) => (res.ok ? res.json() : { files: [] }))
+      .then((data) => {
+        if (Array.isArray(data.files)) {
+          setAudioFiles(data.files);
+        }
+      })
+      .catch((err) => {
+        console.warn('[DeviceMonitor] Failed to fetch audio files:', err);
+      });
+  }, []);
+
+  const handleDeviceSoundSelect = (deviceId: string, value: string) => {
+    setSelectedSounds((prev) => ({ ...prev, [deviceId]: value }));
+  };
+
+  const handleTriggerDeviceSound = (deviceId: string) => {
+    const soundKey = selectedSounds[deviceId] || 'preset:lowImpact';
+    if (soundKey.startsWith('file:')) {
+      const filename = soundKey.slice(5);
+      onIndividualSound?.(deviceId, 'file', filename, 1.5);
+    } else if (soundKey.startsWith('preset:')) {
+      const soundType = soundKey.slice(7) as SoundEffectOptions['soundType'];
+      onIndividualSound?.(deviceId, soundType, undefined, 1.5);
+    }
+  };
+
+  const filteredDevices = devices
+    .filter((dev) => {
+      if (filterRole === 'client') return !dev.role || dev.role === 'client';
+      if (filterRole === 'sound_node') return dev.role === 'sound_node';
+      if (filterRole === 'elevator') return dev.role === 'elevator_display' || dev.deviceId.includes('ELEVATOR');
+      return true;
+    })
+    .sort((a, b) => {
+      // 1. 接続状態: オンラインを常に先頭、オフラインは末尾
+      const aOnline = a.socketId ? 1 : 0;
+      const bOnline = b.socketId ? 1 : 0;
+      if (aOnline !== bOnline) return bOnline - aOnline;
+
+      // 2. 役割: PDA -> 音響 -> 昇降
+      const roleOrder: Record<string, number> = { client: 1, sound_node: 2, elevator_display: 3 };
+      const aPriority = roleOrder[a.role || 'client'] || 99;
+      const bPriority = roleOrder[b.role || 'client'] || 99;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      // 3. 端末IDの自然昇順
+      return a.deviceId.localeCompare(b.deviceId, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
   const clientCount = devices.filter((d) => !d.role || d.role === 'client').length;
   const soundNodeCount = devices.filter((d) => d.role === 'sound_node').length;
@@ -42,7 +95,7 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar" style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>[接続端末監視] Device &amp; Battery Monitor ({devices.length}台)</span>
+        <span>[接続端末監視]({devices.length}台)</span>
         <div style={{ display: 'flex', gap: '3px' }}>
           <button
             onClick={() => setFilterRole('all')}
@@ -97,6 +150,17 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                 borderStyle = { border: '2px solid #f59e0b' };
               }
 
+              // 端末カードのヘッダー表示名の整形
+              let displayId = dev.deviceId;
+              if (isSoundNode) {
+                // SOUND_NODE_8421 や sound-node-1 のような冗長なプレフィックスを短縮し、末尾の個別識別番号を明確化
+                const shortId = dev.deviceId.replace(/^SOUND_NODE_?/i, '').replace(/^sound-?/i, '');
+                displayId = `[音響] ${shortId || dev.deviceId}`;
+              } else if (isElevator) {
+                const shortId = dev.deviceId.replace(/^ELEVATOR_DISPLAY_?/i, '').replace(/^elevator_?/i, '');
+                displayId = `[昇降] ${shortId || dev.deviceId}`;
+              }
+
               return (
                 <div
                   key={dev.deviceId}
@@ -105,11 +169,10 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                 >
                   {/* Row 1: ID, Role Badge & Battery/Status */}
                   <div className="device-card-row between">
-                    <div className="device-card-id" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div className="device-card-id" title={`${dev.deviceId} (${dev.socketId ? '接続中' : '未接続'})`}>
                       <span className={`device-link-dot${onlineClass}`} />
-                      <strong className="device-id-text">
-                        {isSoundNode ? '[SOUND] ' : isElevator ? '[ELEVATOR] ' : ''}
-                        ID: {dev.deviceId}
+                      <strong className="device-id-text" title={dev.deviceId}>
+                        {displayId}
                       </strong>
                     </div>
 
@@ -117,45 +180,67 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                     <div
                       className="device-battery"
                       style={isLowBattery ? { color: '#ef4444', fontWeight: 'bold' } : undefined}
-                      title={dev.charging ? '電源接続中 (充電中)' : 'バッテリー駆動中'}
+                      title={dev.charging ? '給電中 (充電中)' : 'バッテリー駆動中'}
                     >
-                      {dev.charging ? '[CHG] ' : '[BAT] '}
-                      {dev.batteryLevel}%
-                      {isLowBattery && ' (!)'}
+                      {dev.charging ? '給:' : '残:'}{dev.batteryLevel}%
+                      {isLowBattery && '!'}
                     </div>
                   </div>
 
                   {/* 設置場所情報 */}
                   {dev.location && (
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', padding: '2px 0' }}>
-                      場所: {dev.location}
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', padding: '1px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {dev.location}
                     </div>
                   )}
 
                   {/* Row 2: 端末種別に応じた詳細情報 / 操作 */}
                   {!isSoundNode && !isElevator ? (
                     <div className="device-card-row phase">
-                      <span className="device-phase-label">Phase:</span>
+                      <span className="device-phase-label">相:</span>
                       <select
                         value={dev.phase}
                         onChange={(e) => onPhaseChange(dev.deviceId, e.target.value as DevicePhase)}
                         className="win95-inset device-phase-select"
                       >
-                        <option value="STANDBY">1: STANDBY (待機)</option>
-                        <option value="AREA_1_PHOTO">2: AREA 1 (撮影)</option>
-                        <option value="ELEVATOR">3: ELEVATOR (昇降)</option>
-                        <option value="AREA_2_CONVEYOR">4: AREA 2 (コンベア)</option>
-                        <option value="AREA_3_VIDEO">5: AREA 3 (映像)</option>
-                        <option value="RETURN">6: RETURN (返却)</option>
+                        <option value="STANDBY">1: 待機</option>
+                        <option value="AREA_1_PHOTO">2: 撮影</option>
+                        <option value="ELEVATOR">3: 昇降</option>
+                        <option value="AREA_2_CONVEYOR">4: 搬送</option>
+                        <option value="AREA_3_VIDEO">5: 映像</option>
+                        <option value="RETURN">6: 返却</option>
                       </select>
                     </div>
                   ) : isElevator ? (
-                    <div style={{ fontSize: '0.8rem', color: '#f59e0b', margin: '4px 0' }}>
-                      エレベーター発光電照端末 (全画面均等発光中)
+                    <div style={{ fontSize: '0.72rem', color: '#d97706', margin: '2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      昇降演出発光稼働中
                     </div>
                   ) : (
-                    <div style={{ fontSize: '0.8rem', color: '#38bdf8', margin: '4px 0' }}>
-                      専用音響待機中 (自動再生アンロック済)
+                    /* Sound Node: 端末別音源選択ドロップダウン */
+                    <div style={{ margin: '2px 0' }}>
+                      <select
+                        value={selectedSounds[dev.deviceId] || 'preset:lowImpact'}
+                        onChange={(e) => handleDeviceSoundSelect(dev.deviceId, e.target.value)}
+                        className="win95-inset"
+                        style={{ width: '100%', fontSize: '10px', height: '22px', padding: '1px 2px' }}
+                      >
+                        <optgroup label="── プリセット音 ──">
+                          {SOUND_PRESETS.map((p) => (
+                            <option key={`preset:${p.type}`} value={`preset:${p.type}`}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                        {audioFiles.length > 0 && (
+                          <optgroup label="── 外部音源 (audio/) ──">
+                            {audioFiles.map((f) => (
+                              <option key={`file:${f}`} value={`file:${f}`}>
+                                {f}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
                     </div>
                   )}
 
@@ -182,30 +267,24 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                     ) : isSoundNode ? (
                       <>
                         <button
+                          onClick={() => handleTriggerDeviceSound(dev.deviceId)}
+                          className="win95-btn device-action-btn"
+                          style={{ fontWeight: 'bold', color: '#0369a1' }}
+                          title="選択中の音源をこの端末単体に再生指示"
+                        >
+                          再生
+                        </button>
+                        <button
                           onClick={() => onIndividualSound?.(dev.deviceId, 'beep')}
                           className="win95-btn device-action-btn"
-                          title="テストビープ音"
+                          title="接続テスト短ビープ音"
                         >
                           テスト音
                         </button>
-                        <button
-                          onClick={() => onIndividualSound?.(dev.deviceId, 'lowImpact')}
-                          className="win95-btn device-action-btn"
-                          title="重低音ドカン"
-                        >
-                          重低音
-                        </button>
-                        <button
-                          onClick={() => onIndividualSound?.(dev.deviceId, 'geiger')}
-                          className="win95-btn device-action-btn"
-                          title="ガイガー放射線音"
-                        >
-                          ガイガー
-                        </button>
                       </>
                     ) : (
-                      <div style={{ fontSize: '0.72rem', color: '#78716c' }}>
-                        画面側は発光専用・遠隔バッテリー監視稼働中
+                      <div style={{ fontSize: '0.68rem', color: '#78716c', gridColumn: 'span 2', textAlign: 'center' }}>
+                        発光・監視中
                       </div>
                     )}
                   </div>

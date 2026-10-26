@@ -39,7 +39,7 @@ export const PhaseElevator: React.FC<PhaseElevatorProps> = ({ deviceId }) => {
           >
             エレベータに乗って
             <br />
-            地下（エリア2）に移動してください。
+            地下（第零搬送室）に移動してください。
           </div>
 
           <div
@@ -71,7 +71,7 @@ export const PhaseElevator: React.FC<PhaseElevatorProps> = ({ deviceId }) => {
           backgroundColor: '#e0ded8',
         }}
       >
-        ※ 昇降機の起動およびエリア2への移行は、運行管理システムにより遠隔で行われます。手元の端末操作は不要です。
+        ※ 昇降機の起動および第零搬送室への移行は、運行管理システムにより遠隔で行われます。手元の端末操作は不要です。
       </div>
     </div>
   );

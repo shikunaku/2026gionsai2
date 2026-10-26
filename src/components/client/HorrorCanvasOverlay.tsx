@@ -25,8 +25,16 @@ export const HorrorCanvasOverlay: React.FC<HorrorCanvasOverlayProps> = ({
     const { level, mode } = glitchOptions;
 
     const renderNoise = () => {
-      const w = (canvas.width = window.innerWidth);
-      const h = (canvas.height = window.innerHeight);
+      const w = window.innerWidth || canvas.clientWidth || 0;
+      const h = window.innerHeight || canvas.clientHeight || 0;
+
+      if (!w || !h || isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+        animId = requestAnimationFrame(renderNoise);
+        return;
+      }
+
+      canvas.width = w;
+      canvas.height = h;
 
       ctx.clearRect(0, 0, w, h);
 

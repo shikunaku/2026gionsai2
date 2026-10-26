@@ -92,6 +92,8 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
 
   const getStatusBadge = (status: ReviewStatus) => {
     switch (status) {
+      case 'UNINSPECTED':
+        return <span className="zone1-badge idle">[未実施]</span>;
       case 'SUBMITTING':
         return <span className="zone1-badge submitting">[送信中]</span>;
       case 'PENDING':
@@ -113,7 +115,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       {/* Task List Window */}
       <div className="win95-window">
         <div className="win95-titlebar zone1-titlebar">
-          <span className="zone1-titlebar-text">[ZONE 1] 品質管理室 - 点検対象選択</span>
+          <span className="zone1-titlebar-text">品質管理室 - 点検対象選択</span>
           <span className="zone1-titlebar-tag">ID: {deviceId}</span>
         </div>
         <div className="zone1-task-list-body">
@@ -187,7 +189,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       {allApproved && onProceedZone2 && (
         <div className="zone1-proceed">
           <button onClick={onProceedZone2} className="win95-btn zone1-proceed-btn">
-            全点検合格: エリア3 エレベータ へ進む -&gt;
+            全点検合格: エレベータ へ進む -&gt;
           </button>
         </div>
       )}

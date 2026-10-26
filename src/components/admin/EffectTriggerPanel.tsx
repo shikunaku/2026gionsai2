@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { DevicePhase, TorchEffectOptions } from '../../lib/types';
+import React, { useState, useEffect } from 'react';
+import { DeviceInfo, DevicePhase, TorchEffectOptions } from '../../lib/types';
 import '../../styles/admin.css';
 
 type GlitchMode = 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
 
 interface EffectTriggerPanelProps {
+  devices?: DeviceInfo[];
   onOverrideAllPhase: (phase: DevicePhase) => void;
   onTriggerGlitch: (options: {
     level: number;
@@ -15,8 +16,14 @@ interface EffectTriggerPanelProps {
     vibrate: boolean;
   }) => void;
   onTriggerSound: (soundType: string, level?: number) => void;
-  /** 全サウンド専用ノード (Sound Nodes) に対する一斉演出再生 */
-  onTriggerSoundNode?: (soundType: string, level?: number, volume?: number, filename?: string) => void;
+  /** サウンド専用ノード (Sound Nodes) に対する演出再生 (全体または個別端末) */
+  onTriggerSoundNode?: (
+    soundType: string,
+    level?: number,
+    volume?: number,
+    filename?: string,
+    targetDeviceId?: string
+  ) => void;
   /** MP3/音声ファイル再生トリガー */
   onTriggerFileSound?: (filename: string, volume?: number, loop?: boolean) => void;
   onTriggerTorch: (options: TorchEffectOptions) => void;
@@ -52,6 +59,7 @@ const SOUND_BUTTONS: { type: string; label: string; level?: number }[] = [
 const VOLUME_STEPS = [1.0, 1.5, 2.0, 2.5];
 
 export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
+  devices = [],
   onOverrideAllPhase,
   onTriggerGlitch,
   onTriggerSound,
@@ -72,6 +80,26 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   const [glitchMode, setGlitchMode] = useState<GlitchMode>('creepy');
   const [selectedVolume, setSelectedVolume] = useState<number>(1.0);
   const [customFileName, setCustomFileName] = useState<string>('alarm.mp3');
+  const [targetNodeId, setTargetNodeId] = useState<string>('ALL');
+  const [audioFiles, setAudioFiles] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/audio-files')
+      .then((res) => (res.ok ? res.json() : { files: [] }))
+      .then((data) => {
+        if (Array.isArray(data.files)) {
+          setAudioFiles(data.files);
+          if (data.files.length > 0) {
+            setCustomFileName(data.files[0]);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[EffectTriggerPanel] Failed to fetch audio files:', err);
+      });
+  }, []);
+
+  const soundNodeDevices = devices.filter((d) => d.role === 'sound_node');
 
   const handleVolumeChange = (vol: number) => {
     setSelectedVolume(vol);
@@ -81,7 +109,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar effect-titlebar">
-        <span>[演出・機材制御] Phase &amp; Equipment Remote</span>
+        <span>[演出・機材制御]</span>
       </div>
 
       <div className="effect-body">
@@ -99,28 +127,28 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             <button
               onClick={() => onOverrideAllPhase('AREA_1_PHOTO')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ2: エリア1 撮影提出"
+              title="フェーズ2: 品質管理室 撮影提出"
             >
               2.写真
             </button>
             <button
               onClick={() => onOverrideAllPhase('ELEVATOR')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ3: エレベータ"
+              title="フェーズ3: エレベータ昇降"
             >
               3.昇降
             </button>
             <button
               onClick={() => onOverrideAllPhase('AREA_2_CONVEYOR')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ4: エリア2 コンベア"
+              title="フェーズ4: 第零搬送室 コンベア"
             >
               4.コンベア
             </button>
             <button
               onClick={() => onOverrideAllPhase('AREA_3_VIDEO')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ5: エリア3 映像トリガー"
+              title="フェーズ5: モニター室 映像トリガー"
             >
               5.映像
             </button>
@@ -179,7 +207,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
 
         {/* Dedicated Conveyor & Video Manual Panel */}
         <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">コンベア操作 &amp; エリア3映像テスト</legend>
+          <legend className="win95-groupbox-legend">コンベア操作 &amp; モニター室映像テスト</legend>
           <div className="effect-grid cols-3">
             <button
               onClick={() => onConveyorControl && onConveyorControl('forward')}
@@ -208,7 +236,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             className="win95-btn"
             style={{ width: '100%', marginTop: '4px', padding: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fff', backgroundColor: '#6a1b9a' }}
           >
-            エリア3 映像再生トリガー [TRIGGER_VIDEO_PLAY]
+            モニター室 映像再生トリガー
           </button>
         </fieldset>
 
@@ -258,7 +286,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               }
               className="win95-btn effect-btn-execute"
             >
-              全端末に妨害発火 [EXECUTE]
+              全端末に妨害発火
             </button>
           </div>
         </fieldset>
@@ -285,61 +313,100 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             ))}
           </div>
 
-          {/* 専用サウンドノード (Sound Nodes) 一斉発火 */}
+          {/* 専用サウンドノード (Sound Nodes) 再生制御 */}
           {onTriggerSoundNode && (
             <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #444' }}>
-              <div style={{ fontSize: '11px', color: '#38bdf8', marginBottom: '4px', fontWeight: 'bold' }}>
-                全音響専用ノード (Sound Nodes) 一斉演出:
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 'bold' }}>
+                  音響ノード再生トリガー:
+                </span>
+                {soundNodeDevices.length > 0 && (
+                  <select
+                    value={targetNodeId}
+                    onChange={(e) => setTargetNodeId(e.target.value)}
+                    className="win95-inset"
+                    style={{ fontSize: '10px', height: '20px', padding: '0 4px', maxWidth: '140px' }}
+                    title="再生対象ノードを選択（全体または単一端末）"
+                  >
+                    <option value="ALL">全音響ノード (一斉)</option>
+                    {soundNodeDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.deviceId}{d.location ? ` (${d.location})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
-              <div className="effect-grid cols-3">
+
+              {/* プリセット発火ボタン */}
+              <div className="effect-grid cols-3" style={{ marginBottom: '6px' }}>
                 <button
-                  onClick={() => onTriggerSoundNode('lowImpact', 5, 2.0)}
+                  onClick={() => onTriggerSoundNode('lowImpact', 5, selectedVolume, undefined, targetNodeId === 'ALL' ? undefined : targetNodeId)}
                   className="win95-btn"
                   style={{ fontSize: '10px', color: '#ffb4b4', backgroundColor: '#3b1c1c' }}
-                  title="全サウンドノードで轟音サブベースを大音量再生"
+                  title="轟音サブベースを大音量再生"
                 >
                   会場轟音 (衝撃)
                 </button>
                 <button
-                  onClick={() => onTriggerSoundNode('geiger', 5, 1.8)}
+                  onClick={() => onTriggerSoundNode('geiger', 5, selectedVolume, undefined, targetNodeId === 'ALL' ? undefined : targetNodeId)}
                   className="win95-btn"
                   style={{ fontSize: '10px', color: '#ffeb3b', backgroundColor: '#3b381c' }}
-                  title="全サウンドノードで激しいガイガー音"
+                  title="激しいガイガー放射線音"
                 >
-                  全館ガイガー
+                  ガイガー異変
                 </button>
                 <button
-                  onClick={() => onTriggerSoundNode('powerDown', 3, 2.0)}
+                  onClick={() => onTriggerSoundNode('powerDown', 3, selectedVolume, undefined, targetNodeId === 'ALL' ? undefined : targetNodeId)}
                   className="win95-btn"
                   style={{ fontSize: '10px', color: '#90caf9', backgroundColor: '#1c283b' }}
-                  title="全館電源喪失音"
+                  title="電源喪失音"
                 >
                   電源喪失音
                 </button>
               </div>
-            </div>
-          )}
 
-          {/* MP3音声ファイル (public/audio/) 再生トリガー */}
-          {onTriggerFileSound && (
-            <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #444' }}>
-              <div style={{ fontSize: '11px', color: '#a5b4fc', marginBottom: '4px', fontWeight: 'bold' }}>
-                MP3ファイル再生 (public/audio/):
+              {/* MP3音声ファイル (public/audio/) 選択または入力して再生 */}
+              <div style={{ fontSize: '10px', color: '#a5b4fc', marginBottom: '2px', fontWeight: 'bold' }}>
+                音声ファイル (audio/):
               </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <input
-                  type="text"
-                  value={customFileName}
-                  onChange={(e) => setCustomFileName(e.target.value)}
-                  placeholder="例: siren.mp3"
-                  className="win95-input"
-                  style={{ flex: 1, fontSize: '10px', padding: '2px 6px' }}
-                />
+              <div style={{ display: 'flex', gap: '3px' }}>
+                {audioFiles.length > 0 ? (
+                  <select
+                    value={customFileName}
+                    onChange={(e) => setCustomFileName(e.target.value)}
+                    className="win95-inset"
+                    style={{ flex: 1, fontSize: '10px', height: '24px', padding: '1px 4px' }}
+                  >
+                    {audioFiles.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={customFileName}
+                    onChange={(e) => setCustomFileName(e.target.value)}
+                    placeholder="例: siren.mp3"
+                    className="win95-input"
+                    style={{ flex: 1, fontSize: '10px', padding: '2px 4px', height: '24px' }}
+                  />
+                )}
                 <button
-                  onClick={() => onTriggerFileSound(customFileName.trim(), selectedVolume, false)}
+                  onClick={() => {
+                    const file = customFileName.trim();
+                    if (!file) return;
+                    if (targetNodeId === 'ALL') {
+                      onTriggerFileSound?.(file, selectedVolume, false);
+                    } else {
+                      onTriggerSoundNode('file', 3, selectedVolume, file, targetNodeId);
+                    }
+                  }}
                   className="win95-btn"
-                  style={{ fontSize: '10px', fontWeight: 'bold', color: '#c7d2fe', backgroundColor: '#312e81' }}
-                  title="public/audio/ 配下のMP3ファイルを全ノード・端末で再生"
+                  style={{ fontSize: '10px', fontWeight: 'bold', color: '#c7d2fe', backgroundColor: '#312e81', minWidth: '70px', height: '24px' }}
+                  title="選択した音声ファイルを指定ノード（または全体）で再生"
                 >
                   ファイル再生
                 </button>
@@ -406,7 +473,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             onClick={onEmergencyAllLight}
             className="win95-btn effect-btn-emergency"
           >
-            非常用全照明発火 [EMERGENCY LIGHT]
+            非常用全照明発火
           </button>
         </div>
       </div>

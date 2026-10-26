@@ -31,7 +31,7 @@ export const PhaseArea2Conveyor: React.FC<PhaseArea2ConveyorProps> = ({
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}>
-          <span>[エリア 4] エリア2: 第零搬送コンベア制御</span>
+          <span>第零搬送室: 搬送コンベア制御</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
@@ -119,10 +119,10 @@ export const PhaseArea2Conveyor: React.FC<PhaseArea2ConveyorProps> = ({
       {/* Live Log */}
       <div className="win95-inset-dark" style={{ marginTop: '8px', padding: '8px', fontSize: '11px', color: '#a5d6a7' }}>
         <div>[02:18:10] コンベア駆動回路: 通電中</div>
-        <div>[02:18:24] 搬送対象の回収が完了したら、エリア3へ進んでください。</div>
+        <div>[02:18:24] 搬送対象の回収が完了したら、モニター室へ進んでください。</div>
       </div>
 
-      {/* Advance to Area 3 Button */}
+      {/* Advance to Monitor Room Button */}
       <div style={{ marginTop: '14px' }}>
         <button
           onClick={onProceedNext}
@@ -136,7 +136,7 @@ export const PhaseArea2Conveyor: React.FC<PhaseArea2ConveyorProps> = ({
             color: '#fff',
           }}
         >
-          エリア3 (大型モニター区画) へ進む -&gt;
+          モニター室 (主電算モニター区画) へ進む -&gt;
         </button>
       </div>
     </div>

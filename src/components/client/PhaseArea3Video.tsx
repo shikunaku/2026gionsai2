@@ -3,6 +3,14 @@
 import React, { useState } from 'react';
 import '../../styles/client.css';
 
+/**
+ * @file PhaseArea3Video.tsx
+ * @description エリア3（主電算モニター）動画再生トリガーUI。
+ * 押下時に WebSocket（`video:trigger_play`）をブロードキャストし、
+ * 別置端末（`/display/video`）にて `public/videos/` 配下の動画（例: `2026-09-11 01-07-05.mp4` または `area3.mp4`）
+ * がフルスクリーン再生されます。動画ファイル未配置時はプロシージャル合成シンセサイザー画面へと自動フォールバックします。
+ */
+
 interface PhaseArea3VideoProps {
   deviceId: string;
   onTriggerVideo: () => void;
@@ -28,7 +36,7 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}>
-          <span>[エリア 5] エリア3: 主電算モニター機動ギミック</span>
+          <span>モニター室: 主電算モニター機動ギミック</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
@@ -87,7 +95,7 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
           color: triggered ? '#ef5350' : '#ba68c8',
         }}
       >
-        <div>[SYSTEM] エリア3映像再生用別端末へ TRIGGER_VIDEO_PLAY をブロードキャストします。</div>
+        <div>[SYSTEM] モニター室映像端末へ TRIGGER_VIDEO_PLAY をブロードキャストします。</div>
         {triggered && <div>[WARNING] 異常シグナル受信。現場の大型モニターを確認してください。</div>}
       </div>
     </div>

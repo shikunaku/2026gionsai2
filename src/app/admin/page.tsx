@@ -15,7 +15,6 @@ import { ReconnectingModal } from '../../components/common/ReconnectingModal';
 import { DeviceMonitor } from '../../components/admin/DeviceMonitor';
 import { PhotoReviewQueue } from '../../components/admin/PhotoReviewQueue';
 import { EffectTriggerPanel } from '../../components/admin/EffectTriggerPanel';
-import { CastManualViewer } from '../../components/admin/CastManualViewer';
 import {
   DeviceInfo,
   DevicePhase,
@@ -73,19 +72,32 @@ export default function AdminPage() {
     triggerEffect('torch', { pattern: '1,0,0,1,0,0,1,0,0,0', intervalMs: 120 } as TorchEffectOptions, deviceId);
   };
 
-  /** サウンドノード宛ての個別テスト音再生 */
-  const handleIndividualSound = (deviceId: string, soundType: SoundEffectOptions['soundType']) => {
+  /** サウンドノード宛ての個別効果音・ファイル再生 */
+  const handleIndividualSound = (
+    deviceId: string,
+    soundType: SoundEffectOptions['soundType'],
+    filename?: string,
+    volume = 1.5
+  ) => {
     socket?.emit('sound:trigger', {
       targetDeviceId: deviceId,
       soundType,
-      volume: 1.5,
+      filename,
+      volume,
       level: 4,
     });
   };
 
-  /** 全サウンド専用ノード (Sound Nodes) に対する一斉演出発火 */
-  const handleTriggerSoundNode = (soundType: string, level = 3, volume = 1.5, filename?: string) => {
+  /** サウンド専用ノード (Sound Nodes) に対する演出発火 (一斉または個別指定) */
+  const handleTriggerSoundNode = (
+    soundType: string,
+    level = 3,
+    volume = 1.5,
+    filename?: string,
+    targetDeviceId?: string
+  ) => {
     socket?.emit('sound:trigger', {
+      targetDeviceId,
       soundType: soundType as SoundEffectOptions['soundType'],
       filename,
       volume,
@@ -205,7 +217,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Main 4-Column Working Area */}
+      {/* Main 3-Column Working Area (端末監視, 写真審査, 演出制御) */}
       <div className="admin-workspace">
         <div className="app-column">
           <DeviceMonitor
@@ -222,11 +234,8 @@ export default function AdminPage() {
         </div>
 
         <div className="app-column">
-          <CastManualViewer pdfUrl="/cast-manual.pdf" />
-        </div>
-
-        <div className="app-column">
           <EffectTriggerPanel
+            devices={devices}
             onOverrideAllPhase={handleOverrideAllPhase}
             onTriggerGlitch={handleTriggerGlitch}
             onTriggerSound={handleTriggerSound}
