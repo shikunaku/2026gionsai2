@@ -102,19 +102,44 @@
   font-size: 10px;
 }
 
-/* ===== PhaseInit ===== */
-.phase-init {
+/* ===== 共通Phaseコンテナ (全フェーズ統一レイアウト) ===== */
+.phase-container,
+.phase-init,
+.phase-zone1,
+.phase-zone2,
+.phase-elevator,
+.phase-area2-conveyor,
+.phase-area3-video,
+.phase-panic-escape,
+.phase-return {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background-color: #c7c4bd;
   color: #27292e;
   box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   gap: 10px;
 }
 
+.phase-container .win95-window,
+.phase-init .win95-window,
+.phase-zone1 .win95-window,
+.phase-elevator .win95-window,
+.phase-area2-conveyor .win95-window,
+.phase-area3-video .win95-window,
+.phase-panic-escape .win95-window,
+.phase-return .win95-window {
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* ===== PhaseInit ===== */
 .win95-window.phase-init-window {
   width: 100%;
   flex-shrink: 0;
@@ -259,17 +284,6 @@
 }
 
 /* ===== PhaseZone1 ===== */
-.phase-zone1 {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 10px 12px;
-  background-color: #c7c4bd;
-  color: #27292e;
-  box-sizing: border-box;
-  overflow-y: auto;
-  gap: 8px;
-}
 
 .phase-zone1 .win95-window {
   flex-shrink: 0;
@@ -425,17 +439,6 @@
 }
 
 /* ===== PhaseZone2 ===== */
-.phase-zone2 {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 10px 12px;
-  background-color: #c7c4bd;
-  color: #27292e;
-  box-sizing: border-box;
-  overflow-y: auto;
-  gap: 8px;
-}
 
 .phase-zone2 .win95-window {
   flex-shrink: 0;

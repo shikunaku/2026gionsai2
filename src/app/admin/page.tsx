@@ -142,7 +142,7 @@ export default function AdminPage() {
 
   const handleTriggerShutdown = () => triggerEffect('shutdown', {});
 
-  // 機材・エレベーター・映像ハンドラー
+  // 機材・エレベータ・映像ハンドラー
   const handleElevatorSetFloor = (floor: 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF') => {
     socket?.emit('elevator:set_floor', { floor });
   };
@@ -161,6 +161,10 @@ export default function AdminPage() {
 
   const handleTriggerVideoPlay = () => {
     socket?.emit('video:trigger_play', {});
+  };
+
+  const handleTriggerPanic = () => {
+    socket?.emit('panic:trigger', { reason: 'ADMIN_MANUAL_TRIGGER' });
   };
 
   return (
@@ -191,6 +195,11 @@ export default function AdminPage() {
           <Link href="/admin" className="app-nav-link">
             <button className="win95-btn app-nav-btn active" title="管理コンソール（現在の画面）">
               [管理コンソール]
+            </button>
+          </Link>
+          <Link href="/admin/cctv" className="app-nav-link" target="_blank">
+            <button className="win95-btn app-nav-btn" title="監視カメラ専用モニタリング画面 (別タブ)">
+              [監視CCTV]
             </button>
           </Link>
           <Link href="/display/sound" className="app-nav-link" target="_blank">
@@ -236,6 +245,7 @@ export default function AdminPage() {
         <div className="app-column">
           <EffectTriggerPanel
             devices={devices}
+            equipments={equipments}
             onOverrideAllPhase={handleOverrideAllPhase}
             onTriggerGlitch={handleTriggerGlitch}
             onTriggerSound={handleTriggerSound}
@@ -245,6 +255,7 @@ export default function AdminPage() {
             onSetVolume={handleSetVolume}
             onEmergencyAllLight={handleEmergencyAllLight}
             onTriggerShutdown={handleTriggerShutdown}
+            onTriggerPanic={handleTriggerPanic}
             onElevatorSetFloor={handleElevatorSetFloor}
             onElevatorTriggerMove={handleElevatorTriggerMove}
             onElevatorGlitch={handleElevatorGlitch}

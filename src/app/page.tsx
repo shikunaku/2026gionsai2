@@ -35,6 +35,13 @@ const PORTAL_CARDS = [
     launchLabel: 'エレベータ表示を起動 (/elevator-display) ->',
   },
   {
+    key: 'cctv',
+    href: '/admin/cctv',
+    title: '[監視] 監視カメラ CCTV モニター',
+    description: '現場配置のカメラ3台（品質管理室/通路・EV前/製造ライン）のWebRTC常時モニタリング。遠隔ライト操作・3分割/フォーカス切替対応。',
+    launchLabel: 'CCTV モニターを起動 (/admin/cctv) ->',
+  },
+  {
     key: 'video',
     href: '/display/video',
     title: '[演出] エリア3 映像再生用端末',

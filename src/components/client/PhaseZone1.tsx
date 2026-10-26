@@ -99,7 +99,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
       case 'PENDING':
         return <span className="zone1-badge pending">[審査中]</span>;
       case 'APPROVED':
-        return <span className="zone1-badge approved">[合格 済]</span>;
+        return <span className="zone1-badge approved">[合格済]</span>;
       case 'REJECTED':
         return <span className="zone1-badge rejected">[要再点検]</span>;
       default:
@@ -111,7 +111,7 @@ export const PhaseZone1: React.FC<PhaseZone1Props> = ({
   const isCurrentApproved = currentTask.status === 'APPROVED';
 
   return (
-    <div className="phase-zone1">
+    <div className="phase-zone1 phase-container">
       {/* Task List Window */}
       <div className="win95-window">
         <div className="win95-titlebar zone1-titlebar">

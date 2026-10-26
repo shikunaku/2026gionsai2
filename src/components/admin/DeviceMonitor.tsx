@@ -2,7 +2,7 @@
 
 /**
  * @file DeviceMonitor.tsx
- * @description 管理画面における接続端末（参加者PDA、サウンドノード、エレベーター電照端末）のリアルタイム監視コンポーネント。
+ * @description 管理画面における接続端末（参加者PDA、サウンドノード、エレベータ電照端末）のリアルタイム監視コンポーネント。
  * 各種端末のロール判定バッジ、バッテリー残量・充電状態、20%未満の警告表示、個別テストアクションを提供します。
  */
 
@@ -204,11 +204,12 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                         className="win95-inset device-phase-select"
                       >
                         <option value="STANDBY">1: 待機</option>
-                        <option value="AREA_1_PHOTO">2: 撮影</option>
+                        <option value="AREA_1_PHOTO">2: 写真</option>
                         <option value="ELEVATOR">3: 昇降</option>
-                        <option value="AREA_2_CONVEYOR">4: 搬送</option>
+                        <option value="AREA_2_CONVEYOR">4: ライン</option>
                         <option value="AREA_3_VIDEO">5: 映像</option>
-                        <option value="RETURN">6: 返却</option>
+                        <option value="PANIC_ESCAPE">6: 退避</option>
+                        <option value="RETURN">7: 返却</option>
                       </select>
                     </div>
                   ) : isElevator ? (

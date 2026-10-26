@@ -23,7 +23,7 @@ export interface McuMessage {
 /** 搬送コンベア制御アクション */
 export type ConveyorAction = 'forward' | 'reverse' | 'stop';
 
-/** エレベーターフロア状態 */
+/** エレベータフロア状態 */
 export type ElevatorFloor = 'FLOOR_1' | 'FLOOR_B1' | 'MOVING';
 
 // ============================================================================
@@ -157,7 +157,7 @@ export class McuManager {
   }
 
   /**
-   * エレベーター演出のフロア移動状態をマイコン（インジケータLED・モーター演出等）に通知します。
+   * エレベータ演出のフロア移動状態をマイコン（インジケータLED・モーター演出等）に通知します。
    *
    * @param {ElevatorFloor} targetFloor 階層状態 ('FLOOR_1' | 'FLOOR_B1' | 'MOVING')
    */

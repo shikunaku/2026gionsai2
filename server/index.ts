@@ -2,7 +2,7 @@
  * @file index.ts
  * @description アトラクション統合サーバーのエントリーポイント。
  * Next.js (App Router) カスタムサーバー、HTTPS/HTTP終端、Socket.IO WebSocket通信、
- * エレベーター演出シーケンス、機材制御(MCU)、写真審査、緊急時一斉点灯を統括します。
+ * エレベータ演出シーケンス、機材制御(MCU)、写真審査、緊急時一斉点灯を統括します。
  */
 
 import express from 'express';
@@ -23,6 +23,10 @@ import {
   TorchEffectOptions,
   SoundEffectOptions,
   EquipmentItem,
+  CctvCameraId,
+  CctvSignalPayload,
+  CctvLightPayload,
+  CctvCameraStatusPayload,
 } from '../src/lib/types';
 
 // ============================================================================
@@ -31,11 +35,11 @@ import {
 
 /** 演出シーケンスのタイミング設定 (ミリ秒) */
 export const EFFECT_TIMINGS = {
-  /** エレベーターが1FからB1Fへの移動に要する時間 (3.5秒) */
+  /** エレベータが1FからB1Fへの移動に要する時間 (3.5秒) */
   ELEVATOR_MOVE_DURATION_MS: 3500,
-  /** エレベーター到着時の画面グリッチ・明滅演出時間 (1.2秒) */
+  /** エレベータ到着時の画面グリッチ・明滅演出時間 (1.2秒) */
   ELEVATOR_ARRIVAL_GLITCH_DURATION_MS: 1200,
-  /** デフォルトのエレベーター単発グリッチ時間 (1.5秒) */
+  /** デフォルトのエレベータ単発グリッチ時間 (1.5秒) */
   ELEVATOR_DEFAULT_GLITCH_DURATION_MS: 1500,
   /** 画像転送用最大バッファサイズ (20MB) */
   MAX_HTTP_BUFFER_SIZE_BYTES: 2e7,
@@ -98,6 +102,12 @@ async function main() {
     maxHttpBufferSize: EFFECT_TIMINGS.MAX_HTTP_BUFFER_SIZE_BYTES,
   });
 
+  /** CCTV 監視カメラ接続台帳 (cam1, cam2, cam3) */
+  const cctvCameras = new Map<
+    CctvCameraId,
+    { socketId: string; deviceId?: string; lightOn: boolean; batteryLevel?: number | string }
+  >();
+
   /** 管理コンソール画面 (Admin) に最新の全体状態を一括同期 */
   const broadcastAdminState = () => {
     io.emit('admin:state_sync', {
@@ -121,8 +131,8 @@ async function main() {
       }
       const dev = store.registerDevice(deviceId, socket.id, phase, location, role);
       console.log(`[Socket] Device ready: ${deviceId} (Role: ${role}, Phase: ${dev.phase}, Loc: ${location || 'N/A'})`);
-      
-      // 接続端末へ現在のエレベーター状態を初期配信
+
+      // 接続端末へ現在のエレベータ状態を初期配信
       socket.emit('elevator:state', store.getElevatorState());
       broadcastAdminState();
     });
@@ -162,7 +172,7 @@ async function main() {
     });
 
     // ------------------------------------------------------------------------
-    // C. 機材制御・エレベーター・演出連動
+    // C. 機材制御・エレベータ・演出連動
     // ------------------------------------------------------------------------
 
     // 個別機材の直接トグル操作
@@ -176,49 +186,85 @@ async function main() {
       broadcastAdminState();
     });
 
-    // 搬送コンベア制御
-    socket.on('conveyor:control', ({ action, speed, deviceId }) => {
-      console.log(`[Socket] Conveyor control received: ${action} (from: ${deviceId || socket.id})`);
-      mcuManager.handleConveyorControl(action, speed);
-      const eq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
-      if (eq) {
-        io.emit('equipment:updated', eq);
+    // 搬送コンベア制御（テスト稼働・自動停止タイマー対応）
+    socket.on('conveyor:control', ({ action, speed, durationMs = 6000, deviceId }) => {
+      console.log(`[Socket] Conveyor control received: ${action} (from: ${deviceId || socket.id}, duration: ${durationMs}ms)`);
+
+      if (action === 'forward' || action === 'reverse' || action === 'test_run') {
+        const driveAction = action === 'reverse' ? 'reverse' : 'forward';
+        mcuManager.handleConveyorControl(driveAction, speed);
+        store.updateEquipmentState('eq_conveyor_01', true);
+        const eq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+        if (eq) {
+          io.emit('equipment:updated', eq);
+        }
+        broadcastAdminState();
+
+        // 指定秒数後に自動停止（管理者介入不要）
+        setTimeout(() => {
+          console.log(`[Socket] Conveyor auto-stop timer fired after ${durationMs}ms`);
+          mcuManager.handleConveyorControl('stop');
+          store.updateEquipmentState('eq_conveyor_01', false);
+          const stopEq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+          if (stopEq) {
+            io.emit('equipment:updated', stopEq);
+          }
+          broadcastAdminState();
+        }, durationMs);
+      } else {
+        mcuManager.handleConveyorControl('stop');
+        store.updateEquipmentState('eq_conveyor_01', false);
+        const eq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+        if (eq) {
+          io.emit('equipment:updated', eq);
+        }
+        broadcastAdminState();
       }
+    });
+
+    // エレベータ主電源投入
+    socket.on('elevator:power', ({ powerOn, deviceId }) => {
+      console.log(`[Socket] Elevator power toggled: ${powerOn} (by: ${deviceId || socket.id})`);
+      const current = store.getElevatorState();
+      store.setElevatorState({ ...current, powerOn });
+      io.emit('elevator:power', { powerOn });
+      io.emit('elevator:state', { ...current, powerOn });
       broadcastAdminState();
     });
 
-    // エレベーターフロアの直接指定
-    socket.on('elevator:set_floor', ({ floor, glitch }) => {
+    // エレベータフロアの直接指定
+    socket.on('elevator:set_floor', ({ floor, glitch, powerOn }) => {
       console.log(`[Socket] Elevator floor set: ${floor}`);
-      store.setElevatorState({ floor, glitch });
-      io.emit('elevator:state', { floor, glitch });
+      const currentPower = powerOn !== undefined ? powerOn : store.getElevatorState().powerOn;
+      store.setElevatorState({ floor, glitch, powerOn: currentPower });
+      io.emit('elevator:state', { floor, glitch, powerOn: currentPower });
       if (floor === 'FLOOR_1' || floor === 'FLOOR_B1' || floor === 'MOVING') {
         mcuManager.handleElevatorMove(floor);
       }
       broadcastAdminState();
     });
 
-    // エレベーター移動演出シーケンス (1F -> B1F 下降シミュレーション)
+    // エレベータ移動演出シーケンス (1F -> B1F 下降シミュレーション)
     socket.on('elevator:trigger_move', ({ from = 'FLOOR_1', to = 'FLOOR_B1', deviceId }) => {
       console.log(`[Socket] Elevator sequence triggered from ${from} -> ${to} (by: ${deviceId || socket.id})`);
-      
-      // 1. 移動開始: MCUとエレベーター表示画面にMOVINGを通知
+
+      // 1. 移動開始: MCUとエレベータ表示画面にMOVINGを通知
       mcuManager.handleElevatorMove('MOVING');
-      store.setElevatorState({ floor: 'MOVING' });
-      io.emit('elevator:state', { floor: 'MOVING' });
+      store.setElevatorState({ floor: 'MOVING', powerOn: true });
+      io.emit('elevator:state', { floor: 'MOVING', powerOn: true });
       broadcastAdminState();
 
       // 2. 移動時間待機後、到着時のグリッチ演出と目標階層を適用
       setTimeout(() => {
         io.emit('elevator:glitch', { duration: EFFECT_TIMINGS.ELEVATOR_ARRIVAL_GLITCH_DURATION_MS });
-        store.setElevatorState({ floor: to, glitch: true });
-        io.emit('elevator:state', { floor: to, glitch: true });
+        store.setElevatorState({ floor: to, glitch: true, powerOn: true });
+        io.emit('elevator:state', { floor: to, glitch: true, powerOn: true });
         mcuManager.handleElevatorMove(to);
         broadcastAdminState();
       }, EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS);
     });
 
-    // エレベーター単発グリッチ演出
+    // エレベータ単発グリッチ演出
     socket.on('elevator:trigger_glitch', ({ duration = EFFECT_TIMINGS.ELEVATOR_DEFAULT_GLITCH_DURATION_MS } = {}) => {
       console.log(`[Socket] Elevator glitch triggered (${duration}ms)`);
       io.emit('elevator:glitch', { duration });
@@ -232,6 +278,22 @@ async function main() {
 
     socket.on('video:ended', ({ deviceId } = {}) => {
       console.log(`[Socket] Video ended on player terminal (reporter: ${deviceId || socket.id})`);
+      broadcastAdminState();
+    });
+
+    // パニック演出トリガー（ビデオ怪異タイムスタンプ検知またはAdmin手動）
+    socket.on('panic:trigger', (payload) => {
+      console.log('[Socket] CRITICAL PANIC TRIGGERED!', payload);
+      // 全端末へパニックイベントをブロードキャスト
+      io.emit('panic:trigger', payload || {});
+
+      // 参加中端末を自動で PANIC_ESCAPE フェーズへ遷移
+      for (const dev of store.getAllDevices()) {
+        if (dev.phase !== 'STANDBY' && dev.role === 'client') {
+          store.updateDevice(dev.deviceId, { phase: 'PANIC_ESCAPE' });
+          io.to(`device:${dev.deviceId}`).emit('phase:update', { phase: 'PANIC_ESCAPE', deviceId: dev.deviceId });
+        }
+      }
       broadcastAdminState();
     });
 
@@ -409,8 +471,115 @@ async function main() {
       }
     });
 
+    // ------------------------------------------------------------------------
+    // F. CCTV 監視カメラ WebRTCシグナリング & 遠隔ライト制御
+    // ------------------------------------------------------------------------
+
+    // カメラ端末（配信側）の登録
+    socket.on('cctv:register_camera', ({ camId, deviceId }) => {
+      console.log(`[CCTV] Camera registered: ${camId} (socket: ${socket.id}, deviceId: ${deviceId || 'N/A'})`);
+      socket.join(`cctv_camera:${camId}`);
+      cctvCameras.set(camId, { socketId: socket.id, deviceId, lightOn: false });
+
+      // ビューアーへカメラがオンラインになったことを通知
+      const statusPayload: CctvCameraStatusPayload = { camId, online: true, lightOn: false };
+      io.to('cctv_viewers').emit('cctv:status', statusPayload);
+    });
+
+    // CCTV監視ダッシュボード（受信側）の登録
+    socket.on('cctv:register_viewer', () => {
+      socket.join('cctv_viewers');
+      console.log(`[CCTV] Viewer registered: ${socket.id}`);
+
+      // 現在の全カメラステータスを即時返信
+      const allStatus: CctvCameraStatusPayload[] = (['cam1', 'cam2', 'cam3'] as CctvCameraId[]).map((id) => {
+        const cam = cctvCameras.get(id);
+        return {
+          camId: id,
+          online: !!cam,
+          lightOn: cam?.lightOn ?? false,
+          batteryLevel: cam?.batteryLevel,
+        };
+      });
+      socket.emit('cctv:all_status', allStatus);
+
+      // 各接続中カメラにビューアー準備完了シグナルを通知 (再接続・ストリーム開始促進)
+      for (const [camId] of cctvCameras.entries()) {
+        io.to(`cctv_camera:${camId}`).emit('cctv:signal', {
+          camId,
+          type: 'viewer_ready',
+          senderSocketId: socket.id,
+        });
+      }
+    });
+
+    // WebRTCシグナリング（SDP offer/answer, ICE candidate）の中継
+    socket.on('cctv:signal', (payload: CctvSignalPayload) => {
+      const { camId, targetSocketId, type } = payload;
+      // 送信元のソケットIDを付与
+      const forwarded: CctvSignalPayload = { ...payload, senderSocketId: socket.id };
+
+      if (targetSocketId) {
+        // 指定された個別ソケットへ転送
+        io.to(targetSocketId).emit('cctv:signal', forwarded);
+      } else if (type === 'offer' || type === 'candidate') {
+        // カメラ端末からのオファー/候補は全CCTVビューアーへ
+        io.to('cctv_viewers').emit('cctv:signal', forwarded);
+      } else {
+        // ビューアーからのアンサー/候補は該当カメラ端末へ
+        io.to(`cctv_camera:${camId}`).emit('cctv:signal', forwarded);
+      }
+    });
+
+    // 監視画面からの遠隔カメラライト（Torch）制御
+    socket.on('cctv:light_control', ({ camId, lightOn }) => {
+      console.log(`[CCTV] Light control: ${camId} -> ${lightOn ? 'ON' : 'OFF'}`);
+      const cam = cctvCameras.get(camId);
+      if (cam) {
+        cam.lightOn = lightOn;
+      }
+      // 該当カメラ端末へ指示送信
+      io.to(`cctv_camera:${camId}`).emit('cctv:light_control', { camId, lightOn });
+      // ビューアー全員へ状態同期
+      io.to('cctv_viewers').emit('cctv:status', { camId, online: !!cam, lightOn });
+    });
+
+    // カメラ端末からのステータス自己更新
+    socket.on('cctv:camera_status_update', (payload) => {
+      const cam = cctvCameras.get(payload.camId);
+      if (cam) {
+        if (payload.lightOn !== undefined) cam.lightOn = payload.lightOn;
+        if (payload.batteryLevel !== undefined) cam.batteryLevel = payload.batteryLevel;
+      }
+      io.to('cctv_viewers').emit('cctv:status', payload);
+    });
+
+    // 全カメラ状態取得要求
+    socket.on('cctv:get_status', () => {
+      const allStatus: CctvCameraStatusPayload[] = (['cam1', 'cam2', 'cam3'] as CctvCameraId[]).map((id) => {
+        const cam = cctvCameras.get(id);
+        return {
+          camId: id,
+          online: !!cam,
+          lightOn: cam?.lightOn ?? false,
+          batteryLevel: cam?.batteryLevel,
+        };
+      });
+      socket.emit('cctv:all_status', allStatus);
+    });
+
     // 切断時のクリーンアップ
     socket.on('disconnect', () => {
+      // CCTVカメラ切断判定
+      for (const [camId, cam] of cctvCameras.entries()) {
+        if (cam.socketId === socket.id) {
+          console.log(`[CCTV] Camera disconnected: ${camId}`);
+          cctvCameras.delete(camId);
+          io.to('cctv_viewers').emit('cctv:status', { camId, online: false, lightOn: false });
+          break;
+        }
+      }
+
       const removed = store.removeDeviceBySocketId(socket.id);
       if (removed) {
         console.log(`[Socket] Device disconnected: ${removed.deviceId}`);

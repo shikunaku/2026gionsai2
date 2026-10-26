@@ -2,7 +2,7 @@
 
 /**
  * @file page.tsx (Elevator Backlight Display)
- * @description エレベーター内設置用の階層電照・発光表示コンポーネント。
+ * @description エレベータ内設置用の階層電照・発光表示コンポーネント。
  * 画面上の余計なUIや余白、スクロールバーを完全排除（0px）し、画面全体を上下均等2分割（50%:50%）で
  * 漆黒／暖色白発光（蛍光灯フリッカー付き）させます。
  *
@@ -59,7 +59,7 @@ export default function ElevatorDisplayPage() {
     socket.emit('device:ready', {
       deviceId: ELEVATOR_DEVICE_ID,
       phase: 'ELEVATOR',
-      location: 'エレベーター筐体電照パネル',
+      location: 'エレベータ筐体電照パネル',
       role: 'elevator_display',
     });
 
@@ -152,9 +152,8 @@ export default function ElevatorDisplayPage() {
   const slot1 = (
     <div key="slot-1" className="elevator-slot">
       <div
-        className={`elevator-light-box ${isFloor1Active ? 'active' : ''} ${
-          isFloor1Active && flickering ? 'flicker' : ''
-        }`}
+        className={`elevator-light-box ${isFloor1Active ? 'active' : ''} ${isFloor1Active && flickering ? 'flicker' : ''
+          }`}
       />
     </div>
   );
@@ -162,9 +161,8 @@ export default function ElevatorDisplayPage() {
   const slotB1 = (
     <div key="slot-b1" className="elevator-slot">
       <div
-        className={`elevator-light-box ${isFloorB1Active ? 'active' : ''} ${
-          isFloorB1Active && flickering ? 'flicker' : ''
-        }`}
+        className={`elevator-light-box ${isFloorB1Active ? 'active' : ''} ${isFloorB1Active && flickering ? 'flicker' : ''
+          }`}
       />
     </div>
   );

@@ -20,7 +20,7 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
       case 'PENDING':
         return <span className="review-badge pending">[審査待ち]</span>;
       case 'APPROVED':
-        return <span className="review-badge approved">[合格 済]</span>;
+        return <span className="review-badge approved">[合格済]</span>;
       case 'REJECTED':
         return <span className="review-badge rejected">[差戻し]</span>;
     }

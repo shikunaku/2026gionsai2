@@ -1,7 +1,7 @@
 # 2026 祇園祭 工場点検ホラーアトラクション 統合制御システム
 
 本リポジトリは、文化祭・展示イベントにおけるホラーアトラクションの運営を支える統合制御システムです。  
-参加者が携帯する **「保守用PDA端末 (Web)」**、スタッフが操作する **「集中管理コンソール (Admin)」**、会場内各所に分散配置される **「音響専用ノード (Sound Node)」**、**「エレベーター階数電照パネル」**、**「大型映像モニター」**、および物理ギミック（搬送コンベア、蒸気弁サーボ、非常パトランプ、排煙ファン等）を駆動する **「ESP32マイコン」** をリアルタイムに連携制御します。
+参加者が携帯する **「保守用PDA端末 (Web)」**、スタッフが操作する **「集中管理コンソール (Admin)」**、会場内各所に分散配置される **「音響専用ノード (Sound Node)」**、**「エレベータ階数電照パネル」**、**「大型映像モニター」**、および物理ギミック（搬送コンベア、蒸気弁サーボ、非常パトランプ、排煙ファン等）を駆動する **「ESP32マイコン」** をリアルタイムに連携制御します。
 
 Next.js (App Router) + TypeScript + Socket.IO によるフルスタック構成で、レトロ業務機（Windows 95/98 Classic）調の硬質かつ統一されたUIデザインを採用しています。
 
@@ -17,7 +17,7 @@ graph TD
         PDA["参加者用PDA端末<br/>/client<br/>(Camera / Torch / SFX / Glitch)"]
         Admin["集中管理コンソール<br/>/admin<br/>(Tele-monitor / Review / Trigger)"]
         SoundNode["音響専用ノード<br/>/display/sound<br/>(Web Audio / MP3 Cache Engine)"]
-        ElevatorDisp["エレベーター電照パネル<br/>/elevator-display<br/>(Flicker / Floor Display)"]
+        ElevatorDisp["エレベータ電照パネル<br/>/elevator-display<br/>(Flicker / Floor Display)"]
         VideoDisp["エリア3映像端末<br/>/display/video<br/>(Fullscreen Video Player)"]
         EquipPanel["機材制御盤<br/>/equipment<br/>(Web Serial / Relay Control)"]
     end
@@ -57,7 +57,7 @@ graph TD
 | **参加者用PDA端末** | `/client` | 進行フェーズ同期、点検ミッション撮影（Canvasリサイズ圧縮）、画面グリッチ妨害演出、背面トーチ明滅、プロシージャル効果音再生、オフライン再接続ダイアログ |
 | **集中管理コンソール** | `/admin` | 全PDA/音響/昇降端末のリアルタイム多列監視（バッテリー・充電・通信・フェーズ）、写真合否審査、フェーズ進行、全館恐怖演出の一斉発火、非常用全点灯スイッチ |
 | **音響専用ノード** | `/display/sound` | 会場内の隠しスピーカー・天井スピーカー接続端末。Autoplay制約のワンタップ解除、プロシージャル合成音およびMP3キャッシュ再生 |
-| **エレベーター電照パネル** | `/elevator-display` | 段ボール筐体くり抜き用の上下2分割全画面発光電照板。遠隔バッテリー監視連携、蛍光灯チラつきグリッチ演出、1F/B1F表示切替 |
+| **エレベータ電照パネル** | `/elevator-display` | 段ボール筐体くり抜き用の上下2分割全画面発光電照板。遠隔バッテリー監視連携、蛍光灯チラつきグリッチ演出、1F/B1F表示切替 |
 | **エリア3大型映像端末** | `/display/video` | フルスクリーン動画再生プレイヤー。走査線待機画面からWebSocketシグナルにより即座にホラー動画を再生 |
 | **機材演出制御盤** | `/equipment` | Web Serial APIを用いたマイコン直結制御、COMポート自動検出、リレー/サーボの個別ON/OFFテスト |
 
@@ -91,7 +91,7 @@ graph TD
     │   ├── display/
     │   │   ├── sound/page.tsx # 音響専用ノード画面
     │   │   └── video/page.tsx # エリア3映像再生端末画面
-    │   ├── elevator-display/ # エレベーター階数表示画面
+    │   ├── elevator-display/ # エレベータ階数表示画面
     │   ├── equipment/        # 機材制御盤画面
     │   ├── layout.tsx        # アプリ全体共通ルートレイアウト
     │   └── page.tsx          # 統合ポータルランチャー画面
@@ -126,7 +126,7 @@ graph TD
 | `sound:register_node` | サウンドノード | `{ deviceId, location? }` | 音響専用ノードとしての明示的登録と `sound_nodes` ルーム参加 |
 | `sound:trigger` | 管理コンソール | `SoundNodePlayPayload` | サウンドノードまたは全端末への効果音・MP3ファイル再生指示 |
 | `task:photo_submit` | PDA端末 | `{ deviceId, taskId, taskTitle, imageBase64 }` | 点検写真の提出（10秒間の重複排除デバウンス付き） |
-| `elevator:trigger_move` | PDA / 管理 | `{ from?, to?, deviceId? }` | 1FからB1Fへのエレベーター下降演出シーケンスの開始 |
+| `elevator:trigger_move` | PDA / 管理 | `{ from?, to?, deviceId? }` | 1FからB1Fへのエレベータ下降演出シーケンスの開始 |
 | `conveyor:control` | PDA / 管理 | `{ action: 'forward'\|'reverse'\|'stop', speed? }` | 搬送コンベアの動作指示（ESP32へ即時中継） |
 | `admin:trigger_effect` | 管理コンソール | `{ targetDeviceId?, effectType, options }` | グリッチ妨害、トーチ点滅、音響演出の手動強制発火 |
 | `admin:emergency_all_light` | 管理コンソール | なし | 全非常照明・全端末トーチの一斉強制点灯およびコンベア緊急停止 |
@@ -140,7 +140,7 @@ graph TD
 | `effect:torch` | PDA端末 | `TorchEffectOptions` | 怪異点滅（`pattern: '1,0,0,1,0,0,1'`）や高速明滅の実行 |
 | `effect:sound` | PDA端末 | `SoundEffectOptions` | プロシージャル効果音またはMP3ファイル再生 |
 | `sound:play` | サウンドノード | `SoundNodePlayPayload` | 指定音源（プロシージャルまたはMP3）の即時再生 |
-| `elevator:state` | エレベーター表示 | `{ floor, glitch? }` | 階数表示（FLOOR_1 / MOVING / FLOOR_B1）の更新 |
+| `elevator:state` | エレベータ表示 | `{ floor, glitch? }` | 階数表示（FLOOR_1 / MOVING / FLOOR_B1）の更新 |
 | `admin:state_sync` | 管理コンソール | `{ devices, submissions, equipments, ... }` | 全接続端末・機材状態のリアルタイム一括同期 |
 
 ---

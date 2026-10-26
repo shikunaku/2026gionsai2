@@ -16,6 +16,11 @@ export default function VideoDisplayPlayerPage() {
   const proceduralCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const hasTriggeredPanicRef = useRef<boolean>(false);
+  const [panicEmitted, setPanicEmitted] = useState<boolean>(false);
+
+  /** 怪異出現・パニック自動発火タイムスタンプ（秒） */
+  const PANIC_TRIGGER_SECONDS = 5.0;
 
   // Background Analog TV Noise on standby
   useEffect(() => {
@@ -88,6 +93,8 @@ export default function VideoDisplayPlayerPage() {
 
     const handleTriggerPlay = (payload?: { videoSrc?: string; title?: string }) => {
       console.log('[Video Player] TRIGGER_VIDEO_PLAY received:', payload);
+      hasTriggeredPanicRef.current = false;
+      setPanicEmitted(false);
 
       // 優先度: payload指定 > public/videos内の最初の実在ファイル > 既定フォールバック
       let src = payload?.videoSrc;
@@ -142,6 +149,8 @@ export default function VideoDisplayPlayerPage() {
 
     const handleVideoReset = () => {
       console.log('[Video Player] Video reset received');
+      hasTriggeredPanicRef.current = false;
+      setPanicEmitted(false);
       if (videoRef.current) {
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
@@ -208,6 +217,21 @@ export default function VideoDisplayPlayerPage() {
     }
   };
 
+  // 動画再生中のタイムスタンプ監視（特定秒数で自動パニックを発動）
+  const handleTimeUpdate = () => {
+    if (!videoRef.current || hasTriggeredPanicRef.current) return;
+    const currentTime = videoRef.current.currentTime;
+
+    if (currentTime >= PANIC_TRIGGER_SECONDS) {
+      hasTriggeredPanicRef.current = true;
+      setPanicEmitted(true);
+      console.log(`[Video Player] PANIC TIMESTAMP HIT: ${currentTime.toFixed(2)}s (Target: ${PANIC_TRIGGER_SECONDS}s) -> Emitting panic:trigger!`);
+      if (socket) {
+        socket.emit('panic:trigger', { timestamp: currentTime, reason: 'VIDEO_ANOMALY_TIMESTAMP' });
+      }
+    }
+  };
+
   // Procedural Generative Horror Visual & Audio (Used when video file is absent or as fallback)
   const playProceduralHorrorShow = () => {
     const canvas = proceduralCanvasRef.current;
@@ -247,6 +271,16 @@ export default function VideoDisplayPlayerPage() {
         setUseProcedural(false);
         if (socket) socket.emit('video:ended');
         return;
+      }
+
+      // プロシージャル再生時も4秒経過時に自動パニックを発行
+      if (elapsed >= 4000 && !hasTriggeredPanicRef.current) {
+        hasTriggeredPanicRef.current = true;
+        setPanicEmitted(true);
+        console.log('[Video Player] Procedural horror elapsed 4.0s -> Emitting panic:trigger!');
+        if (socket) {
+          socket.emit('panic:trigger', { timestamp: elapsed / 1000, reason: 'PROCEDURAL_HORROR_TIMESTAMP' });
+        }
       }
 
       if (canvas && ctx) {
@@ -325,6 +359,7 @@ export default function VideoDisplayPlayerPage() {
         className="video-fullscreen-player"
         style={{ display: isPlaying && !useProcedural ? 'block' : 'none' }}
         onEnded={handleVideoEnded}
+        onTimeUpdate={handleTimeUpdate}
         playsInline
         autoPlay
         preload="auto"
@@ -341,7 +376,7 @@ export default function VideoDisplayPlayerPage() {
         <span>|</span>
         <span>AUDIO: {audioUnlocked ? 'UNLOCKED' : 'LOCKED'}</span>
         <span>|</span>
-        <span>STATE: {isPlaying ? 'PLAYING' : 'IDLE'}</span>
+        <span>STATE: {isPlaying ? (panicEmitted ? 'PANIC SYNC ACTIVE' : 'PLAYING') : 'IDLE'}</span>
       </div>
     </div>
   );

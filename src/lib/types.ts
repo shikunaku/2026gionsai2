@@ -1,7 +1,7 @@
 /**
  * @file types.ts
  * @description アトラクションシステム全体の共有型定義。
- * 端末フェーズ、デバイスメタ情報、エレベーター・コンベア制御、Web Serial、
+ * 端末フェーズ、デバイスメタ情報、エレベータ・コンベア制御、Web Serial、
  * サウンドノード（Sound Node）、および Socket.IO イベント通信規約を定義します。
  */
 
@@ -16,27 +16,71 @@ export type DevicePhase =
   | 'ELEVATOR'
   | 'AREA_2_CONVEYOR'
   | 'AREA_3_VIDEO'
+  | 'PANIC_ESCAPE'
   | 'RETURN';
 
 /** 端末の運用ロール種別 */
-export type DeviceRole = 'client' | 'sound_node' | 'elevator_display' | 'display' | 'admin';
+export type DeviceRole = 'client' | 'sound_node' | 'elevator_display' | 'display' | 'admin' | 'camera' | 'cctv_viewer';
 
-/** エレベーター階層状態 */
+/** CCTV監視カメラID */
+export type CctvCameraId = 'cam1' | 'cam2' | 'cam3';
+
+/** 監視カメラ定義仕様 */
+export interface CctvCameraConfig {
+  id: CctvCameraId;
+  name: string;
+  location: string;
+}
+
+/** 3台の固定監視カメラ定義 */
+export const CCTV_CAMERAS: CctvCameraConfig[] = [
+  { id: 'cam1', name: 'CAM-1: 品質管理室', location: '1F 品質管理室 (撮影エリア)' },
+  { id: 'cam2', name: 'CAM-2: 通路・EV前', location: '1F〜B1F エレベータ前通路' },
+  { id: 'cam3', name: 'CAM-3: 製造ライン・モニター室', location: 'B1F 第零製造ライン / モニター室' },
+];
+
+/** CCTV WebRTCシグナリングペイロード */
+export interface CctvSignalPayload {
+  camId: CctvCameraId;
+  targetSocketId?: string;
+  senderSocketId?: string;
+  type: 'offer' | 'answer' | 'candidate' | 'camera_ready' | 'viewer_ready';
+  sdp?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
+}
+
+/** CCTV カメラフラッシュライト制御ペイロード */
+export interface CctvLightPayload {
+  camId: CctvCameraId;
+  lightOn: boolean;
+}
+
+/** CCTV カメラ状態同期ペイロード */
+export interface CctvCameraStatusPayload {
+  camId: CctvCameraId;
+  online: boolean;
+  lightOn?: boolean;
+  batteryLevel?: number | string;
+}
+
+/** エレベータ階層状態 */
 export type ElevatorFloorState = 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF';
 
-/** エレベーター状態同期ペイロード */
+/** エレベータ状態同期ペイロード */
 export interface ElevatorStatePayload {
   floor: ElevatorFloorState;
   glitch?: boolean;
+  powerOn?: boolean;
 }
 
 /** 搬送コンベア制御アクション */
-export type ConveyorAction = 'forward' | 'reverse' | 'stop';
+export type ConveyorAction = 'forward' | 'reverse' | 'stop' | 'test_run';
 
 /** 搬送コンベア制御ペイロード */
 export interface ConveyorControlPayload {
   action: ConveyorAction;
   speed?: number;
+  durationMs?: number;
   deviceId?: string;
 }
 
@@ -234,17 +278,27 @@ export interface ServerToClientEvents {
   'equipment:updated': (equipment: EquipmentItem) => void;
   'equipment:removed': (payload: { id: string }) => void;
 
-  // エレベーター表示画面向けイベント
+  // エレベータ表示画面向けイベント
   'elevator:state': (payload: ElevatorStatePayload) => void;
   'elevator:glitch': (payload?: { duration?: number }) => void;
+  'elevator:power': (payload: { powerOn: boolean }) => void;
 
   // エリア3 ビデオ表示画面向けイベント
   'video:trigger_play': (payload?: { videoSrc?: string; title?: string }) => void;
   'video:reset': () => void;
 
+  // パニック脱出トリガーイベント（映像タイムスタンプ連動または管理者手動）
+  'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
+
   // サウンド専用端末（Sound Node）向けイベント
   'sound:play': (payload: SoundNodePlayPayload) => void;
   'sound:stop': (payload?: { targetDeviceId?: string }) => void;
+
+  // CCTV監視カメラ関連イベント
+  'cctv:signal': (payload: CctvSignalPayload) => void;
+  'cctv:light_control': (payload: CctvLightPayload) => void;
+  'cctv:status': (payload: CctvCameraStatusPayload) => void;
+  'cctv:all_status': (payload: CctvCameraStatusPayload[]) => void;
 }
 
 /** クライアントからサーバーへ送信されるイベント */
@@ -273,18 +327,30 @@ export interface ClientToServerEvents {
   // 搬送コンベア直接操作
   'conveyor:control': (payload: ConveyorControlPayload) => void;
 
-  // エレベーター動作指示
+  // エレベータ動作指示
   'elevator:trigger_move': (payload?: { from?: ElevatorFloorState; to?: ElevatorFloorState; deviceId?: string }) => void;
   'elevator:set_floor': (payload: ElevatorStatePayload) => void;
   'elevator:trigger_glitch': (payload?: { duration?: number }) => void;
+  'elevator:power': (payload: { powerOn: boolean; deviceId?: string }) => void;
 
   // ビデオトリガー
   'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
   'video:ended': (payload?: { deviceId?: string }) => void;
 
+  // パニック脱出トリガー（ビデオ再生画面またはAdminからの送信）
+  'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
+
   // サウンド専用端末（Sound Node）登録およびトリガー
   'sound:register_node': (payload: { deviceId: string; location?: string }) => void;
   'sound:trigger': (payload: SoundNodePlayPayload) => void;
+
+  // CCTV監視カメラ（配信側・ビューアー側）イベント
+  'cctv:register_camera': (payload: { camId: CctvCameraId; deviceId?: string }) => void;
+  'cctv:register_viewer': () => void;
+  'cctv:signal': (payload: CctvSignalPayload) => void;
+  'cctv:light_control': (payload: CctvLightPayload) => void;
+  'cctv:camera_status_update': (payload: CctvCameraStatusPayload) => void;
+  'cctv:get_status': () => void;
 
   // 管理コンソール (Admin) ハンドラー
   'admin:join': () => void;

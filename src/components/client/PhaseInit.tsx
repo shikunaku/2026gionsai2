@@ -44,7 +44,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
   };
 
   return (
-    <div className="phase-init">
+    <div className="phase-init phase-container">
       {/* Header Window */}
       <div className="win95-window phase-init-window">
         <div className="win95-titlebar phase-init-titlebar">
@@ -77,7 +77,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
           <p className="phase-init-rules-heading">[保安注意事項]</p>
           <p className="rule">1. 本端末は第零製造区画の巡視保守用専用端末です。</p>
           <p className="rule">2. 各ポイントで指示された対象の撮影点検を行ってください。</p>
-          <p className="rule">3. 異常振動・異音・照明明滅を感知した場合は直ちに退避してください。</p>
+          <p className="rule">3. 異常振動・異音・照明明滅の可能性があります。</p>
           <p className="rule">4. 業務中は画面から目を離さず、必ず管理者の指示に従ってください。</p>
           <p className="phase-init-rules-note">
             ※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DeviceInfo, DevicePhase, TorchEffectOptions } from '../../lib/types';
+import { DeviceInfo, DevicePhase, TorchEffectOptions, EquipmentItem } from '../../lib/types';
 import '../../styles/admin.css';
 
 type GlitchMode = 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
@@ -30,7 +30,10 @@ interface EffectTriggerPanelProps {
   onSetVolume: (volume: number) => void;
   onEmergencyAllLight: () => void;
   onTriggerShutdown: () => void;
+  /** エリア3 パニック演出手動強制発火 (フェイルセーフ) */
+  onTriggerPanic?: () => void;
   // New manual equipment / display controls
+  equipments?: EquipmentItem[];
   onElevatorSetFloor?: (floor: 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF') => void;
   onElevatorTriggerMove?: () => void;
   onElevatorGlitch?: () => void;
@@ -69,6 +72,8 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   onSetVolume,
   onEmergencyAllLight,
   onTriggerShutdown,
+  onTriggerPanic,
+  equipments = [],
   onElevatorSetFloor,
   onElevatorTriggerMove,
   onElevatorGlitch,
@@ -101,6 +106,10 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
 
   const soundNodeDevices = devices.filter((d) => d.role === 'sound_node');
 
+  // コンベア (eq_conveyor_01) のリアルタイム稼働状態
+  const conveyorEq = equipments.find((e) => e.id === 'eq_conveyor_01');
+  const isConveyorActive = !!conveyorEq?.state;
+
   const handleVolumeChange = (vol: number) => {
     setSelectedVolume(vol);
     onSetVolume(vol);
@@ -113,10 +122,10 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
       </div>
 
       <div className="effect-body">
-        {/* Phase Overrides (6 stages) */}
+        {/* Phase Overrides (7 stages) */}
         <fieldset className="win95-groupbox">
           <legend className="win95-groupbox-legend">全端末 進行フェーズ手動切替</legend>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3px', marginTop: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginTop: '4px' }}>
             <button
               onClick={() => onOverrideAllPhase('STANDBY')}
               className="win95-btn effect-btn-phase"
@@ -141,9 +150,9 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             <button
               onClick={() => onOverrideAllPhase('AREA_2_CONVEYOR')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ4: 第零搬送室 コンベア"
+              title="フェーズ4: 第零製造ライン コンベア"
             >
-              4.コンベア
+              4.ライン
             </button>
             <button
               onClick={() => onOverrideAllPhase('AREA_3_VIDEO')}
@@ -153,12 +162,20 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               5.映像
             </button>
             <button
+              onClick={() => onOverrideAllPhase('PANIC_ESCAPE')}
+              className="win95-btn effect-btn-phase"
+              style={{ backgroundColor: '#b71c1c', color: '#fff', fontWeight: 'bold' }}
+              title="フェーズ6: 非常事態発生 パニック退避"
+            >
+              6.退避
+            </button>
+            <button
               onClick={() => onOverrideAllPhase('RETURN')}
               className="win95-btn effect-btn-phase"
               style={{ backgroundColor: '#2e5b3e', color: '#fff', fontWeight: 'bold' }}
-              title="フェーズ6: 業務完了・端末返却案内"
+              title="フェーズ7: 業務完了・端末返却案内"
             >
-              6.返却
+              7.返却
             </button>
           </div>
         </fieldset>
@@ -207,37 +224,56 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
 
         {/* Dedicated Conveyor & Video Manual Panel */}
         <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">コンベア操作 &amp; モニター室映像テスト</legend>
+          <legend className="win95-groupbox-legend">
+            コンベア稼働ステータス &amp; 映像・パニック制御
+          </legend>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '11px' }}>
+            <span>第零搬送コンベア:</span>
+            <span style={{ fontWeight: 'bold', color: isConveyorActive ? '#4caf50' : '#888' }}>
+              {isConveyorActive ? '[通電中: 稼働中]' : '[停止中: 待機]'}
+            </span>
+          </div>
           <div className="effect-grid cols-3">
             <button
               onClick={() => onConveyorControl && onConveyorControl('forward')}
               className="win95-btn"
               style={{ padding: '4px 2px', fontSize: '10px' }}
             >
-              コンベア正転
+              正転(6s稼働)
             </button>
             <button
               onClick={() => onConveyorControl && onConveyorControl('reverse')}
               className="win95-btn"
               style={{ padding: '4px 2px', fontSize: '10px' }}
             >
-              コンベア逆転
+              逆転(6s稼働)
             </button>
             <button
               onClick={() => onConveyorControl && onConveyorControl('stop')}
               className="win95-btn"
               style={{ padding: '4px 2px', fontSize: '10px', color: '#e53935' }}
             >
-              コンベア停止
+              緊急停止
             </button>
           </div>
-          <button
-            onClick={() => onTriggerVideoPlay && onTriggerVideoPlay()}
-            className="win95-btn"
-            style={{ width: '100%', marginTop: '4px', padding: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fff', backgroundColor: '#6a1b9a' }}
-          >
-            モニター室 映像再生トリガー
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px' }}>
+            <button
+              onClick={() => onTriggerVideoPlay && onTriggerVideoPlay()}
+              className="win95-btn"
+              style={{ padding: '6px 2px', fontSize: '10px', fontWeight: 'bold', color: '#fff', backgroundColor: '#6a1b9a' }}
+              title="モニター室の大型ディスプレイで記録映像アーカイブを再生"
+            >
+              映像アーカイブ再生
+            </button>
+            <button
+              onClick={() => onTriggerPanic && onTriggerPanic()}
+              className="win95-btn"
+              style={{ padding: '6px 2px', fontSize: '10px', fontWeight: 'bold', color: '#ffffff', backgroundColor: '#d50000', border: '1px solid #ff5252' }}
+              title="フェイルセーフ: 全PDA端末を即座に赤点滅・大音量警報・ライト激速点滅のパニック退避状態へ"
+            >
+              [手動] パニック発火
+            </button>
+          </div>
         </fieldset>
 
         {/* Glitch Panel */}

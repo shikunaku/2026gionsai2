@@ -5,10 +5,9 @@ import '../../styles/client.css';
 
 /**
  * @file PhaseArea3Video.tsx
- * @description エリア3（主電算モニター）動画再生トリガーUI。
+ * @description エリア3（モニター室）監視記録アーカイブ再生トリガーUI。
  * 押下時に WebSocket（`video:trigger_play`）をブロードキャストし、
- * 別置端末（`/display/video`）にて `public/videos/` 配下の動画（例: `2026-09-11 01-07-05.mp4` または `area3.mp4`）
- * がフルスクリーン再生されます。動画ファイル未配置時はプロシージャル合成シンセサイザー画面へと自動フォールバックします。
+ * 別置大型モニター（`/display/video`）にて記録映像が再生されます。
  */
 
 interface PhaseArea3VideoProps {
@@ -32,37 +31,37 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
   };
 
   return (
-    <div className="phase-area3-video">
+    <div className="phase-area3-video phase-container">
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}>
-          <span>モニター室: 主電算モニター機動ギミック</span>
+          <span>エリア3: モニター室 </span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          部屋の大型モニター（別端末）と通信リンクしています。起動認証を行ってください。
+          部屋の大型モニターと通信リンクしています。監視記録アーカイブを再生し本工場で過去にあった事件について知りましょう。
         </div>
       </div>
 
       {/* Trigger Box */}
-      <div className="win95-window" style={{ marginTop: '8px' }}>
+      <div className="win95-window">
         <div className="win95-titlebar" style={{ background: '#311b92' }}>
-          <span>主電算装置 認証ステータス</span>
+          <span>監視記録アーカイブ 再生制御</span>
         </div>
-        <div style={{ padding: '16px', textAlign: 'center' }}>
+        <div style={{ padding: '18px 16px', textAlign: 'center' }}>
           <div style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>
-            別置大型モニターリンク状態: <strong>READY</strong>
+            別置大型モニターリンク状態: <strong>接続中</strong>
           </div>
 
           <div
             style={{
-              fontSize: '18px',
+              fontSize: '17px',
               fontWeight: 'bold',
               color: triggered ? '#d50000' : '#4a148c',
               marginBottom: '16px',
             }}
           >
-            {triggered ? '【緊急映像再生信号 送信済】' : '【認証キー入力待機中】'}
+            {triggered ? '【監視記録映像 再生中】' : '【監視記録アーカイブ 再生待機】'}
           </div>
 
           <button
@@ -80,7 +79,7 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
               boxShadow: triggered ? 'none' : '0 0 15px rgba(183, 28, 28, 0.4)',
             }}
           >
-            {triggered ? '映像再生信号 送信完了 [TRANSMITTED]' : '主電算映像を緊急再生 [OVERRIDE PLAY]'}
+            {triggered ? '再生信号送信完了' : '監視記録アーカイブ再生'}
           </button>
         </div>
       </div>
@@ -89,14 +88,18 @@ export const PhaseArea3Video: React.FC<PhaseArea3VideoProps> = ({
       <div
         className="win95-inset-dark"
         style={{
-          marginTop: '8px',
-          padding: '8px',
+          padding: '10px',
           fontSize: '11px',
           color: triggered ? '#ef5350' : '#ba68c8',
+          lineHeight: '1.7',
         }}
       >
-        <div>[SYSTEM] モニター室映像端末へ TRIGGER_VIDEO_PLAY をブロードキャストします。</div>
-        {triggered && <div>[WARNING] 異常シグナル受信。現場の大型モニターを確認してください。</div>}
+        <div>[SYSTEM] 大型モニターへ映像再生トリガーを送信します。</div>
+        {triggered ? (
+          <div>[WARNING] 映像を注視してください。異常が発生した場合は端末の指示に従ってください。</div>
+        ) : (
+          <div>[INFO] 体験者全員がモニター室に入室したことを確認し、ボタンを押してください。</div>
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ interface PhaseReturnProps {
 
 export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId }) => {
   return (
-    <div className="phase-return" style={{ padding: '4px' }}>
+    <div className="phase-return phase-container">
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1b3a27, #2e5b3e)' }}>
@@ -19,11 +19,11 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId }) => {
       </div>
 
       {/* Return Notice Card */}
-      <div className="win95-window" style={{ marginTop: '14px' }}>
+      <div className="win95-window">
         <div className="win95-titlebar" style={{ background: '#253d2d' }}>
           <span>端末返却案内</span>
         </div>
-        <div style={{ padding: '28px 16px', textAlign: 'center' }}>
+        <div style={{ padding: '24px 16px', textAlign: 'center' }}>
           <div
             style={{
               fontSize: '18px',
@@ -31,7 +31,7 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId }) => {
               color: '#1b5e20',
               lineHeight: '1.8',
               letterSpacing: '1px',
-              marginBottom: '20px',
+              marginBottom: '16px',
             }}
           >
             点検業務お疲れさまでした。
@@ -60,7 +60,6 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId }) => {
       <div
         className="win95-inset"
         style={{
-          marginTop: '16px',
           padding: '12px',
           fontSize: '11px',
           color: '#555960',
@@ -68,7 +67,7 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId }) => {
           backgroundColor: '#dedbd4',
         }}
       >
-        ※ 本端末の点検操作はすべて終了しロックされています。スタッフの誘導に従ってご退場ください。
+        ※ 本端末の点検操作はすべて終了しロックされています。所定の位置に端末を返却後ご退室お願いいたします。最後まで点検業務お疲れさまでした。
       </div>
     </div>
   );
