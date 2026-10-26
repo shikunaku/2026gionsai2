@@ -30,12 +30,19 @@ export class AppStore {
     this.currentElevatorState = { ...state };
   }
 
-  public registerDevice(deviceId: string, socketId: string, phase: DevicePhase = 'STANDBY', location?: string): DeviceInfo {
+  public registerDevice(
+    deviceId: string,
+    socketId: string,
+    phase: DevicePhase = 'STANDBY',
+    location?: string,
+    role?: 'client' | 'sound_node' | 'display' | 'admin'
+  ): DeviceInfo {
     const existing = this.devices.get(deviceId);
     const device: DeviceInfo = {
       deviceId,
       socketId,
       phase: existing ? existing.phase : phase,
+      role: role || (existing ? existing.role : 'client'),
       location: location || (existing ? existing.location : undefined),
       batteryLevel: existing ? existing.batteryLevel : 100,
       charging: existing ? existing.charging : false,
@@ -44,6 +51,10 @@ export class AppStore {
     };
     this.devices.set(deviceId, device);
     return device;
+  }
+
+  public getSoundNodes(): DeviceInfo[] {
+    return Array.from(this.devices.values()).filter((d) => d.role === 'sound_node');
   }
 
   public getDevice(deviceId: string): DeviceInfo | undefined {

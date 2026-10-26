@@ -1,3 +1,15 @@
+/**
+ * @file types.ts
+ * @description アトラクションシステム全体の共有型定義。
+ * 端末フェーズ、デバイスメタ情報、エレベーター・コンベア制御、Web Serial、
+ * サウンドノード（Sound Node）、および Socket.IO イベント通信規約を定義します。
+ */
+
+// ============================================================================
+// 1. デバイスフェーズ & 端末ロール定義
+// ============================================================================
+
+/** 参加者端末（PDA）の進行フェーズ */
 export type DevicePhase =
   | 'STANDBY'
   | 'AREA_1_PHOTO'
@@ -6,24 +18,41 @@ export type DevicePhase =
   | 'AREA_3_VIDEO'
   | 'RETURN';
 
+/** 端末の運用ロール種別 */
+export type DeviceRole = 'client' | 'sound_node' | 'display' | 'admin';
+
+/** エレベーター階層状態 */
 export type ElevatorFloorState = 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF';
 
+/** エレベーター状態同期ペイロード */
 export interface ElevatorStatePayload {
   floor: ElevatorFloorState;
   glitch?: boolean;
 }
 
+/** 搬送コンベア制御アクション */
 export type ConveyorAction = 'forward' | 'reverse' | 'stop';
 
+/** 搬送コンベア制御ペイロード */
 export interface ConveyorControlPayload {
   action: ConveyorAction;
   speed?: number;
   deviceId?: string;
 }
 
+// ============================================================================
+// 2. ブラウザ / ネイティブ環境拡張
+// ============================================================================
+
 declare global {
   interface Navigator {
-    getBattery?: () => Promise<any>;
+    getBattery?: () => Promise<BatteryManager>;
+  }
+  interface BatteryManager extends EventTarget {
+    level: number;
+    charging: boolean;
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
+    removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
   }
   interface Window {
     Android?: {
@@ -35,12 +64,18 @@ declare global {
   }
 }
 
+// ============================================================================
+// 3. 端末・審査・ミッション型定義
+// ============================================================================
+
 export type ReviewStatus = 'SUBMITTING' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
+/** 接続端末（PDA / Sound Node等）のテレメトリ情報 */
 export interface DeviceInfo {
   deviceId: string;
   socketId: string;
   phase: DevicePhase;
+  role?: DeviceRole;
   location?: string;
   batteryLevel: number | string;
   charging: boolean;
@@ -48,6 +83,7 @@ export interface DeviceInfo {
   lastSeen: number;
 }
 
+/** 提出された写真データ */
 export interface PhotoSubmission {
   id: string;
   deviceId: string;
@@ -59,6 +95,7 @@ export interface PhotoSubmission {
   reason?: string;
 }
 
+/** 点検ミッションタスク仕様 */
 export interface InspectionTask {
   id: number;
   title: string;
@@ -68,6 +105,11 @@ export interface InspectionTask {
   rejectionReason?: string;
 }
 
+// ============================================================================
+// 4. 演出エフェクト型定義
+// ============================================================================
+
+/** 画面グリッチ妨害エフェクトのオプション */
 export interface GlitchEffectOptions {
   level: number;
   duration: number;
@@ -75,6 +117,7 @@ export interface GlitchEffectOptions {
   mode?: 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
 }
 
+/** LEDトーチ点滅エフェクトのオプション */
 export interface TorchEffectOptions {
   state?: boolean;
   flicker?: boolean;
@@ -84,36 +127,67 @@ export interface TorchEffectOptions {
   stop?: boolean;
 }
 
+/** 効果音エフェクトのオプション（内蔵プロシージャル音源またはMP3音声ファイル） */
 export interface SoundEffectOptions {
-  soundType: 'beep' | 'shutter' | 'lowImpact' | 'geiger' | 'drone' | 'motor' | 'powerDown' | 'taskSuccess';
+  soundType: 'beep' | 'shutter' | 'lowImpact' | 'geiger' | 'drone' | 'motor' | 'powerDown' | 'taskSuccess' | 'file';
   level?: number;
+  /** 再生する音声ファイル名 (public/audio/ 配下、例: "alarm.mp3") */
+  filename?: string;
+  /** 音量倍率 (0.0 〜 2.5) */
+  volume?: number;
+  /** ループ再生フラグ */
+  loop?: boolean;
 }
+
+/** サウンド専用ノード（Sound Node）向け高機能オーディオ再生ペイロード */
+export interface SoundNodePlayPayload {
+  /** 対象端末ID（省略時は全Sound Nodeで同時再生） */
+  targetDeviceId?: string;
+  /** 再生するサウンド種別または音源URL/名前 ('file' でMP3ファイル再生) */
+  soundType: SoundEffectOptions['soundType'] | 'custom' | 'file';
+  /** 再生する音声ファイル名 (public/audio/ 配下、例: "siren.mp3") */
+  filename?: string;
+  /** カスタム音源URL（soundType === 'custom' の場合） */
+  soundUrl?: string;
+  /** 音量倍率 (0.0 〜 2.5) */
+  volume?: number;
+  /** 効果音の強度レベル (例: ガイガー音の激しさ 1〜5) */
+  level?: number;
+  /** ループ再生フラグ */
+  loop?: boolean;
+  /** 再生時間 (ミリ秒、省略時は音源の終端まで) */
+  durationMs?: number;
+}
+
+// ============================================================================
+// 5. ハードウェア機材 (Equipment) 型定義
+// ============================================================================
 
 export type EquipmentProtocol = 'serial' | 'wifi' | 'ble';
 
 export interface SerialSwitchConfig {
   id: string;
   name: string;
-  action: string;      // e.g. "conveyor", "fan", "light"
-  state: boolean;      // current state
-  onPayload?: Record<string, any>; // optional custom payload
-  offPayload?: Record<string, any>;
+  action: string;      // 例: "conveyor", "fan", "light"
+  state: boolean;      // 現在の状態
+  onPayload?: Record<string, unknown>;
+  offPayload?: Record<string, unknown>;
 }
 
 export interface SerialButtonConfig {
   id: string;
   name: string;
-  action: string;      // e.g. "emergency", "all_off", "reset"
-  payload?: Record<string, any>; // optional custom payload
+  action: string;      // 例: "emergency", "all_off", "reset"
+  payload?: Record<string, unknown>;
 }
 
 export interface SerialDeviceConfig {
   id: string;
-  name: string;               // 端末名/表示名
-  portName?: string;          // 検出されたCOMポート/端末情報 (例: "COM3 - USB-SERIAL CH340")
+  name: string;
+  portName?: string;
   usbVendorId?: number;
   usbProductId?: number;
-  baudRate: number;           // 9600, 115200, etc.
+  baudRate: number;
   switches: SerialSwitchConfig[];
   buttons: SerialButtonConfig[];
   connected: boolean;
@@ -126,12 +200,17 @@ export interface EquipmentItem {
   type: 'relay' | 'servo' | 'light' | 'fan' | 'custom';
   state: boolean | number | string;
   topic?: string;
-  mcuId?: string;       // マイコンID (例: ESP32_MAIN, ESP32_ZONE2, ARDUINO_01)
-  protocol?: EquipmentProtocol; // 通信方式 (有線シリアル / Wi-Fi / Bluetooth)
-  endpoint?: string;    // COMポート名 / IPアドレス / BLEサービスUUID
+  mcuId?: string;
+  protocol?: EquipmentProtocol;
+  endpoint?: string;
   updatedAt: string;
 }
 
+// ============================================================================
+// 6. Socket.IO 通信イベント規格
+// ============================================================================
+
+/** サーバーからクライアントへ送信されるイベント */
 export interface ServerToClientEvents {
   'phase:update': (payload: { phase: DevicePhase; deviceId?: string }) => void;
   'task:review_result': (payload: {
@@ -155,17 +234,27 @@ export interface ServerToClientEvents {
   'equipment:updated': (equipment: EquipmentItem) => void;
   'equipment:removed': (payload: { id: string }) => void;
 
-  // New Elevator Display Events
+  // エレベーター表示画面向けイベント
   'elevator:state': (payload: ElevatorStatePayload) => void;
   'elevator:glitch': (payload?: { duration?: number }) => void;
 
-  // New Area 3 Video Display Events
+  // エリア3 ビデオ表示画面向けイベント
   'video:trigger_play': (payload?: { videoSrc?: string; title?: string }) => void;
   'video:reset': () => void;
+
+  // サウンド専用端末（Sound Node）向けイベント
+  'sound:play': (payload: SoundNodePlayPayload) => void;
+  'sound:stop': (payload?: { targetDeviceId?: string }) => void;
 }
 
+/** クライアントからサーバーへ送信されるイベント */
 export interface ClientToServerEvents {
-  'device:ready': (payload: { deviceId: string; phase: DevicePhase; location?: string }) => void;
+  'device:ready': (payload: {
+    deviceId: string;
+    phase: DevicePhase;
+    location?: string;
+    role?: DeviceRole;
+  }) => void;
   'device:start_inspection': (payload: { deviceId: string }) => void;
   'device:battery_update': (payload: {
     deviceId: string;
@@ -181,19 +270,23 @@ export interface ClientToServerEvents {
   }) => void;
   'machine:control': (payload: { machineId: string; state: boolean; deviceId: string }) => void;
 
-  // Conveyor Direct Control from Participant or Admin
+  // 搬送コンベア直接操作
   'conveyor:control': (payload: ConveyorControlPayload) => void;
 
-  // Elevator Action Trigger
+  // エレベーター動作指示
   'elevator:trigger_move': (payload?: { from?: ElevatorFloorState; to?: ElevatorFloorState; deviceId?: string }) => void;
   'elevator:set_floor': (payload: ElevatorStatePayload) => void;
   'elevator:trigger_glitch': (payload?: { duration?: number }) => void;
 
-  // Video Trigger & Status
+  // ビデオトリガー
   'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
   'video:ended': (payload?: { deviceId?: string }) => void;
 
-  // Admin handlers
+  // サウンド専用端末（Sound Node）登録およびトリガー
+  'sound:register_node': (payload: { deviceId: string; location?: string }) => void;
+  'sound:trigger': (payload: SoundNodePlayPayload) => void;
+
+  // 管理コンソール (Admin) ハンドラー
   'admin:join': () => void;
   'admin:get_state': () => void;
   'admin:review_photo': (payload: {
@@ -205,11 +298,11 @@ export interface ClientToServerEvents {
   'admin:trigger_effect': (payload: {
     targetDeviceId?: string;
     effectType: 'glitch' | 'torch' | 'sound' | 'volume' | 'shutdown';
-    options: any;
+    options: unknown;
   }) => void;
   'admin:emergency_all_light': () => void;
   'equipment:get_all': () => void;
   'equipment:add': (equipment: Omit<EquipmentItem, 'updatedAt'>) => void;
   'equipment:remove': (payload: { id: string }) => void;
-  'equipment:control': (payload: { id: string; action: string; value: any }) => void;
+  'equipment:control': (payload: { id: string; action: string; value: unknown }) => void;
 }

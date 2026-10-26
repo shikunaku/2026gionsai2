@@ -41,9 +41,9 @@ export const SerialDeviceManager: React.FC = () => {
   return (
     <div className="serial-manager-root win95-window">
       <div className="win95-titlebar serial-header-titlebar">
-        <span>🔌 マイコンUSBシリアル統合制御コンソール (Web Serial)</span>
+        <span>マイコンUSBシリアル統合制御コンソール (Web Serial)</span>
         <span className="serial-browser-badge">
-          {supported ? '✅ Web Serial API 有効' : '⚠️ Web Serial 非対応 (Chrome/Edge推奨)'}
+          {supported ? 'Web Serial API 有効' : 'Web Serial 非対応 (Chrome/Edge推奨)'}
         </span>
       </div>
 
@@ -55,7 +55,7 @@ export const SerialDeviceManager: React.FC = () => {
         </div>
         <div className="serial-toolbar-actions">
           <button className="win95-btn serial-add-btn" onClick={handleOpenNewModal}>
-            ➕ 新規マイコン端末を追加
+            新規マイコン端末を追加
           </button>
         </div>
       </div>
@@ -66,7 +66,7 @@ export const SerialDeviceManager: React.FC = () => {
         <div className="serial-devices-compact-container">
           {devices.length === 0 ? (
             <div className="serial-empty-message win95-inset">
-              マイコン端末が登録されていません。「➕ 新規マイコン端末を追加」ボタンからUSB接続・設定を行ってください。
+              マイコン端末が登録されていません。「新規マイコン端末を追加」ボタンからUSB接続・設定を行ってください。
             </div>
           ) : (
             devices.map((device) => (
@@ -87,7 +87,7 @@ export const SerialDeviceManager: React.FC = () => {
         {/* Global Unified Serial Log Console */}
         <div className="win95-window serial-global-log-window">
           <div className="win95-titlebar serial-global-log-titlebar">
-            <span>📜 全マイコン統合シリアル通信ログ ({logs.length}件)</span>
+            <span>全マイコン統合シリアル通信ログ ({logs.length}件)</span>
             <button className="win95-btn serial-clear-btn" onClick={clearLogs}>
               ログクリア
             </button>

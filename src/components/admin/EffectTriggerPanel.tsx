@@ -15,6 +15,10 @@ interface EffectTriggerPanelProps {
     vibrate: boolean;
   }) => void;
   onTriggerSound: (soundType: string, level?: number) => void;
+  /** 全サウンド専用ノード (Sound Nodes) に対する一斉演出再生 */
+  onTriggerSoundNode?: (soundType: string, level?: number, volume?: number, filename?: string) => void;
+  /** MP3/音声ファイル再生トリガー */
+  onTriggerFileSound?: (filename: string, volume?: number, loop?: boolean) => void;
   onTriggerTorch: (options: TorchEffectOptions) => void;
   onSetVolume: (volume: number) => void;
   onEmergencyAllLight: () => void;
@@ -51,6 +55,8 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   onOverrideAllPhase,
   onTriggerGlitch,
   onTriggerSound,
+  onTriggerSoundNode,
+  onTriggerFileSound,
   onTriggerTorch,
   onSetVolume,
   onEmergencyAllLight,
@@ -65,6 +71,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   const [glitchDuration, setGlitchDuration] = useState<number>(3000);
   const [glitchMode, setGlitchMode] = useState<GlitchMode>('creepy');
   const [selectedVolume, setSelectedVolume] = useState<number>(1.0);
+  const [customFileName, setCustomFileName] = useState<string>('alarm.mp3');
 
   const handleVolumeChange = (vol: number) => {
     setSelectedVolume(vol);
@@ -265,7 +272,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               className="win95-btn effect-btn-sound success"
               title="合格通知チャイム (880Hz->1320Hz)"
             >
-              合格チャイム ♪
+              合格チャイム
             </button>
             {SOUND_BUTTONS.map(({ type, label, level }) => (
               <button
@@ -277,6 +284,68 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               </button>
             ))}
           </div>
+
+          {/* 専用サウンドノード (Sound Nodes) 一斉発火 */}
+          {onTriggerSoundNode && (
+            <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #444' }}>
+              <div style={{ fontSize: '11px', color: '#38bdf8', marginBottom: '4px', fontWeight: 'bold' }}>
+                全音響専用ノード (Sound Nodes) 一斉演出:
+              </div>
+              <div className="effect-grid cols-3">
+                <button
+                  onClick={() => onTriggerSoundNode('lowImpact', 5, 2.0)}
+                  className="win95-btn"
+                  style={{ fontSize: '10px', color: '#ffb4b4', backgroundColor: '#3b1c1c' }}
+                  title="全サウンドノードで轟音サブベースを大音量再生"
+                >
+                  会場轟音 (衝撃)
+                </button>
+                <button
+                  onClick={() => onTriggerSoundNode('geiger', 5, 1.8)}
+                  className="win95-btn"
+                  style={{ fontSize: '10px', color: '#ffeb3b', backgroundColor: '#3b381c' }}
+                  title="全サウンドノードで激しいガイガー音"
+                >
+                  全館ガイガー
+                </button>
+                <button
+                  onClick={() => onTriggerSoundNode('powerDown', 3, 2.0)}
+                  className="win95-btn"
+                  style={{ fontSize: '10px', color: '#90caf9', backgroundColor: '#1c283b' }}
+                  title="全館電源喪失音"
+                >
+                  電源喪失音
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MP3音声ファイル (public/audio/) 再生トリガー */}
+          {onTriggerFileSound && (
+            <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #444' }}>
+              <div style={{ fontSize: '11px', color: '#a5b4fc', marginBottom: '4px', fontWeight: 'bold' }}>
+                MP3ファイル再生 (public/audio/):
+              </div>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <input
+                  type="text"
+                  value={customFileName}
+                  onChange={(e) => setCustomFileName(e.target.value)}
+                  placeholder="例: siren.mp3"
+                  className="win95-input"
+                  style={{ flex: 1, fontSize: '10px', padding: '2px 6px' }}
+                />
+                <button
+                  onClick={() => onTriggerFileSound(customFileName.trim(), selectedVolume, false)}
+                  className="win95-btn"
+                  style={{ fontSize: '10px', fontWeight: 'bold', color: '#c7d2fe', backgroundColor: '#312e81' }}
+                  title="public/audio/ 配下のMP3ファイルを全ノード・端末で再生"
+                >
+                  ファイル再生
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Volume multiplier */}
           <div className="effect-volume">

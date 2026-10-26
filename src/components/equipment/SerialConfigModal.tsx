@@ -68,7 +68,7 @@ const ItemBuilderSection: React.FC<ItemBuilderProps> = ({
           onChange={(e) => setAction(e.target.value)}
         />
         <button type="button" className="win95-btn" onClick={handleAdd}>
-          ➕ 追加
+          追加
         </button>
       </div>
 
@@ -217,11 +217,11 @@ export const SerialConfigModal: React.FC<SerialConfigModalProps> = ({
                 onClick={handleDetectPort}
                 disabled={detecting}
               >
-                {detecting ? '検出中...' : '🔍 USBマイコンを検出 (ポート選択)'}
+                {detecting ? '検出中...' : 'USBマイコンを検出 (ポート選択)'}
               </button>
               <div className="serial-detected-info">
                 {formPortName ? (
-                  <span className="serial-detect-success">✅ {formPortName}</span>
+                  <span className="serial-detect-success">[検出完了] {formPortName}</span>
                 ) : (
                   <span className="serial-detect-waiting">未検出 (ボタンを押してポートを選択)</span>
                 )}

@@ -1,3 +1,10 @@
+/**
+ * @file index.ts
+ * @description アトラクション統合サーバーのエントリーポイント。
+ * Next.js (App Router) カスタムサーバー、HTTPS/HTTP終端、Socket.IO WebSocket通信、
+ * エレベーター演出シーケンス、機材制御(MCU)、写真審査、緊急時一斉点灯を統括します。
+ */
+
 import express from 'express';
 import http from 'http';
 import https from 'https';
@@ -15,14 +22,40 @@ import {
   GlitchEffectOptions,
   TorchEffectOptions,
   SoundEffectOptions,
+  EquipmentItem,
 } from '../src/lib/types';
+
+// ============================================================================
+// 1. 演出定数 & タイムアウト定義 (Magic Numberの集約)
+// ============================================================================
+
+/** 演出シーケンスのタイミング設定 (ミリ秒) */
+export const EFFECT_TIMINGS = {
+  /** エレベーターが1FからB1Fへの移動に要する時間 (3.5秒) */
+  ELEVATOR_MOVE_DURATION_MS: 3500,
+  /** エレベーター到着時の画面グリッチ・明滅演出時間 (1.2秒) */
+  ELEVATOR_ARRIVAL_GLITCH_DURATION_MS: 1200,
+  /** デフォルトのエレベーター単発グリッチ時間 (1.5秒) */
+  ELEVATOR_DEFAULT_GLITCH_DURATION_MS: 1500,
+  /** 画像転送用最大バッファサイズ (20MB) */
+  MAX_HTTP_BUFFER_SIZE_BYTES: 2e7,
+} as const;
 
 const port = parseInt(process.env.PORT || '3000', 10);
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
 const handle = nextApp.getRequestHandler();
 
-// Check for SSL certificates in certificates/ or custom paths
+// ============================================================================
+// 2. SSL/TLS 証明書ローダー
+// ============================================================================
+
+/**
+ * certificates/ ディレクトリまたは環境変数からSSL証明書と秘密鍵を読み込みます。
+ * HTTPSはWeb Serial APIやCamera API (useTorch) をLAN内で動作させるために必須です。
+ *
+ * @returns {{ cert: Buffer; key: Buffer; certPath: string; keyPath: string } | null}
+ */
 function getSslCredentials() {
   const certDir = path.join(process.cwd(), 'certificates');
   const certPath = process.env.SSL_CERT_PATH || path.join(certDir, 'cert.pem');
@@ -39,6 +72,10 @@ function getSslCredentials() {
   }
   return null;
 }
+
+// ============================================================================
+// 3. サーバー初期化 & WebSocketイベントハンドリング
+// ============================================================================
 
 async function main() {
   await nextApp.prepare();
@@ -58,9 +95,10 @@ async function main() {
       origin: '*',
       methods: ['GET', 'POST'],
     },
-    maxHttpBufferSize: 2e7, // 20MB for image transfers
+    maxHttpBufferSize: EFFECT_TIMINGS.MAX_HTTP_BUFFER_SIZE_BYTES,
   });
 
+  /** 管理コンソール画面 (Admin) に最新の全体状態を一括同期 */
   const broadcastAdminState = () => {
     io.emit('admin:state_sync', {
       devices: store.getAllDevices(),
@@ -71,43 +109,63 @@ async function main() {
   };
 
   io.on('connection', (socket: Socket) => {
-    // Client joins/identifies
-    socket.on('device:ready', ({ deviceId, phase, location }) => {
+    // ------------------------------------------------------------------------
+    // A. クライアント端末（参加者端末）ライフサイクルイベント
+    // ------------------------------------------------------------------------
+
+    // 端末の準備完了・ルーム参加
+    socket.on('device:ready', ({ deviceId, phase, location, role = 'client' }) => {
       socket.join(`device:${deviceId}`);
-      const dev = store.registerDevice(deviceId, socket.id, phase, location);
-      console.log(`[Socket] Device ready: ${deviceId} (Phase: ${dev.phase}, Loc: ${location || 'N/A'})`);
-      // Send initial elevator state
+      if (role === 'sound_node') {
+        socket.join('sound_nodes');
+      }
+      const dev = store.registerDevice(deviceId, socket.id, phase, location, role);
+      console.log(`[Socket] Device ready: ${deviceId} (Role: ${role}, Phase: ${dev.phase}, Loc: ${location || 'N/A'})`);
+      
+      // 接続端末へ現在のエレベーター状態を初期配信
       socket.emit('elevator:state', store.getElevatorState());
       broadcastAdminState();
     });
 
+    // 探索・点検の開始トリガー
     socket.on('device:start_inspection', ({ deviceId }) => {
       console.log(`[Socket] Device start inspection: ${deviceId}`);
-      const updated = store.updateDevice(deviceId, { phase: 'AREA_1_PHOTO' });
+      store.updateDevice(deviceId, { phase: 'AREA_1_PHOTO' });
       io.to(`device:${deviceId}`).emit('phase:update', { phase: 'AREA_1_PHOTO', deviceId });
       broadcastAdminState();
     });
 
+    // バッテリー残量・充電状態のテレメトリ更新
     socket.on('device:battery_update', ({ deviceId, batteryLevel, charging }) => {
       store.updateDevice(deviceId, { batteryLevel, charging });
       broadcastAdminState();
     });
 
+    // フラッシュライトの物理状態テレメトリ更新
     socket.on('device:flash_state', ({ deviceId, flashState }) => {
       store.updateDevice(deviceId, { flashState });
       broadcastAdminState();
     });
 
+    // ------------------------------------------------------------------------
+    // B. ミッション写真提出・審査
+    // ------------------------------------------------------------------------
+
     socket.on('task:photo_submit', ({ deviceId, taskId, taskTitle, imageBase64 }) => {
       console.log(`[Socket] Photo submitted by ${deviceId} for task ${taskId}: ${taskTitle}`);
-      const { submission, deduped } = store.addSubmission(deviceId, taskId, taskTitle, imageBase64);
+      const { deduped } = store.addSubmission(deviceId, taskId, taskTitle, imageBase64);
       if (deduped) {
-        console.log(`[Socket] Debounced submission from ${deviceId} on task ${taskId}`);
+        console.log(`[Socket] Debounced duplicate submission from ${deviceId} on task ${taskId}`);
         return;
       }
       broadcastAdminState();
     });
 
+    // ------------------------------------------------------------------------
+    // C. 機材制御・エレベーター・演出連動
+    // ------------------------------------------------------------------------
+
+    // 個別機材の直接トグル操作
     socket.on('machine:control', ({ machineId, state, deviceId }) => {
       console.log(`[Socket] Machine control from ${deviceId}: ${machineId} = ${state}`);
       mcuManager.handleMachineControl(machineId, state);
@@ -118,7 +176,7 @@ async function main() {
       broadcastAdminState();
     });
 
-    // Conveyor Direct Control
+    // 搬送コンベア制御
     socket.on('conveyor:control', ({ action, speed, deviceId }) => {
       console.log(`[Socket] Conveyor control received: ${action} (from: ${deviceId || socket.id})`);
       mcuManager.handleConveyorControl(action, speed);
@@ -129,7 +187,7 @@ async function main() {
       broadcastAdminState();
     });
 
-    // Elevator Display & Movement
+    // エレベーターフロアの直接指定
     socket.on('elevator:set_floor', ({ floor, glitch }) => {
       console.log(`[Socket] Elevator floor set: ${floor}`);
       store.setElevatorState({ floor, glitch });
@@ -140,30 +198,33 @@ async function main() {
       broadcastAdminState();
     });
 
+    // エレベーター移動演出シーケンス (1F -> B1F 下降シミュレーション)
     socket.on('elevator:trigger_move', ({ from = 'FLOOR_1', to = 'FLOOR_B1', deviceId }) => {
       console.log(`[Socket] Elevator sequence triggered from ${from} -> ${to} (by: ${deviceId || socket.id})`);
-      // 1. Start moving: Notify MCU and Elevator Display
+      
+      // 1. 移動開始: MCUとエレベーター表示画面にMOVINGを通知
       mcuManager.handleElevatorMove('MOVING');
       store.setElevatorState({ floor: 'MOVING' });
       io.emit('elevator:state', { floor: 'MOVING' });
       broadcastAdminState();
 
-      // 2. Schedule arrival at B1 with flicker glitch
+      // 2. 移動時間待機後、到着時のグリッチ演出と目標階層を適用
       setTimeout(() => {
-        io.emit('elevator:glitch', { duration: 1200 });
+        io.emit('elevator:glitch', { duration: EFFECT_TIMINGS.ELEVATOR_ARRIVAL_GLITCH_DURATION_MS });
         store.setElevatorState({ floor: to, glitch: true });
         io.emit('elevator:state', { floor: to, glitch: true });
         mcuManager.handleElevatorMove(to);
         broadcastAdminState();
-      }, 3500);
+      }, EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS);
     });
 
-    socket.on('elevator:trigger_glitch', ({ duration = 1500 } = {}) => {
+    // エレベーター単発グリッチ演出
+    socket.on('elevator:trigger_glitch', ({ duration = EFFECT_TIMINGS.ELEVATOR_DEFAULT_GLITCH_DURATION_MS } = {}) => {
       console.log(`[Socket] Elevator glitch triggered (${duration}ms)`);
       io.emit('elevator:glitch', { duration });
     });
 
-    // Video Player & Trigger
+    // ビデオ再生トリガー
     socket.on('video:trigger_play', (payload) => {
       console.log('[Socket] Video play triggered!', payload);
       io.emit('video:trigger_play', payload || {});
@@ -171,11 +232,39 @@ async function main() {
 
     socket.on('video:ended', ({ deviceId } = {}) => {
       console.log(`[Socket] Video ended on player terminal (reporter: ${deviceId || socket.id})`);
-      // Can notify admin or log
       broadcastAdminState();
     });
 
-    // Admin handlers
+    // ------------------------------------------------------------------------
+    // C-2. サウンド専用端末 (Sound Node) 制御
+    // ------------------------------------------------------------------------
+
+    // サウンドノードの明示的登録
+    socket.on('sound:register_node', ({ deviceId, location }) => {
+      socket.join(`device:${deviceId}`);
+      socket.join('sound_nodes');
+      store.registerDevice(deviceId, socket.id, 'STANDBY', location, 'sound_node');
+      console.log(`[Socket] Sound Node explicitly registered: ${deviceId} (Loc: ${location || 'N/A'})`);
+      broadcastAdminState();
+    });
+
+    // サウンドノード向け再生トリガー (個別端末宛て、または全体配信)
+    socket.on('sound:trigger', (payload) => {
+      const { targetDeviceId, soundType, volume = 1.0 } = payload;
+      console.log(`[Socket] Sound trigger dispatched: ${soundType} -> ${targetDeviceId || 'ALL_SOUND_NODES'} (vol: ${volume})`);
+
+      if (targetDeviceId) {
+        io.to(`device:${targetDeviceId}`).emit('sound:play', payload);
+      } else {
+        // 全Sound Node宛て、および音響演出連動用ルームにブロードキャスト
+        io.to('sound_nodes').emit('sound:play', payload);
+      }
+    });
+
+    // ------------------------------------------------------------------------
+    // D. 管理コンソール (Admin) 専用ハンドラー
+    // ------------------------------------------------------------------------
+
     socket.on('admin:join', () => {
       socket.join('admin_room');
       socket.emit('admin:state_sync', {
@@ -195,6 +284,7 @@ async function main() {
       });
     });
 
+    // 写真判定（承認 / 却下）
     socket.on('admin:review_photo', ({ submissionId, status, reason }) => {
       console.log(`[Admin] Review photo: ${submissionId} -> ${status} (${reason || ''})`);
       const updated = store.updateSubmissionStatus(submissionId, status, reason);
@@ -209,13 +299,13 @@ async function main() {
       broadcastAdminState();
     });
 
+    // フェーズ手動強制変更
     socket.on('admin:override_phase', ({ targetDeviceId, phase }) => {
       console.log(`[Admin] Override phase: ${phase} -> ${targetDeviceId || 'ALL'}`);
       if (targetDeviceId) {
         store.updateDevice(targetDeviceId, { phase });
         io.to(`device:${targetDeviceId}`).emit('phase:update', { phase, deviceId: targetDeviceId });
       } else {
-        // Change all devices
         for (const dev of store.getAllDevices()) {
           store.updateDevice(dev.deviceId, { phase });
           io.to(`device:${dev.deviceId}`).emit('phase:update', { phase, deviceId: dev.deviceId });
@@ -224,11 +314,12 @@ async function main() {
       broadcastAdminState();
     });
 
+    // 各種恐怖演出（グリッチ・トーチ点滅・低周波音・シャットダウン）の手動起爆
     socket.on('admin:trigger_effect', ({ targetDeviceId, effectType, options }) => {
       console.log(`[Admin] Trigger effect: ${effectType} -> target: ${targetDeviceId || 'ALL_EXCEPT_STANDBY'}`);
 
       const emitToTarget = (targetDev: { deviceId: string; phase: DevicePhase }) => {
-        // Prevent spoilers: Skip effect for devices in STANDBY phase unless targeted directly
+        // ネタバレ防止: STANDBYフェーズの待機端末には全体演出を波及させない（個別指名時は除く）
         if (!targetDeviceId && targetDev.phase === 'STANDBY') {
           return;
         }
@@ -263,17 +354,18 @@ async function main() {
       }
     });
 
+    // 緊急時非常用全点灯 (照明・パトランプ全開、コンベア緊急停止)
     socket.on('admin:emergency_all_light', () => {
       console.log('[Admin] EMERGENCY ALL LIGHT triggered!');
       mcuManager.handleEmergencyAllLight();
 
-      // Turn on torch for all active devices (exclude STANDBY)
+      // 参加中端末のトーチを一斉強制点灯
       for (const dev of store.getAllDevices()) {
         if (dev.phase !== 'STANDBY') {
           io.to(`device:${dev.deviceId}`).emit('effect:torch', { state: true });
         }
       }
-      // Also update all beacon lights in equipments
+      // 登録されている全ての照明機材をONへ
       for (const eq of store.getEquipments()) {
         if (eq.type === 'light') {
           store.updateEquipmentState(eq.id, true);
@@ -282,12 +374,15 @@ async function main() {
       broadcastAdminState();
     });
 
-    // Equipment handlers
+    // ------------------------------------------------------------------------
+    // E. 機材管理 (Equipment CRUD)
+    // ------------------------------------------------------------------------
+
     socket.on('equipment:get_all', () => {
       socket.emit('equipment:init', store.getEquipments());
     });
 
-    socket.on('equipment:add', (item) => {
+    socket.on('equipment:add', (item: Omit<EquipmentItem, 'updatedAt'>) => {
       const added = store.addEquipment(item);
       io.emit('equipment:updated', added);
       broadcastAdminState();
@@ -304,12 +399,17 @@ async function main() {
     socket.on('equipment:control', ({ id, action, value }) => {
       const updated = store.updateEquipmentState(id, value);
       if (updated) {
-        mcuManager.dispatchCommand(updated.topic || `mcu/equipment/${id}`, { action, value });
+        mcuManager.dispatchCommand(
+          updated.topic || `mcu/equipment/${id}`,
+          { action, value },
+          updated.protocol || 'serial'
+        );
         io.emit('equipment:updated', updated);
         broadcastAdminState();
       }
     });
 
+    // 切断時のクリーンアップ
     socket.on('disconnect', () => {
       const removed = store.removeDeviceBySocketId(socket.id);
       if (removed) {
@@ -319,7 +419,7 @@ async function main() {
     });
   });
 
-  // Next.js fallback
+  // Next.js リクエストハンドラーへ委託
   app.all('*', (req, res) => {
     return handle(req, res);
   });

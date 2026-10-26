@@ -44,3 +44,11 @@ public/videos/*
 *.mp4
 *.webm
 *.mov
+
+# Audio assets (Exclude media while keeping folder)
+public/audio/*
+!public/audio/.gitkeep
+*.mp3
+*.wav
+*.ogg
+*.m4a

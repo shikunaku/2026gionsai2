@@ -1,21 +1,37 @@
 'use client';
 
+/**
+ * @file page.tsx (Admin Console)
+ * @description アトラクション集中管理コンソール。
+ * PDA端末監視、写真審査、機材・演出トリガー、音響専用ノード (Sound Node) の死活監視および一斉発火、
+ * そしてオフライン検知・再接続モーダルを統合提供します。
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSocket } from '../../hooks/useSocket';
 import { FullscreenButton } from '../../components/common/FullscreenButton';
+import { ReconnectingModal } from '../../components/common/ReconnectingModal';
 import { DeviceMonitor } from '../../components/admin/DeviceMonitor';
 import { PhotoReviewQueue } from '../../components/admin/PhotoReviewQueue';
 import { EffectTriggerPanel } from '../../components/admin/EffectTriggerPanel';
 import { CastManualViewer } from '../../components/admin/CastManualViewer';
-import { DeviceInfo, DevicePhase, PhotoSubmission, EquipmentItem } from '../../lib/types';
+import {
+  DeviceInfo,
+  DevicePhase,
+  PhotoSubmission,
+  EquipmentItem,
+  SoundEffectOptions,
+  GlitchEffectOptions,
+  TorchEffectOptions,
+} from '../../lib/types';
 import '../../styles/app-shell.css';
 import '../../styles/admin.css';
 
 type EffectType = 'glitch' | 'torch' | 'sound' | 'volume' | 'shutdown';
 
 export default function AdminPage() {
-  const { socket, connected } = useSocket();
+  const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [submissions, setSubmissions] = useState<PhotoSubmission[]>([]);
   const [equipments, setEquipments] = useState<EquipmentItem[]>([]);
@@ -36,8 +52,11 @@ export default function AdminPage() {
     };
   }, [socket]);
 
-  // Handlers
-  const triggerEffect = (effectType: EffectType, options: any, targetDeviceId?: string) => {
+  // --------------------------------------------------------------------------
+  // エフェクト & 端末操作ハンドラー
+  // --------------------------------------------------------------------------
+
+  const triggerEffect = (effectType: EffectType, options: unknown, targetDeviceId?: string) => {
     socket?.emit('admin:trigger_effect', { targetDeviceId, effectType, options });
   };
 
@@ -46,12 +65,46 @@ export default function AdminPage() {
   };
 
   const handleIndividualGlitch = (deviceId: string) => {
-    triggerEffect('glitch', { level: 2, duration: 2500, mode: 'creepy', vibrate: true }, deviceId);
+    triggerEffect('glitch', { level: 2, duration: 2500, mode: 'creepy', vibrate: true } as GlitchEffectOptions, deviceId);
   };
 
   const handleIndividualTorch = (deviceId: string) => {
     // Eerie horror blink rhythm: "ぴかっ...ぴかっ...ぴかっ..."
-    triggerEffect('torch', { pattern: '1,0,0,1,0,0,1,0,0,0', intervalMs: 120 }, deviceId);
+    triggerEffect('torch', { pattern: '1,0,0,1,0,0,1,0,0,0', intervalMs: 120 } as TorchEffectOptions, deviceId);
+  };
+
+  /** サウンドノード宛ての個別テスト音再生 */
+  const handleIndividualSound = (deviceId: string, soundType: SoundEffectOptions['soundType']) => {
+    socket?.emit('sound:trigger', {
+      targetDeviceId: deviceId,
+      soundType,
+      volume: 1.5,
+      level: 4,
+    });
+  };
+
+  /** 全サウンド専用ノード (Sound Nodes) に対する一斉演出発火 */
+  const handleTriggerSoundNode = (soundType: string, level = 3, volume = 1.5, filename?: string) => {
+    socket?.emit('sound:trigger', {
+      soundType: soundType as SoundEffectOptions['soundType'],
+      filename,
+      volume,
+      level,
+    });
+  };
+
+  /** 全体・全ノードに対するMP3/音声ファイル再生指示 */
+  const handleTriggerFileSound = (filename: string, volume = 1.0, loop = false) => {
+    if (!filename) return;
+    // 1. 全体端末 (PDA) 向け
+    triggerEffect('sound', { soundType: 'file', filename, volume, loop });
+    // 2. 音響専用ノード (Sound Nodes) 向け
+    socket?.emit('sound:trigger', {
+      soundType: 'file',
+      filename,
+      volume,
+      loop,
+    });
   };
 
   const handleReviewPhoto = (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
@@ -62,12 +115,12 @@ export default function AdminPage() {
     socket?.emit('admin:override_phase', { phase });
   };
 
-  const handleTriggerGlitch = (options: any) => triggerEffect('glitch', options);
+  const handleTriggerGlitch = (options: GlitchEffectOptions) => triggerEffect('glitch', options);
 
   const handleTriggerSound = (soundType: string, level?: number) =>
     triggerEffect('sound', { soundType, level });
 
-  const handleTriggerTorch = (options: any) => triggerEffect('torch', options);
+  const handleTriggerTorch = (options: TorchEffectOptions) => triggerEffect('torch', options);
 
   const handleSetVolume = (volume: number) => triggerEffect('volume', { volume });
 
@@ -77,7 +130,7 @@ export default function AdminPage() {
 
   const handleTriggerShutdown = () => triggerEffect('shutdown', {});
 
-  // New Equipment & Display Direct Handlers
+  // 機材・エレベーター・映像ハンドラー
   const handleElevatorSetFloor = (floor: 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF') => {
     socket?.emit('elevator:set_floor', { floor });
   };
@@ -100,6 +153,14 @@ export default function AdminPage() {
 
   return (
     <div className="app-shell">
+      {/* オフライン・再接続通知ダイアログ */}
+      <ReconnectingModal
+        isReconnecting={isReconnecting}
+        isOnline={isOnline}
+        reconnectAttempts={reconnectAttempts}
+        onManualReconnect={manualReconnect}
+      />
+
       {/* Top Application Bar */}
       <div className="win95-titlebar app-titlebar">
         <div className="app-titlebar-left">
@@ -116,8 +177,13 @@ export default function AdminPage() {
             </button>
           </Link>
           <Link href="/admin" className="app-nav-link">
-            <button className="win95-btn app-nav-btn active" title="管理コンソール移動（現在の画面）">
+            <button className="win95-btn app-nav-btn active" title="管理コンソール（現在の画面）">
               [管理コンソール]
+            </button>
+          </Link>
+          <Link href="/display/sound" className="app-nav-link" target="_blank">
+            <button className="win95-btn app-nav-btn" title="音響専用ノード画面を開く">
+              [音響ノード]
             </button>
           </Link>
           <Link href="/elevator-display" className="app-nav-link" target="_blank">
@@ -147,6 +213,7 @@ export default function AdminPage() {
             onPhaseChange={handleDevicePhaseChange}
             onIndividualGlitch={handleIndividualGlitch}
             onIndividualTorch={handleIndividualTorch}
+            onIndividualSound={handleIndividualSound}
           />
         </div>
 
@@ -163,6 +230,8 @@ export default function AdminPage() {
             onOverrideAllPhase={handleOverrideAllPhase}
             onTriggerGlitch={handleTriggerGlitch}
             onTriggerSound={handleTriggerSound}
+            onTriggerSoundNode={handleTriggerSoundNode}
+            onTriggerFileSound={handleTriggerFileSound}
             onTriggerTorch={handleTriggerTorch}
             onSetVolume={handleSetVolume}
             onEmergencyAllLight={handleEmergencyAllLight}

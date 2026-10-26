@@ -103,13 +103,13 @@ export default function EquipmentPage() {
           className={`win95-btn equipment-subtab-btn ${activeTab === 'serial' ? 'active' : ''}`}
           onClick={() => setActiveTab('serial')}
         >
-          🔌 USBマイコン端末管理・シリアル制御 (Web Serial)
+          USBマイコン端末管理・シリアル制御 (Web Serial)
         </button>
         <button
           className={`win95-btn equipment-subtab-btn ${activeTab === 'network' ? 'active' : ''}`}
           onClick={() => setActiveTab('network')}
         >
-          📡 ネットワーク機材同期盤 (Socket.io / Wi-Fi / BLE)
+          ネットワーク機材同期盤 (Socket.io / Wi-Fi / BLE)
         </button>
       </div>
 

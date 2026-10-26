@@ -1,193 +1,278 @@
-# 文化祭・工場点検ホラーアトラクション演出統合システム (2026 祇園祭)
+# 2026 祇園祭 工場点検ホラーアトラクション 統合制御システム
 
-文化祭・イベント等のアトラクションにおいて、参加者が携帯する **「工場保守用PDA（Webクライアント）」** と、運営・演出スタッフが監視・審査・演出制御を行う **「集中管理コンソール（Admin）」**、および会場内の物理ギミック（搬送コンベア、エレベータ昇降リレー、蒸気バルブ、非常灯、換気ファン等）を連携制御する **「マイコン（ESP32 / BLE / Wi-Fi / Serial）」**、さらに **エレベータ内階数電照パネル端末** や **エリア3大型モニター端末** をリアルタイムに統合制御するWebアプリケーション基盤です。
+本リポジトリは、文化祭・展示イベントにおけるホラーアトラクションの運営を支える統合制御システムです。  
+参加者が携帯する **「保守用PDA端末 (Web)」**、スタッフが操作する **「集中管理コンソール (Admin)」**、会場内各所に分散配置される **「音響専用ノード (Sound Node)」**、**「エレベーター階数電照パネル」**、**「大型映像モニター」**、および物理ギミック（搬送コンベア、蒸気弁サーボ、非常パトランプ、排煙ファン等）を駆動する **「ESP32マイコン」** をリアルタイムに連携制御します。
 
-Next.js (App Router) + TypeScript + Socket.io によるフルスタック構成で、レトロ業務機（Windows 95/98 Classic）テイストのデザインシステムを採用しています。
+Next.js (App Router) + TypeScript + Socket.IO によるフルスタック構成で、レトロ業務機（Windows 95/98 Classic）調の硬質かつ統一されたUIデザインを採用しています。
 
 ---
 
-## システムアーキテクチャ
+## 1. システム全体アーキテクチャ概要
+
+### A. 全体連携データフロー図
+
+```mermaid
+graph TD
+    subgraph Clients["端末・表示ノード群 (Next.js App Router)"]
+        PDA["参加者用PDA端末<br/>/client<br/>(Camera / Torch / SFX / Glitch)"]
+        Admin["集中管理コンソール<br/>/admin<br/>(Tele-monitor / Review / Trigger)"]
+        SoundNode["音響専用ノード<br/>/display/sound<br/>(Web Audio / MP3 Cache Engine)"]
+        ElevatorDisp["エレベーター電照パネル<br/>/elevator-display<br/>(Flicker / Floor Display)"]
+        VideoDisp["エリア3映像端末<br/>/display/video<br/>(Fullscreen Video Player)"]
+        EquipPanel["機材制御盤<br/>/equipment<br/>(Web Serial / Relay Control)"]
+    end
+
+    subgraph Server["中央統合サーバー (server/index.ts)"]
+        SocketServer["Socket.IO WebSocket Server<br/>(ポート 3000 / HTTP & HTTPS)"]
+        Store["インメモリストア (store.ts)<br/>・端末ステート & ロール管理<br/>・写真重複排除デバウンス (10s)"]
+        McuMgr["MCUディスパッチャー (mcu-manager.ts)<br/>・ESP32コマンド生成<br/>・緊急全点灯 / コンベア制御"]
+        Persistence["データ永続化 (persistence.ts)<br/>・data/equipments.json"]
+    end
+
+    subgraph Hardware["物理機材 & マイコン群 (firmware/)"]
+        ESP_Main["メイン機材ハブ (ESP32有線シリアル / COM)<br/>・リレー: コンベア / ファン / パトランプ<br/>・サーボ: 蒸気減圧弁"]
+        ESP_WiFi["Wi-Fiリモートノード (REST / WebSocket)<br/>・天井スポットライト / 別棟ファン"]
+        ESP_BLE["BLE隠しノード (Bluetooth NUS)<br/>・隠しストロボ照明 / 遠隔ブザー"]
+    end
+
+    PDA <-->|WebSocket: device:ready, photo_submit, effect:*| SocketServer
+    Admin <-->|WebSocket: admin:join, override_phase, trigger_effect| SocketServer
+    SoundNode <-->|WebSocket: sound:register_node, sound:play| SocketServer
+    ElevatorDisp <-->|WebSocket: elevator:state, elevator:glitch| SocketServer
+    VideoDisp <-->|WebSocket: video:trigger_play, video:ended| SocketServer
+    EquipPanel <-->|Web Serial API: 115200bps| ESP_Main
+
+    SocketServer <--> Store
+    SocketServer <--> McuMgr
+    McuMgr <--> Persistence
+    McuMgr -.->|USB Serial / LAN / BLE| ESP_Main
+    McuMgr -.->|HTTP / REST| ESP_WiFi
+    McuMgr -.->|Bluetooth LE| ESP_BLE
+```
+
+### B. 各ノードの役割分担
+
+| ノード種別 | エンドポイント | 主な責務と機能 |
+|---|---|---|
+| **参加者用PDA端末** | `/client` | 進行フェーズ同期、点検ミッション撮影（Canvasリサイズ圧縮）、画面グリッチ妨害演出、背面トーチ明滅、プロシージャル効果音再生、オフライン再接続ダイアログ |
+| **集中管理コンソール** | `/admin` | 全PDA/音響端末のリアルタイム監視（バッテリー・通信・フェーズ）、写真合否審査、フェーズ強制進行、全館恐怖演出の一斉発火、非常用全点灯スイッチ |
+| **音響専用ノード** | `/display/sound` | 会場内の隠しスピーカー・天井スピーカー接続端末。Autoplay制約のワンタップ解除、プロシージャル合成音およびMP3キャッシュ再生 |
+| **エレベーター電照パネル** | `/elevator-display` | 段ボール筐体くり抜き用の暖色発光バックライト電照板。蛍光灯チラつきグリッチ演出、1F/B1F表示切替 |
+| **エリア3大型映像端末** | `/display/video` | フルスクリーン動画再生プレイヤー。走査線待機画面からWebSocketシグナルにより即座にホラー動画を再生 |
+| **機材演出制御盤** | `/equipment` | Web Serial APIを用いたマイコン直結制御、COMポート自動検出、リレー/サーボの個別ON/OFFテスト |
+
+---
+
+## 2. ディレクトリ構成とモジュール責務
 
 ```text
-[ 参加者用 PDA 端末 ] (/client)
-  ├── 100dvh & PWA / 全画面表示
-  ├── カメラ写真撮影 (<input type="file"> + 800px Canvas圧縮)
-  ├── Web Audio API 合成 (合格チャイム♪、重低音、ガイガー、ビープ等)
-  ├── 画面妨害エフェクト (不穏歪み/激震裂け/色反転/突発暗転/血色赤転/砂嵐)
-  └── 背面トーチ制御 (Android Bridge / ImageCapture 多重フォールバック)
-         │
-         │ WebSocket (Socket.io)
-         ▼
-[ 統合バックエンドサーバー ] (server/index.ts)
-  ├── Express + Socket.io + Next.js カスタムサーバー (HTTP/HTTPS対応)
-  ├── メモリ内状態管理 & 10秒多重送信デバウンス (store.ts)
-  ├── 設備設定永続化 (data/equipments.json)
-  └── マルチマイコン・プロトコル振り分けディスパッチャー (mcu-manager.ts)
-         │
-         ├──► [ 集中管理コンソール ] (/admin)
-         │      ├── 接続端末監視 (電池残量・オンライン・新5段階エリア制御・個別妨害・個別点滅)
-         │      ├── 写真審査キュー (合否判定・差し戻し理由)
-         │      ├── キャスト運用マニュアル (PDFビューア埋め込み)
-         │      ├── 演出制御 (全端末5エリア切替・多重妨害モード・音響トリガー・非常照明)
-         │      └── エレベータ階数テスト & コンベア操作 & エリア3映像手動トリガー
-         │
-         ├──► [ エレベータ内 階数表示端末 ] (/elevator-display または /display/elevator)
-         │      ├── 段ボール切り抜き用バックライト電照パネル画面 (漆黒背景 & 暖色系白発光 #FFF3D0)
-         │      ├── 縦配置 (上:1 / 下:B1) & 横配置 (左:1 / 右:B1) 切り替え & 反転設定
-         │      ├── 段ボール穴合わせ微調整 (幅・高さ・余白スライダー / LocalStorage保存)
-         │      └── 古い蛍光灯/白熱球特有のフリッカー・チラつき演出 & 昇降連動
-         │
-         ├──► [ エリア3 映像再生用別端末 ] (/display/video または /display/player)
-         │      ├── 別置き大型モニター/タブレット用 フルスクリーンプレイヤー
-         │      ├── CRT走査線・アナログ砂嵐ノイズの待機画面 & 音声自動再生アンロック機構
-         │      └── WebSocket連動による動画再生 & 合成ホラービジュアルフォールバック
-         │
-         ├──► [ 機材演出制御盤 ] (/equipment)
-         │      ├── 有線シリアル / Wi-Fi / Bluetooth (BLE) のプロトコル個別設定
-         │      └── 物理/仮想設備 (リレー・サーボ・ライト・ファン) の即時制御・追加・永続化
-         │
-         └──► [ 会場ハードウェア ] (ESP32 有線ハブ / Wi-Fi ノード / BLE ノード)
+2026gionsai2/
+├── certificates/             # HTTPS用SSL証明書配置ディレクトリ (cert.pem, key.pem)
+├── data/
+│   └── equipments.json       # 機材定義・ピンアサイン永続化ファイル
+├── docs/                     # 各種外部API仕様書 (FLASHLIGHT_API.md等)
+├── firmware/                 # ESP32マイコン向けArduinoスケッチ
+│   ├── README_HARDWARE.md    # ハードウェア配線仕様・AIコード生成プロンプト
+│   ├── esp32_relay_hub/      # 【有線USBシリアル統合メインハブ】リレー4ch + サーボ
+│   ├── esp32_wifi_hub/       # 【Wi-Fiリモートノード】REST APIサーバー
+│   └── esp32_ble_hub/        # 【BLE隠しノード】Nordic UART Service
+├── public/                   # 静的公開アセット
+│   ├── audio/                # MP3/WAV音声アセット配置場所 (Git管理対象外、.gitkeepのみ保持)
+│   ├── videos/               # 演出用動画ファイル配置場所 (Git管理対象外)
+│   └── cast-manual.pdf       # 管理画面でインライン閲覧する運営スタッフマニュアル
+├── server/                   # バックエンド・リアルタイムWebSocketサーバー
+│   ├── index.ts              # Express + Socket.IO + Next.js カスタムサーバー
+│   ├── store.ts              # インメモリストア (端末・審査キュー・機材状態管理)
+│   ├── persistence.ts        # equipments.json のファイルI/O
+│   └── mcu-manager.ts        # ハードウェア通信プロトコルブリッジ
+└── src/                      # フロントエンド (Next.js 14 App Router)
+    ├── app/                  # 各種画面ルーティング
+    │   ├── admin/page.tsx    # 集中管理コンソール画面
+    │   ├── client/page.tsx   # 参加者用PDA端末画面
+    │   ├── display/
+    │   │   ├── sound/page.tsx # 音響専用ノード画面
+    │   │   └── video/page.tsx # エリア3映像再生端末画面
+    │   ├── elevator-display/ # エレベーター階数表示画面
+    │   ├── equipment/        # 機材制御盤画面
+    │   ├── layout.tsx        # アプリ全体共通ルートレイアウト
+    │   └── page.tsx          # 統合ポータルランチャー画面
+    ├── components/           # UIコンポーネント群
+    │   ├── admin/            # 端末監視、写真審査、演出発火パネル
+    │   ├── client/           # 各エリア演出、カメラ撮影、グリッチキャンバス
+    │   ├── common/           # 全画面切替、オフライン再接続モーダル (ReconnectingModal)
+    │   └── equipment/        # Web Serial設定ダイアログ、機材カード
+    ├── hooks/                # カスタムフック
+    │   ├── useSocket.ts      # WebSocket接続・切断・再接続監視
+    │   ├── useSoundEngine.ts # 音響エンジンラッパーフック
+    │   ├── useTorch.ts       # ネイティブBridge / Web Camera トーチ制御
+    │   └── useBattery.ts     # バッテリー残量テレメトリ監視
+    ├── lib/                  # コアロジック・共通ユーティリティ
+    │   ├── soundEngine.ts    # Web Audio API シンセサイザー & MP3キャッシュ再生
+    │   ├── types.ts          # システム全域のTypeScript型定義・イベント規約
+    │   └── webSerial.ts      # Web Serial API 通信ラッパー (排他ロック安全解放機構)
+    └── styles/               # CSSスタイル定義 (win95.css, glitch.css, admin.css等)
 ```
 
 ---
 
-## 主な機能・特徴
+## 3. 通信プロトコル・演出イベント仕様
 
-### 1. 進行エリア体系（全5段階）
-ゲーム全体のエリアを以下の5段階フローで一元管理しています：
-1. **エリア1: `STANDBY` (待機・オープニング)**
-   - 参加者端末: 待機画面、案内・ガイダンス表示。管理画面からの開始トリガーを待つ。
-2. **エリア2: `AREA_1_PHOTO` (エリア1: 画像撮影・提出)**
-   - 参加者端末: 指定3か所の写真をカメラで撮影・提出。管理画面の審査で合格すると次へ。
-3. **エリア3: `ELEVATOR` (エレベータ移動・稼働)**
-   - 参加者端末: エレベータ搭乗・運行案内/操作UI。
-   - トリガー時にMCU（ESP32リレー/モーター）へ稼働コマンド送信、エレベータ階数表示端末へ階数更新（1F ➔ MOVING ➔ チラつき点灯B1）を発行。
-4. **エリア4: `AREA_2_CONVEYOR` (エリア2: コンベア操作)**
-   - 参加者端末: 搬送コンベアの操作UI（正転・逆転・緊急停止）。WebSocket経由でESP32へコマンドを転送。
-5. **エリア5: `AREA_3_VIDEO` (エリア3: 別端末映像再生トリガー)**
-   - 参加者端末: ギミック解除・映像再生トリガーUI。
-   - 参加者端末で操作すると、別置き大型モニター（`/display/video`）へ `TRIGGER_VIDEO_PLAY` をブロードキャスト。
-- **カメラ撮影 & 圧縮**: 低スペック端末でもクラッシュしない `<input type="file" capture="environment">` + Canvas 800px 自動リサイズ。
-- **トーチ制御の多重フォールバック**: Android WebView Bridge ➔ Web標準 ImageCapture ➔ スクリーンフラッシュ。
+### A. Socket.IO イベント規約 (`src/lib/types.ts`)
 
-### 2. 集中管理コンソール (`/admin`)
-- **レトロ業務機テイスト (Win95 UI)**: 目に優しい低コントラスト配色、立体ベベルボタン、MSゴシック風等幅フォント。
-- **4カラム統合オペレーション**:
-  1. **接続端末監視 (`Device Monitor`)**: 全PDAの接続状態、バッテリー残量、エリア切替、個別妨害発火、個別トーチ点滅。
-  2. **点検写真審査キュー (`Photo Review Queue`)**: 提出された写真のサムネイル確認、合格（APPROVE）、不鮮明/箇所違いによる差し戻し。
-  3. **キャスト運用マニュアル (`CastManualViewer`)**: 運営・誘導スタッフ向けマニュアル（PDF）のインライン閲覧と別窓表示・ダウンロード。
-  4. **演出制御パネル (`EffectTriggerPanel`)**: 全端末エリア強制切替、6種類の画面妨害（強度・モード）、プロシージャル音響（合格チャイム、重低音、ガイガー等）、音量一括ブースト（100%〜250%）、トーチ遠隔制御、**非常用全照明発火 [EMERGENCY LIGHT]**。
-- **タイトルバー共通ナビゲーション**: ポータル (`/`)、管理コンソール (`/admin`)、機材制御盤 (`/equipment`) のワンクリック相互行き来。
+#### サーバー受信イベント (`ClientToServerEvents`)
 
-### 3. 機材演出制御盤 (`/equipment`)
-- 会場内の照明、リレー、サーボ、換気ファン等の系統を一覧管理・手動ON/OFF。
-- **マルチマイコン & 3通信方式対応**:
-  - 有線シリアル (USB/COM)
-  - Wi-Fi (HTTP / WebSocket)
-  - Bluetooth (BLE)
-- 機材ごとに担当マイコンID（例: `ESP32_MAIN`）や接続ポートを設定可能。
-- `data/equipments.json` による自動永続化（サーバー再起動時も状態を保持）。
+| イベント名 | 送信元 | ペイロード / 引数 | 説明 |
+|---|---|---|---|
+| `device:ready` | クライアント / 全端末 | `{ deviceId, phase, location?, role? }` | 端末接続時の初期登録およびロール（`client`, `sound_node`等）通知 |
+| `sound:register_node` | サウンドノード | `{ deviceId, location? }` | 音響専用ノードとしての明示的登録と `sound_nodes` ルーム参加 |
+| `sound:trigger` | 管理コンソール | `SoundNodePlayPayload` | サウンドノードまたは全端末への効果音・MP3ファイル再生指示 |
+| `task:photo_submit` | PDA端末 | `{ deviceId, taskId, taskTitle, imageBase64 }` | 点検写真の提出（10秒間の重複排除デバウンス付き） |
+| `elevator:trigger_move` | PDA / 管理 | `{ from?, to?, deviceId? }` | 1FからB1Fへのエレベーター下降演出シーケンスの開始 |
+| `conveyor:control` | PDA / 管理 | `{ action: 'forward'\|'reverse'\|'stop', speed? }` | 搬送コンベアの動作指示（ESP32へ即時中継） |
+| `admin:trigger_effect` | 管理コンソール | `{ targetDeviceId?, effectType, options }` | グリッチ妨害、トーチ点滅、音響演出の手動強制発火 |
+| `admin:emergency_all_light` | 管理コンソール | なし | 全非常照明・全端末トーチの一斉強制点灯およびコンベア緊急停止 |
 
-### 4. ポータルランチャー (`/`)
-- 各種画面（PDA端末、管理コンソール、機材制御盤）へのワンクリックランチャー。
-- **折りたたみ式ライセンス・著作権表記パネル**:
-  - イベント運営や展示で必要なOSSライセンス（Next.js, Socket.io, Express, Web Audio等）や本プロジェクトの著作権表記を表示/非表示トグル可能。
+#### クライアント受信イベント (`ServerToClientEvents`)
+
+| イベント名 | 受信先 | ペイロード | 説明 |
+|---|---|---|---|
+| `phase:update` | PDA端末 | `{ phase: DevicePhase, deviceId? }` | 進行フェーズの切り替え通知 |
+| `effect:glitch` | PDA端末 | `GlitchEffectOptions` | 画面歪み・色反転・砂嵐などの妨害演出トリガー |
+| `effect:torch` | PDA端末 | `TorchEffectOptions` | 怪異点滅（`pattern: '1,0,0,1,0,0,1'`）や高速明滅の実行 |
+| `effect:sound` | PDA端末 | `SoundEffectOptions` | プロシージャル効果音またはMP3ファイル再生 |
+| `sound:play` | サウンドノード | `SoundNodePlayPayload` | 指定音源（プロシージャルまたはMP3）の即時再生 |
+| `elevator:state` | エレベーター表示 | `{ floor, glitch? }` | 階数表示（FLOOR_1 / MOVING / FLOOR_B1）の更新 |
+| `admin:state_sync` | 管理コンソール | `{ devices, submissions, equipments, ... }` | 全接続端末・機材状態のリアルタイム一括同期 |
 
 ---
 
-## ハードウェア連携 (ESP32) & AIコード生成
+### B. 音響エンジン (`soundEngine.ts`) 仕様
 
-本リポジトリの `firmware/` ディレクトリに、各通信方式のファームウェアとAI生成用プロンプト仕様書が含まれています。
+システムは **2系統の音響出力方式** を併用します：
 
-- [firmware/README_HARDWARE.md](file:///c:/works-LeX13/2026/2026gionsai2/firmware/README_HARDWARE.md):
-  - 有線/Wi-Fi/BLEの選定基準、結線図、複数台設定ルール
-  - **ChatGPTやClaudeに投げるだけで互換Arduinoコードを即生成できるAIプロンプトテンプレート**
-- [firmware/esp32_relay_hub/esp32_relay_hub.ino](file:///c:/works-LeX13/2026/2026gionsai2/firmware/esp32_relay_hub/esp32_relay_hub.ino): 有線シリアル統合制御
-- [firmware/esp32_wifi_hub/esp32_wifi_hub.ino](file:///c:/works-LeX13/2026/2026gionsai2/firmware/esp32_wifi_hub/esp32_wifi_hub.ino): Wi-Fi / REST API 遠隔制御
-- [firmware/esp32_ble_hub/esp32_ble_hub.ino](file:///c:/works-LeX13/2026/2026gionsai2/firmware/esp32_ble_hub/esp32_ble_hub.ino): Bluetooth Low Energy (NUS) 制御
-
----
-
-## ディレクトリ構成
-
-```text
-.
-├── server/                      # リアルタイム通信バックエンド
-│   ├── index.ts                 # Express + Socket.io + Next.js サーバー
-│   ├── store.ts                 # インメモリストア & 写真重複防止デバウンス
-│   ├── persistence.ts           # equipments.json 読み書き
-│   └── mcu-manager.ts           # マイコン統合管理 (Serial, BLE, Wi-Fi)
-├── src/
-│   ├── app/                     # Next.js 14+ App Router
-│   │   ├── layout.tsx           # ルートレイアウト
-│   │   ├── page.tsx             # ポータルランチャー (/)（ライセンス開閉付き）
-│   │   ├── client/page.tsx      # 参加者用 PDA 端末 (/client)
-│   │   ├── admin/page.tsx       # 集中管理コンソール (/admin)
-│   │   └── equipment/page.tsx   # 機材演出制御盤 (/equipment)
-│   ├── components/
-│   │   ├── admin/               # 管理コンポーネント (端末監視/写真審査/演出/マニュアル)
-│   │   ├── client/              # PDA 端末コンポーネント (各エリア/カメラ/妨害オーバーレイ)
-│   │   ├── equipment/           # 機材制御コンポーネント
-│   │   └── common/              # 共通コンポーネント (全画面切替ボタン等)
-│   ├── hooks/                   # カスタムフック (useSocket, useTorch, useBattery, useSoundEngine)
-│   ├── lib/                     # コアロジック (soundEngine.ts, types.ts)
-│   └── styles/                  # スタイル定義 (win95.css, glitch.css, globals.css)
-├── firmware/                    # ESP32 ファームウェア & AIコード生成仕様
-│   ├── README_HARDWARE.md       # マイコン運用マニュアル & AIプロンプト仕様書
-│   ├── esp32_relay_hub/         # 有線シリアル 統合ハブ
-│   ├── esp32_wifi_hub/          # Wi-Fi 遠隔ハブ
-│   └── esp32_ble_hub/           # Bluetooth BLE ハブ
-├── docs/                        # 技術ドキュメント
-│   └── FLASHLIGHT_API.md        # 専用Androidアプリ フラッシュライトAPI仕様書
-├── public/                      # 静的アセット (cast-manual.pdf 等)
-├── data/                        # 永続化データ (equipments.json)
-└── requirements_definition.md   # システム完全仕様書・要件定義
+```
+[ 音響再生要求 ]
+     ├── プロシージャル合成音 (soundType: 'beep' | 'lowImpact' | 'geiger' | 'drone' ...)
+     │     └── 外部ファイル不要。オシレーター・ノイズ・リバーブ・コンプレッサーを動的生成。
+     │
+     └── 外部MP3ファイル再生 (soundType: 'file', filename: 'alarm.mp3')
+           └── public/audio/ 配下から初回fetchしてAudioBufferCacheにデコード保存。2回目以降は即座にゼロ遅延再生。
 ```
 
+#### 音声アセットの追加と再生手順
+1. `public/audio/` ディレクトリ内にMP3またはWAVファイル（例: `warning_siren.mp3`）を配置します。
+2. 管理コンソールの「MP3ファイル再生」入力欄にファイル名（`warning_siren.mp3`）を入力して実行するか、コード内から呼び出します：
+   ```typescript
+   // クライアント側フック経由の呼び出し例
+   const { playAudioFile } = useSoundEngine();
+   await playAudioFile('warning_siren.mp3', { volume: 1.5, loop: false });
+   ```
+3. **ブラウザのAutoplayポリシー対策**:
+   - Web Audio APIはユーザーの初回インタラクション（タップ・キー押下）がないと音声を鳴らすことができません。
+   - サウンドノード端末（`/display/sound`）では、画面上に **「タップして音響ノードを有効化」** ボタンを表示し、事前に `AudioContext.resume()` を実行して待機状態を確立します。
+
 ---
 
-## セットアップ & 起動方法
+### C. ESP32マイコン通信仕様 (JSON / シリアル)
 
-### 前提環境
-- Node.js 18+ (推奨: Node.js 20+)
-- npm または yarn / pnpm
+管理画面の機材制御盤（`/equipment`）またはサーバーの `mcu-manager.ts` から、ESP32宛てに **改行コード (`\n`) で区切られた1行のJSON** を送信します。
 
-### 1. 依存関係のインストール
+#### コマンド送信フォーマット
+```json
+{"action":"conveyor","state":true,"power":1,"direction":"forward","speed":100}
+{"action":"valve","state":true,"power":1}
+{"action":"emergency","state":true,"power":1}
+{"action":"all_off"}
+```
+
+#### ESP32ファームウェア側の解析仕様 (`firmware/esp32_relay_hub/esp32_relay_hub.ino`)
+- 高速かつ省メモリに処理するため、文字列検索（`indexOf`）による軽量パーサーを実装しています：
+  - `cmd.indexOf("emergency") >= 0` -> リレー3（パトランプ）ON、リレー1（コンベア）OFF
+  - `cmd.indexOf("conveyor") >= 0` -> リレー1（GPIO 23）制御
+  - `cmd.indexOf("valve") >= 0` -> サーボモーター（GPIO 18）を90度回転（減圧弁開放）
+  - `cmd.indexOf("fan") >= 0` -> リレー2（GPIO 22）制御
+
+---
+
+## 4. 開発・実行・改修ガイド
+
+### A. セットアップと起動手順
+
+#### 1. 前提条件
+- Node.js 18.x 以上 (Node.js 20.x 推奨)
+- npm または yarn
+
+#### 2. インストール
 ```bash
 npm install
 ```
 
-### 2. 開発用サーバーの起動
+#### 3. 開発サーバー起動
 ```bash
 npm run dev
 ```
-起動後、ブラウザで以下のURLにアクセスできます：
-- **ポータルランチャー**: [http://localhost:3000](http://localhost:3000)
-- **参加者用 PDA 端末**: [http://localhost:3000/client](http://localhost:3000/client)
-- **集中管理コンソール**: [http://localhost:3000/admin](http://localhost:3000/admin)
-- **機材演出制御盤**: [http://localhost:3000/equipment](http://localhost:3000/equipment)
+`tsx server/index.ts` が実行され、Express + Socket.IO サーバーと Next.js App Router が同一ポート（デフォルト: `3000`）で立ち上がります。
 
-#### HTTPS (SSL) の設定方法
-スマートフォンのカメラアクセスやトーチ機能、Web Audio の安定動作のため、ローカルネットワーク等で HTTPS を利用したい場合は、`certificates/` ディレクトリに証明書を配置するだけで自動認識されます：
+#### 4. HTTPS (SSL) の設定（カメラ・トーチ・Web Serial の動作に必須）
+ローカルLAN内の別端末（スマホ等）からカメラやトーチを使用する場合、ブラウザのセキュリティ制限により **HTTPSが必須** となります。  
+プロジェクトルートに `certificates/` フォルダを作成し、自己署名証明書等を配置すると自動的にHTTPSサーバーとして起動します：
 ```text
 certificates/
-├── cert.pem   # サーバー証明書
+├── cert.pem   # SSLサーバー証明書
 └── key.pem    # 秘密鍵
-```
-
-証明書が存在する場合は自動的に `https://localhost:3000` で起動し、存在しない場合は通常の `http://localhost:3000` で起動します。
-
-### 3. 型チェック & ビルド
-```bash
-# TypeScript 型チェック
-npx tsc --noEmit
-
-# 本番用ビルド
-npm run build
 ```
 
 ---
 
-## ライセンス・著作権
-本プロジェクトは 2026年 祇園祭・文化祭展示専用に設計・制作された演出統合基盤です。  
-ポータル画面（`/`）最下部の「ライセンス・著作権表記を表示」から、利用ライブラリの一覧と権利条項を確認できます。
+### B. 演出・機能改修の指針 (How-To)
+
+#### 1. 新しい演出フェーズを追加する場合
+1. `src/lib/types.ts` の `DevicePhase` 型に新しいフェーズ名を追加します：
+   ```typescript
+   export type DevicePhase = 'STANDBY' | 'AREA_1_PHOTO' | 'ELEVATOR' | 'AREA_2_CONVEYOR' | 'AREA_3_VIDEO' | 'NEW_PHASE' | 'RETURN';
+   ```
+2. `src/components/client/` 配下にフェーズごとのUIコンポーネント（例: `PhaseNewGimmick.tsx`）を作成します。
+3. `src/app/client/page.tsx` のフェーズ描画スイッチ文にコンポーネントを追加します。
+4. `src/components/admin/EffectTriggerPanel.tsx` および `DeviceMonitor.tsx` のフェーズ切り替えUIに新しいフェーズボタンを追加します。
+
+#### 2. 新しいMP3音声を追加する場合
+1. 音声ファイル（`.mp3`）を `public/audio/` に配置します（例: `public/audio/monster_growl.mp3`）。
+2. 管理画面（`/admin`）の「MP3ファイル再生」入力欄に `monster_growl.mp3` を入力して再生テストを行います。
+3. プログラム内から自動トリガーさせたい場合は、サーバー側の目的のイベントハンドラー内で以下を発行します：
+   ```typescript
+   io.emit('sound:play', {
+     soundType: 'file',
+     filename: 'monster_growl.mp3',
+     volume: 1.5,
+   });
+   ```
+
+#### 3. 新しい物理リレー/ギミックを追加する場合
+1. `firmware/esp32_relay_hub/esp32_relay_hub.ino` のピン定義に空きGPIO（例: GPIO 19）を割り当て、`processCommand()` 内に分岐処理を追加します。
+2. `server/mcu-manager.ts` の `handleMachineControl()` 内で、新しい機材IDに対する `action` 文字列（例: `"smoke_machine"`）を設定します。
+3. 機材制御画面（`/equipment`）から機材アイテムを追加・保存します。
+
+---
+
+### C. 静的検査と品質・コーディング規約
+
+#### 1. 型安全性の維持
+コードを変更した後は、必ず TypeScript 型検査を実行してエラーが0件であることを確認してください：
+```bash
+npx tsc --noEmit
+```
+
+#### 2. 絵文字使用の禁止（硬質・インダストリアルUIの維持）
+- コード内およびUI上に絵文字（例: ⚠️, 🔊, 🔌, ❌, 💡 など）を直接記述しないでください。
+- 代替として、角括弧で囲んだテキストバッジ（例: `[SOUND]`, `[DISCONNECTED]`, `[DETECTED]`）や、CSSによるシンプルなステータスインジケーター（`.dot.online`）を使用してください。
+
+#### 3. Hydration Error（SSR不一致）の防止
+- ブラウザ専用API（`window`, `navigator.onLine`, `localStorage` 等）に基づく表示切り替えを行うコンポーネントには、必ずマウント完了フラグ（`isMounted`）を配置してください。
+- タイムスタンプやランダムIDをSSR初期描画時に直接埋め込まず、初期描画時は固定プレースホルダー（`----`）を表示した上で `useEffect` 内で更新してください。
+
+---
+
+## 5. ライセンス・著作権
+
+本プロジェクトは 2026年 祇園祭・文化祭展示専用に設計・制作された演出統合制御システムです。  
+ポータル画面（`/`）最下部の「ライセンス・著作権表記を表示」から、利用オープンソースライブラリの一覧および権利条項を確認できます。

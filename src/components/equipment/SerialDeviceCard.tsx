@@ -42,14 +42,14 @@ export const SerialDeviceCard: React.FC<SerialDeviceCardProps> = ({
             onClick={() => onEdit(device)}
             title="設定・ボタン構成を後から編集"
           >
-            ✏️ 編集
+            編集
           </button>
           <button
             className="win95-btn serial-mini-btn serial-delete-btn"
             onClick={() => onDelete(device.id)}
             title="端末削除"
           >
-            🗑️
+            削除
           </button>
         </div>
       </div>
@@ -66,14 +66,14 @@ export const SerialDeviceCard: React.FC<SerialDeviceCardProps> = ({
                 className="win95-btn serial-disconnect-btn"
                 onClick={() => onDisconnect(device)}
               >
-                ⏹️ 切断
+                切断
               </button>
             ) : (
               <button
                 className="win95-btn serial-connect-btn"
                 onClick={() => onConnect(device)}
               >
-                ⚡ 接続
+                接続
               </button>
             )}
           </div>
@@ -123,7 +123,7 @@ export const SerialDeviceCard: React.FC<SerialDeviceCardProps> = ({
           )}
 
           {device.switches.length === 0 && device.buttons.length === 0 && (
-            <div className="serial-no-controls">スイッチ・ボタン未登録 (「✏️ 編集」から追加)</div>
+            <div className="serial-no-controls">スイッチ・ボタン未登録 (「編集」から追加)</div>
           )}
         </div>
       </div>

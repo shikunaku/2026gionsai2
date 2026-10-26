@@ -1,8 +1,15 @@
 /**
- * Web Audio API SoundEngine
- * Procedural horror & industrial audio generator with master gain amplification up to 250%.
- * Optimized & lightweight implementation.
+ * @file soundEngine.ts
+ * @description Web Audio APIを利用したホラー・インダストリアル音響シンセサイザー。
+ * 外部音声ファイルへの依存を排除し、オシレーター、ノイズジェネレーター、コンボリューションリバーブ、
+ * コンプレッサーを動的に組み合わせて演出用音響（ビープ、機械式シャッター、重低音、ガイガーカウンター等）をプロシージャル生成します。
  */
+
+import { SoundEffectOptions } from './types';
+
+// ============================================================================
+// 1. 音響エンジン クラス定義
+// ============================================================================
 
 export class SoundEngine {
   private static instance: SoundEngine | null = null;
@@ -12,10 +19,20 @@ export class SoundEngine {
   private reverbNode: ConvolverNode | null = null;
   private unlocked = false;
   private currentVolume = 1.0;
-  private activeGeigerTimer: any = null;
+  private activeGeigerTimer: NodeJS.Timeout | number | null = null;
+  /** デコード済みAudioBufferのメモリキャッシュ (キー: ファイルパス) */
+  private audioBufferCache = new Map<string, AudioBuffer>();
+  /** 進行中のフェッチPromiseキャッシュ (二重フェッチ防止) */
+  private pendingFetches = new Map<string, Promise<AudioBuffer | null>>();
+  /** 現在再生中のAudioBufferSourceNodeリスト (停止制御用) */
+  private activeSourceNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainNode }[]>();
 
   private constructor() {}
 
+  /**
+   * SoundEngineのシングルトンインスタンスを取得します。
+   * @returns {SoundEngine}
+   */
   public static getInstance(): SoundEngine {
     if (!SoundEngine.instance) {
       SoundEngine.instance = new SoundEngine();
@@ -23,12 +40,19 @@ export class SoundEngine {
     return SoundEngine.instance;
   }
 
+  // ==========================================================================
+  // A. 初期化 & オーディオバス構築
+  // ==========================================================================
+
+  /**
+   * AudioContextの生成とユーザー操作によるAutoplay制約の解除を行います。
+   */
   public init(): void {
     if (typeof window === 'undefined') return;
-    if (this.ctx && this.unlocked) return;
+    if (this.ctx && this.unlocked && this.ctx.state === 'running') return;
 
     try {
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtxClass) return;
 
       if (!this.ctx) {
@@ -36,22 +60,30 @@ export class SoundEngine {
       }
 
       if (this.ctx.state === 'suspended') {
-        this.ctx.resume();
+        this.ctx.resume().catch((err) => {
+          console.warn('[SoundEngine] AudioContext resume error:', err);
+        });
       }
 
       this.setupMasterBus();
       this.unlocked = true;
     } catch (e) {
-      console.warn('AudioContext initialization error:', e);
+      console.warn('[SoundEngine] AudioContext initialization error:', e);
     }
   }
 
+  /**
+   * マスターコンプレッサーとゲインノードによる出力バスを構築します。
+   * 最大250%までの音量増幅に対応しつつ、過大入力による音割れ（デジタルクリッピング）を防止します。
+   * @private
+   */
   private setupMasterBus(): void {
     if (!this.ctx) return;
 
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.setValueAtTime(this.currentVolume, this.ctx.currentTime);
 
+    // インダストリアルな重厚感を付与するダイナミクスコンプレッサー
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
     this.compressor.knee.setValueAtTime(20, this.ctx.currentTime);
@@ -59,6 +91,7 @@ export class SoundEngine {
     this.compressor.attack.setValueAtTime(0.002, this.ctx.currentTime);
     this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
 
+    // 廃工場の空間反響を再現するコンボリューションリバーブ
     this.reverbNode = this.ctx.createConvolver();
     this.reverbNode.buffer = this.createImpulseResponse(2.7, 2.0);
 
@@ -66,6 +99,14 @@ export class SoundEngine {
     this.masterGain.connect(this.ctx.destination);
   }
 
+  /**
+   * ホワイトノイズと指数減衰エンベロープによるインパルス応答バッファを生成します。
+   *
+   * @param {number} durationSec リバーブの持続時間（秒）
+   * @param {number} decay 減衰係数
+   * @returns {AudioBuffer}
+   * @private
+   */
   private createImpulseResponse(durationSec: number, decay: number): AudioBuffer {
     if (!this.ctx) throw new Error('No AudioContext');
     const sampleRate = this.ctx.sampleRate;
@@ -82,6 +123,14 @@ export class SoundEngine {
     return impulse;
   }
 
+  // ==========================================================================
+  // B. ボリューム制御 & ルーティング
+  // ==========================================================================
+
+  /**
+   * マスターボリュームを設定します (0.0 〜 2.5)。
+   * @param {number} vol 音量倍率
+   */
   public setVolume(vol: number): void {
     this.currentVolume = Math.max(0, Math.min(2.5, vol));
     if (this.masterGain && this.ctx) {
@@ -89,17 +138,34 @@ export class SoundEngine {
     }
   }
 
+  /**
+   * 現在のマスターボリュームを取得します。
+   * @returns {number}
+   */
   public getVolume(): number {
     return this.currentVolume;
   }
 
+  /**
+   * 各サウンドノードの接続先となるマスターバスの入力ノードを取得します。
+   * @private
+   */
   private getDest(): AudioNode {
     if (!this.ctx) this.init();
     if (!this.compressor && this.ctx) this.setupMasterBus();
     return this.compressor || this.ctx!.destination;
   }
 
-  // Helper to construct a standard oscillator chain with envelope
+  /**
+   * 標準的なオシレーターとエンベロープ（音量変化）のペアを構築する内部ヘルパー。
+   *
+   * @param {OscillatorType} type 波形種別 ('sine' | 'square' | 'sawtooth' | 'triangle')
+   * @param {number} freq 周波数 (Hz)
+   * @param {number} [startDelay=0] 再生開始遅延 (秒)
+   * @param {number} [duration=0.1] 音の長さ (秒)
+   * @param {number} [gainPeak=0.4] ピーク音量
+   * @private
+   */
   private createTone(
     type: OscillatorType,
     freq: number,
@@ -115,6 +181,7 @@ export class SoundEngine {
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
 
+    // クリックノイズを防ぐため、ごく微小な値から立ち上げて指数減衰
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.linearRampToValueAtTime(gainPeak, now + Math.min(0.015, duration * 0.1));
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
@@ -125,7 +192,11 @@ export class SoundEngine {
     return { osc, gain, now };
   }
 
-  /** Beep (Operation confirmation sound) */
+  // ==========================================================================
+  // C. 個別効果音プロシージャル生成
+  // ==========================================================================
+
+  /** 操作確認音 (高域サイン波短音) */
   public playBeep(freq = 880, duration = 0.06): void {
     this.init();
     const tone = this.createTone('sine', freq, 0, duration, 0.4);
@@ -142,7 +213,7 @@ export class SoundEngine {
     tone.gain.connect(this.getDest());
   }
 
-  /** Shutter (Camera mechanical shutter sound) */
+  /** カメラの物理メカニカルシャッター音 */
   public playShutter(): void {
     this.init();
     if (!this.ctx) return;
@@ -173,11 +244,12 @@ export class SoundEngine {
       noise.start(t);
     };
 
+    // 2段階のメカニカルなクリック音でリアルなシャッターを演出
     playClick(0, 0.038, 2600);
     playClick(0.065, 0.045, 1850);
   }
 
-  /** Low Impact (Deep bass sub-boom) */
+  /** 心臓に響く低周波の重低音サブベース（不穏演出） */
   public playLowImpact(): void {
     this.init();
     if (!this.ctx) return;
@@ -222,19 +294,24 @@ export class SoundEngine {
     noiseSrc.stop(now + 0.9);
   }
 
-  /** Geiger (Irregular radiation ticks) */
+  /** ガイガーカウンター放射線検知音（不規則なパチパチ音） */
   public playGeiger(level = 3, durationMs = 2000): void {
     this.init();
     if (!this.ctx) return;
-    if (this.activeGeigerTimer) clearInterval(this.activeGeigerTimer);
+    if (this.activeGeigerTimer) {
+      clearInterval(this.activeGeigerTimer as NodeJS.Timeout);
+      this.activeGeigerTimer = null;
+    }
 
     const interval = Math.max(25, 250 - level * 40);
     const endTime = Date.now() + durationMs;
 
     this.activeGeigerTimer = setInterval(() => {
       if (!this.ctx || Date.now() > endTime) {
-        clearInterval(this.activeGeigerTimer);
-        this.activeGeigerTimer = null;
+        if (this.activeGeigerTimer) {
+          clearInterval(this.activeGeigerTimer as NodeJS.Timeout);
+          this.activeGeigerTimer = null;
+        }
         return;
       }
       if (Math.random() < 0.25) return;
@@ -252,70 +329,25 @@ export class SoundEngine {
     }, interval);
   }
 
-  /** Drone (Metallic resonance) */
+  /** 低周波の不気味なドローン持続音 */
   public playDrone(duration = 3.0): void {
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    const freqs = [
-      { type: 'sawtooth' as OscillatorType, freq: 55 },
-      { type: 'triangle' as OscillatorType, freq: 57.5 },
-      { type: 'sawtooth' as OscillatorType, freq: 110.8 },
-    ];
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(260, now);
-    filter.frequency.exponentialRampToValueAtTime(700, now + duration * 0.5);
-    filter.frequency.exponentialRampToValueAtTime(180, now + duration);
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.35, now + 0.6);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    freqs.forEach(({ type, freq }) => {
-      const osc = this.ctx!.createOscillator();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, now);
-      osc.connect(filter);
-      osc.start(now);
-      osc.stop(now + duration + 0.2);
-    });
-
-    filter.connect(gain);
-    if (this.reverbNode) {
-      const revGain = this.ctx.createGain();
-      revGain.gain.setValueAtTime(0.4, now);
-      gain.connect(this.reverbNode);
-      this.reverbNode.connect(revGain);
-      revGain.connect(this.getDest());
-    }
-    gain.connect(this.getDest());
-  }
-
-  /** Motor (Industrial sound) */
-  public playMotor(duration = 1.2): void {
     this.init();
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
-
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(42, now);
-    osc.frequency.linearRampToValueAtTime(46, now + duration * 0.3);
-    osc.frequency.linearRampToValueAtTime(38, now + duration);
+    osc.frequency.setValueAtTime(55, now);
+    osc.frequency.linearRampToValueAtTime(50, now + duration);
 
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(220, now);
-
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.4, now + 0.1);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.5);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(180, now);
 
     osc.connect(filter);
     filter.connect(gain);
@@ -325,18 +357,42 @@ export class SoundEngine {
     osc.stop(now + duration + 0.1);
   }
 
-  /** Power Down (Horror shutdown pitch dive) */
+  /** モーター・機械稼働音 */
+  public playMotor(duration = 2.0): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.linearRampToValueAtTime(240, now + 0.8);
+    osc.frequency.linearRampToValueAtTime(235, now + duration);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(this.getDest());
+
+    osc.start(now);
+    osc.stop(now + duration + 0.1);
+  }
+
+  /** 電源喪失・ダウン音（周波数が落ちていく演出） */
   public playPowerDown(): void {
     this.init();
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    const duration = 2.5;
+    const duration = 1.6;
 
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(380, now);
-    osc.frequency.exponentialRampToValueAtTime(15, now + duration);
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + duration);
 
     oscGain.gain.setValueAtTime(0.5, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
@@ -354,7 +410,7 @@ export class SoundEngine {
     osc.stop(now + duration + 0.1);
   }
 
-  /** Task Success (Clear 2-tone success chime) */
+  /** ミッション達成・クリアチャイム音 */
   public playTaskSuccess(): void {
     this.init();
     if (!this.ctx) return;
@@ -378,7 +434,169 @@ export class SoundEngine {
     playTone(1320, 0.11, 0.45, 0.45);
   }
 
-  public playSound(soundType: string, level = 3): void {
+  // ==========================================================================
+  // D. MP3 / 音声ファイル再生 & キャッシュ管理
+  // ==========================================================================
+
+  /**
+   * 指定された音声ファイルを非同期取得・デコードし、メモリ内にキャッシュします。
+   * 同一ファイルへの同時リクエスト時は重複フェッチを防止します。
+   *
+   * @param {string} filename 音声ファイル名 (例: "alarm.mp3") または相対パス
+   * @returns {Promise<AudioBuffer | null>} デコード済みAudioBuffer
+   */
+  public async loadAudioBuffer(filename: string): Promise<AudioBuffer | null> {
+    this.init();
+    if (!this.ctx) return null;
+
+    // パス正規化 (スラッシュから始まらない場合は /audio/ を補完)
+    const url = filename.startsWith('/') || filename.startsWith('http') ? filename : `/audio/${filename}`;
+
+    // 1. メモリキャッシュにあれば即座に返却
+    if (this.audioBufferCache.has(url)) {
+      return this.audioBufferCache.get(url)!;
+    }
+
+    // 2. 既に同じURLのフェッチ・デコードが進行中であればそのPromiseを共有
+    if (this.pendingFetches.has(url)) {
+      return this.pendingFetches.get(url)!;
+    }
+
+    const fetchPromise = (async (): Promise<AudioBuffer | null> => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`[SoundEngine] Failed to fetch audio file [${url}]: HTTP ${response.status}`);
+          return null;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        if (!this.ctx) return null;
+
+        // Web Audio API でデコード (ブラウザのネイティブコーデックを使用)
+        const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+        this.audioBufferCache.set(url, audioBuffer);
+        return audioBuffer;
+      } catch (err) {
+        console.warn(`[SoundEngine] Error decoding audio file [${url}]:`, err);
+        return null;
+      } finally {
+        this.pendingFetches.delete(url);
+      }
+    })();
+
+    this.pendingFetches.set(url, fetchPromise);
+    return fetchPromise;
+  }
+
+  /**
+   * MP3/WAV等の音声ファイルを非同期再生します。
+   *
+   * @param {string} filename public/audio/ 配下のファイル名 (例: "alarm.mp3")
+   * @param {object} [options] 再生オプション
+   * @param {number} [options.volume=1.0] 個別音量倍率 (0.0 〜 2.5)
+   * @param {boolean} [options.loop=false] ループ再生フラグ
+   * @returns {Promise<boolean>} 再生開始に成功した場合 true
+   */
+  public async playAudioFile(
+    filename: string,
+    options: { volume?: number; loop?: boolean } = {}
+  ): Promise<boolean> {
+    this.init();
+    if (!this.ctx) return false;
+
+    const audioBuffer = await this.loadAudioBuffer(filename);
+    if (!audioBuffer || !this.ctx) return false;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = !!options.loop;
+
+    // 個別ゲインノード
+    const gainNode = this.ctx.createGain();
+    const targetVolume = typeof options.volume === 'number' ? Math.max(0, Math.min(2.5, options.volume)) : 1.0;
+    gainNode.gain.setValueAtTime(targetVolume, this.ctx.currentTime);
+
+    source.connect(gainNode);
+    gainNode.connect(this.getDest());
+
+    // 停止管理リストへ登録
+    const activeList = this.activeSourceNodes.get(filename) || [];
+    activeList.push({ source, gain: gainNode });
+    this.activeSourceNodes.set(filename, activeList);
+
+    source.onended = () => {
+      const currentList = this.activeSourceNodes.get(filename) || [];
+      const filtered = currentList.filter((item) => item.source !== source);
+      if (filtered.length > 0) {
+        this.activeSourceNodes.set(filename, filtered);
+      } else {
+        this.activeSourceNodes.delete(filename);
+      }
+    };
+
+    source.start(0);
+    return true;
+  }
+
+  /**
+   * 指定されたファイル名の再生中音源を停止・フェードアウトします。
+   *
+   * @param {string} filename 停止対象のファイル名
+   */
+  public stopAudioFile(filename: string): void {
+    const list = this.activeSourceNodes.get(filename);
+    if (!list || !this.ctx) return;
+
+    for (const { source, gain } of list) {
+      try {
+        gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+        setTimeout(() => {
+          try {
+            source.stop();
+            source.disconnect();
+          } catch (_) {}
+        }, 90);
+      } catch (_) {}
+    }
+    this.activeSourceNodes.delete(filename);
+  }
+
+  /**
+   * 現在再生中のすべての外部音声ファイルを即座に停止します。
+   */
+  public stopAll(): void {
+    if (!this.ctx) return;
+    for (const [filename, list] of this.activeSourceNodes.entries()) {
+      for (const { source } of list) {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (_) {}
+      }
+    }
+    this.activeSourceNodes.clear();
+  }
+
+  /**
+   * サウンド名またはファイル名に応じた音響を再生します。
+   *
+   * @param {SoundEffectOptions['soundType'] | string} soundType 再生する効果音名
+   * @param {number} [level=3] 効果音の強度レベル
+   * @param {string} [filename] MP3ファイル名 (soundType === 'file' の場合)
+   */
+  public playSound(
+    soundType: SoundEffectOptions['soundType'] | string,
+    level = 3,
+    filename?: string
+  ): void {
+    if (soundType === 'file' && filename) {
+      this.playAudioFile(filename).catch((err) => {
+        console.warn(`[SoundEngine] playAudioFile error for [${filename}]:`, err);
+      });
+      return;
+    }
+
     switch (soundType) {
       case 'beep': return this.playBeep();
       case 'shutter': return this.playShutter();
@@ -391,6 +609,25 @@ export class SoundEngine {
       default: return this.playBeep();
     }
   }
+
+  /**
+   * コンポーネント破棄時やページ遷移時にタイマーおよびオーディオコンテキストを解放します。
+   */
+  public dispose(): void {
+    if (this.activeGeigerTimer) {
+      clearInterval(this.activeGeigerTimer as NodeJS.Timeout);
+      this.activeGeigerTimer = null;
+    }
+    if (this.ctx && this.ctx.state !== 'closed') {
+      this.ctx.close().catch(() => {});
+      this.ctx = null;
+      this.unlocked = false;
+      this.masterGain = null;
+      this.compressor = null;
+      this.reverbNode = null;
+    }
+  }
 }
 
+/** グローバルなSoundEngineインスタンスを取得するアクセサー */
 export const getSoundEngine = () => SoundEngine.getInstance();

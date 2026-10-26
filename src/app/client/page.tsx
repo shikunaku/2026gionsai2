@@ -7,6 +7,7 @@ import { useTorch } from '../../hooks/useTorch';
 import { useBattery } from '../../hooks/useBattery';
 import { useSoundEngine } from '../../hooks/useSoundEngine';
 import { FullscreenButton } from '../../components/common/FullscreenButton';
+import { ReconnectingModal } from '../../components/common/ReconnectingModal';
 import { HorrorCanvasOverlay } from '../../components/client/HorrorCanvasOverlay';
 import { PhaseInit } from '../../components/client/PhaseInit';
 import { PhaseZone1 } from '../../components/client/PhaseZone1';
@@ -59,11 +60,12 @@ const INITIAL_TASKS: InspectionTask[] = [
 function ClientContent() {
   const searchParams = useSearchParams();
   const [deviceId, setDeviceId] = useState<string>('0001');
+  const [isClientMounted, setIsClientMounted] = useState<boolean>(false);
   const [phase, setPhase] = useState<DevicePhase>('STANDBY');
   const [tasks, setTasks] = useState<InspectionTask[]>(INITIAL_TASKS);
   const [glitchOptions, setGlitchOptions] = useState<GlitchEffectOptions | null>(null);
 
-  const { socket, connected } = useSocket();
+  const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
   const soundEngine = useSoundEngine();
 
   // Torch state management
@@ -97,6 +99,7 @@ function ClientContent() {
 
   // Initialize random 4-digit device ID or read from URL
   useEffect(() => {
+    setIsClientMounted(true);
     const qId = searchParams.get('deviceId');
     if (qId) {
       setDeviceId(qId.toUpperCase());
@@ -166,9 +169,15 @@ function ClientContent() {
     });
 
     // Sound effect
-    socket.on('effect:sound', ({ soundType, level }) => {
-      console.log(`[Client] Sound effect received: ${soundType}`);
-      soundEngine.playSound(soundType, level);
+    socket.on('effect:sound', ({ soundType, level, filename, volume, loop }) => {
+      console.log(`[Client] Sound effect received: ${soundType}${filename ? ` (${filename})` : ''}`);
+      if (soundType === 'file' && filename) {
+        soundEngine.playAudioFile(filename, { volume, loop }).catch((err) => {
+          console.warn(`[Client] playAudioFile error for [${filename}]:`, err);
+        });
+      } else {
+        soundEngine.playSound(soundType, level, filename);
+      }
     });
 
     // Master volume control
@@ -254,6 +263,14 @@ function ClientContent() {
 
   return (
     <div className="client-root">
+      {/* ネットワーク切断・再接続待機ダイアログ */}
+      <ReconnectingModal
+        isReconnecting={isReconnecting}
+        isOnline={isOnline}
+        reconnectAttempts={reconnectAttempts}
+        onManualReconnect={manualReconnect}
+      />
+
       <div
         className={`win95-window client-window ${
           glitchOptions ? GLITCH_CLASS[glitchOptions.mode || 'creepy'] ?? 'glitch-creepy' : ''
@@ -269,7 +286,7 @@ function ClientContent() {
         <header className="win95-titlebar client-header">
           <div className="client-header-group">
             <span className={`client-link-dot${connected ? ' online' : ''}`} />
-            <strong className="client-device-id">PDA-ID: {deviceId}</strong>
+            <strong className="client-device-id">PDA-ID: {isClientMounted ? deviceId : '----'}</strong>
           </div>
 
           <div className="client-header-group">

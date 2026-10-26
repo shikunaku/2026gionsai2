@@ -36,8 +36,10 @@ export function useSoundEngine() {
     playGeiger: (level?: number, durationMs?: number) => engine.playGeiger(level, durationMs),
     playDrone: (duration?: number) => engine.playDrone(duration),
     playMotor: (duration?: number) => engine.playMotor(duration),
-    playPowerDown: () => engine.playPowerDown(),
-    playSound: (soundType: string, level?: number) => engine.playSound(soundType, level),
+    playSound: (soundType: string, level?: number, filename?: string) => engine.playSound(soundType, level, filename),
+    playAudioFile: (filename: string, options?: { volume?: number; loop?: boolean }) => engine.playAudioFile(filename, options),
+    stopAudioFile: (filename: string) => engine.stopAudioFile(filename),
+    stopAll: () => engine.stopAll(),
     setVolume: (vol: number) => engine.setVolume(vol),
     getVolume: () => engine.getVolume(),
   };
