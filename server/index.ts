@@ -137,11 +137,76 @@ async function main() {
       broadcastAdminState();
     });
 
-    // 探索・点検の開始トリガー
+    // 探索・点検の開始トリガー（端末側はプレショーをスキップしエリア1品質管理室へ直行）
     socket.on('device:start_inspection', ({ deviceId }) => {
-      console.log(`[Socket] Device start inspection: ${deviceId}`);
-      store.updateDevice(deviceId, { phase: 'AREA_1_PHOTO' });
-      io.to(`device:${deviceId}`).emit('phase:update', { phase: 'AREA_1_PHOTO', deviceId });
+      console.log(`[Socket] Device start inspection (skip preshow -> quality_control): ${deviceId}`);
+      store.updateDevice(deviceId, { phase: 'quality_control' });
+      io.to(`device:${deviceId}`).emit('phase:update', { phase: 'quality_control', deviceId });
+      broadcastAdminState();
+    });
+
+    // お客さんスマホからの各エリア「到着」通知ハンドラー
+    socket.on('device:arrive', ({ deviceId, phase: targetPhase }) => {
+      console.log(`[Socket] Device ${deviceId} arrived at phase: ${targetPhase}`);
+      store.updateDevice(deviceId, { phase: targetPhase });
+      io.to(`device:${deviceId}`).emit('phase:update', { phase: targetPhase, deviceId });
+      io.emit('phase:arrival_confirmed', { phase: targetPhase, deviceId });
+
+      // エリアごとの自動ハードウェア・ギミックトリガー
+      if (targetPhase === 'manufacturing_line' || targetPhase === 'AREA_2_CONVEYOR') {
+        // 到着トリガーによりベルトコンベアが自動起動 (ESP32/リレー経由で6秒間駆動)
+        console.log('[Socket] Manufacturing line arrival -> Auto starting conveyor test run (6s)');
+        mcuManager.handleConveyorControl('forward', 100);
+        store.updateEquipmentState('eq_conveyor_01', true);
+        const eq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+        if (eq) io.emit('equipment:updated', eq);
+
+        setTimeout(() => {
+          mcuManager.handleConveyorControl('stop');
+          store.updateEquipmentState('eq_conveyor_01', false);
+          const stopEq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
+          if (stopEq) io.emit('equipment:updated', stopEq);
+          broadcastAdminState();
+        }, 6000);
+      }
+
+      broadcastAdminState();
+    });
+
+    // プレショー開始トリガー (Adminまたはクライアントから)
+    socket.on('preshow:start', (payload) => {
+      console.log('[Socket] Preshow start triggered:', payload);
+      io.emit('preshow:trigger', payload || {});
+      io.emit('preshow:start', payload || {});
+      broadcastAdminState();
+    });
+
+    // プレショー終了トリガー (映像終了イベント検知でスマホへ振動+アラート通知、品質管理室誘導)
+    socket.on('preshow:ended', ({ targetDeviceId } = {}) => {
+      console.log(`[Socket] Preshow ended event received (target: ${targetDeviceId || 'ALL'})`);
+      const targetRoom = targetDeviceId ? `device:${targetDeviceId}` : null;
+
+      // 該当グループのスマホ端末へ通知（バイブレーション + アラート音）
+      const notifyPayload = { soundType: 'lowImpact' as const, level: 3 };
+      const glitchPayload: GlitchEffectOptions = { level: 2, duration: 1500, vibrate: true, mode: 'creepy' };
+
+      if (targetRoom) {
+        io.to(targetRoom).emit('effect:sound', notifyPayload);
+        io.to(targetRoom).emit('effect:glitch', glitchPayload);
+        io.to(targetRoom).emit('preshow:ended', { targetDeviceId });
+        store.updateDevice(targetDeviceId, { phase: 'quality_control' });
+        io.to(targetRoom).emit('phase:update', { phase: 'quality_control', deviceId: targetDeviceId });
+      } else {
+        io.emit('effect:sound', notifyPayload);
+        io.emit('effect:glitch', glitchPayload);
+        io.emit('preshow:ended');
+        for (const dev of store.getAllDevices()) {
+          if (dev.role === 'client' && (dev.phase === 'preshow' || dev.phase === 'STANDBY')) {
+            store.updateDevice(dev.deviceId, { phase: 'quality_control' });
+            io.to(`device:${dev.deviceId}`).emit('phase:update', { phase: 'quality_control', deviceId: dev.deviceId });
+          }
+        }
+      }
       broadcastAdminState();
     });
 
@@ -174,6 +239,16 @@ async function main() {
     // ------------------------------------------------------------------------
     // C. 機材制御・エレベータ・演出連動
     // ------------------------------------------------------------------------
+
+    // ギミック直接制御（生首ギミック等）
+    socket.on('gimmick:trigger', ({ gimmickId, action, value }) => {
+      console.log(`[Socket] Gimmick triggered: ${gimmickId}, action: ${action}`);
+      if (gimmickId === 'head' || gimmickId === 'eq_head_gimmick_01') {
+        mcuManager.handleHeadGimmick(true, 3000);
+      }
+      io.emit('gimmick:trigger', { gimmickId, action, value });
+      broadcastAdminState();
+    });
 
     // 個別機材の直接トグル操作
     socket.on('machine:control', ({ machineId, state, deviceId }) => {
@@ -244,22 +319,59 @@ async function main() {
       broadcastAdminState();
     });
 
-    // エレベータ移動演出シーケンス (1F -> B1F 下降シミュレーション)
+    // エレベータ移動演出シーケンス (降下シーケンス: 扉閉鎖、降下音、照明明滅、ディスプレイ階数降下、スマホグリッチ・暗転)
     socket.on('elevator:trigger_move', ({ from = 'FLOOR_1', to = 'FLOOR_B1', deviceId }) => {
       console.log(`[Socket] Elevator sequence triggered from ${from} -> ${to} (by: ${deviceId || socket.id})`);
 
-      // 1. 移動開始: MCUとエレベータ表示画面にMOVINGを通知
+      // 1. 移動開始: MCUとエレベータ表示画面にMOVINGを通知、照明異常(明滅)をESP32へ送出
       mcuManager.handleElevatorMove('MOVING');
+      mcuManager.handleLightingAnomaly('flicker', EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS);
       store.setElevatorState({ floor: 'MOVING', powerOn: true });
       io.emit('elevator:state', { floor: 'MOVING', powerOn: true });
+
+      // 会場音響・サウンドノードへ降下音・モーター音再生
+      io.to('sound_nodes').emit('sound:play', {
+        soundType: 'motor',
+        level: 4,
+        volume: 1.8,
+        durationMs: EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS,
+      });
+
+      // 降下途中でスマホ画面がグリッチ・暗転し、端末から異常音・恐怖SEを強制再生
+      setTimeout(() => {
+        const glitchOptions: GlitchEffectOptions = {
+          level: 3,
+          duration: 2200,
+          mode: 'blackout',
+          vibrate: true,
+        };
+        const soundOptions: SoundEffectOptions = {
+          soundType: 'lowImpact',
+          level: 4,
+        };
+
+        if (deviceId) {
+          io.to(`device:${deviceId}`).emit('effect:glitch', glitchOptions);
+          io.to(`device:${deviceId}`).emit('effect:sound', soundOptions);
+        } else {
+          for (const dev of store.getAllDevices()) {
+            if (dev.phase === 'elevator' || dev.phase === 'ELEVATOR') {
+              io.to(`device:${dev.deviceId}`).emit('effect:glitch', glitchOptions);
+              io.to(`device:${dev.deviceId}`).emit('effect:sound', soundOptions);
+            }
+          }
+        }
+      }, 1200);
+
       broadcastAdminState();
 
-      // 2. 移動時間待機後、到着時のグリッチ演出と目標階層を適用
+      // 2. 移動時間待機後、到着時のグリッチ演出と目標階層を適用 (扉が開き、スマホに製造ラインへの移動指示が表示可能に)
       setTimeout(() => {
         io.emit('elevator:glitch', { duration: EFFECT_TIMINGS.ELEVATOR_ARRIVAL_GLITCH_DURATION_MS });
         store.setElevatorState({ floor: to, glitch: true, powerOn: true });
         io.emit('elevator:state', { floor: to, glitch: true, powerOn: true });
         mcuManager.handleElevatorMove(to);
+        mcuManager.handleLightingAnomaly('normal', 1000);
         broadcastAdminState();
       }, EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS);
     });
@@ -287,11 +399,11 @@ async function main() {
       // 全端末へパニックイベントをブロードキャスト
       io.emit('panic:trigger', payload || {});
 
-      // 参加中端末を自動で PANIC_ESCAPE フェーズへ遷移
+      // 参加中端末を自動で escape (PANIC_ESCAPE) フェーズへ遷移
       for (const dev of store.getAllDevices()) {
-        if (dev.phase !== 'STANDBY' && dev.role === 'client') {
-          store.updateDevice(dev.deviceId, { phase: 'PANIC_ESCAPE' });
-          io.to(`device:${dev.deviceId}`).emit('phase:update', { phase: 'PANIC_ESCAPE', deviceId: dev.deviceId });
+        if (dev.phase !== 'STANDBY' && dev.phase !== 'preshow' && dev.role === 'client') {
+          store.updateDevice(dev.deviceId, { phase: 'escape' });
+          io.to(`device:${dev.deviceId}`).emit('phase:update', { phase: 'escape', deviceId: dev.deviceId });
         }
       }
       broadcastAdminState();
@@ -357,8 +469,75 @@ async function main() {
           status,
           reason,
         });
+
+        // 演出連動: 製造ラインの写真（taskId: 10 またはタイトルに「コンベア」を含む）が承認された場合、即座にジャンプスケアを発動
+        if (status === 'APPROVED' && (updated.taskId === 10 || updated.taskTitle?.includes('コンベア') || updated.taskTitle?.includes('製造ライン'))) {
+          console.log('[Admin Review] Manufacturing line photo APPROVED -> Triggering JUMPSCARE sequence!');
+          // 1. 生首ギミック作動 (ESP32リレー/アクチュエータ)
+          mcuManager.handleHeadGimmick(true, 3500);
+
+          // 2. 会場スピーカー(sound_nodes) & display/sound へ大音量の悲鳴・効果音
+          io.to('sound_nodes').emit('sound:play', {
+            soundType: 'file',
+            filename: 'シャキーン1.mp3',
+            volume: 2.2,
+            durationMs: 3500,
+          });
+          io.to('sound_nodes').emit('sound:play', {
+            soundType: 'lowImpact',
+            level: 5,
+            volume: 2.5,
+            durationMs: 3000,
+          });
+
+          // 3. 該当端末（または参加者全員）へ大音量SE・激しい赤点滅・画面裂けグリッチ・バイブレーション
+          const room = `device:${updated.deviceId}`;
+          io.to(room).emit('jumpscare:trigger', { targetDeviceId: updated.deviceId });
+          io.to(room).emit('effect:sound', { soundType: 'lowImpact', level: 5, volume: 2.5 });
+          io.to(room).emit('effect:glitch', {
+            level: 3,
+            duration: 3000,
+            mode: 'redout',
+            vibrate: true,
+          });
+        }
       }
       broadcastAdminState();
+    });
+
+    // ジャンプスケア手動トリガー (Admin手動実行用)
+    socket.on('admin:trigger_jumpscare', ({ targetDeviceId } = {}) => {
+      console.log(`[Admin] Manual jumpscare triggered (target: ${targetDeviceId || 'ALL'})`);
+      mcuManager.handleHeadGimmick(true, 3500);
+      io.to('sound_nodes').emit('sound:play', {
+        soundType: 'file',
+        filename: 'シャキーン1.mp3',
+        volume: 2.2,
+        durationMs: 3500,
+      });
+      io.to('sound_nodes').emit('sound:play', {
+        soundType: 'lowImpact',
+        level: 5,
+        volume: 2.5,
+        durationMs: 3000,
+      });
+
+      const glitchPayload: GlitchEffectOptions = {
+        level: 3,
+        duration: 3000,
+        mode: 'redout',
+        vibrate: true,
+      };
+
+      if (targetDeviceId) {
+        io.to(`device:${targetDeviceId}`).emit('jumpscare:trigger', { targetDeviceId });
+        io.to(`device:${targetDeviceId}`).emit('effect:sound', { soundType: 'lowImpact', level: 5 });
+        io.to(`device:${targetDeviceId}`).emit('effect:glitch', glitchPayload);
+      } else {
+        io.emit('jumpscare:trigger');
+        io.emit('effect:sound', { soundType: 'lowImpact', level: 5 });
+        io.emit('effect:glitch', glitchPayload);
+      }
     });
 
     // フェーズ手動強制変更

@@ -2,171 +2,125 @@
 
 /**
  * @file useTorch.ts
- * @description スマートフォン端末のLEDフラッシュライト（トーチ）および画面フラッシュ演出を制御するカスタムフック。
+ * @description Androidキオスク端末のネイティブBridge（AndroidKioskBridge / AndroidBridge / Android）
+ * およびWeb MediaStreamTrack（CCTV/カメラプレビュー時のハイブリッド対応）を統合したトーチ制御カスタムフック。
  *
  * 【アーキテクチャ & 優先制御パイプライン】
- * 1. Native App Bridge: Android/iOS 専用WebViewコンテナが提供する同期Java/ObjCインターフェースを最優先実行。
- *    （WebブラウザのMediaStream起動に伴う 500〜1000ms の遅延をゼロにし、演出音響とのフレーム単位同期を実現）
- * 2. Web MediaStreamTrack Torch: ブラウザ標準の navigator.mediaDevices.getUserMedia + applyConstraints({ torch })
- * 3. Screen Flash Fallback: カメラLEDが物理的に存在しない/拒否された場合の画面白色発光フォールバック
+ * 1. Native Kiosk Bridge (最優先):
+ *    window.AndroidBridge, window.AndroidKioskBridge, window.Android を検索。
+ *    turnOnTorch(), turnOffTorch(), setTorch(bool), flashBurst(interval, times),
+ *    strobeTorch(onMs, offMs, count), stopFlash() / stopStrobe(), isTorchOn() を直接呼び出し。
+ *    JS側のループ遅延を廃止し、Androidハードウェア層で正確なストロボ・バーストを実行。
+ * 2. CCTV / Camera Active 専有時のハイブリッド・フォールバック:
+ *    native側で available: false ("Torch unavailable (camera in use)") の場合、
+ *    Web側で保持している MediaStreamTrack（または外部から渡された activeTrack）に対して
+ *    track.applyConstraints({ advanced: [{ torch: state }] }) を安全に適用。
+ * 3. イベント駆動ステート管理:
+ *    Window CustomEvent ("torchStatusChange", "torchError") を購読し、
+ *    React state (torchOn, isTorchAvailable, torchWarning, torchError) を即座に更新。
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-
-// ============================================================================
-// 1. ネイティブBridge型定義
-// ============================================================================
-
-/** ネイティブWebViewコンテナ（Android/iOS）が注入するBridgeオブジェクトの仕様 */
-export interface NativeTorchBridge {
-  turnOnFlash?: () => void;
-  turnOffFlash?: () => void;
-  toggleFlash?: () => void;
-  turnOnTorch?: () => void;
-  turnOffTorch?: () => void;
-  setFlashlight?: (state: boolean) => void;
-  setTorch?: (state: boolean) => void;
-  setFlash?: (state: boolean) => void;
-  blink?: (count: number, intervalMs: number) => void;
-  blinkPattern?: (pattern: string, intervalMs: number) => void;
-  stopBlink?: () => void;
-  isFlashOn?: () => boolean;
-  isTorchOn?: () => boolean;
-  getBatteryLevel?: () => number;
-}
+import {
+  AndroidNativeBridge,
+  TorchStatusChangeDetail,
+  TorchErrorDetail,
+} from '../lib/types';
 
 /** Web MediaStreamTrack の W3C 制約拡張型（torchオプション用） */
 interface ExtendedMediaTrackConstraintSet extends MediaTrackConstraintSet {
   torch?: boolean;
 }
 
-// ============================================================================
-// 2. カスタムフック本体
-// ============================================================================
+export interface UseTorchOptions {
+  /** 外部カメラ（CCTVやカメラプレビュー）で起動中のMediaStreamTrack。指定時はCCTV動作中のtorch適用に使用 */
+  externalTrack?: MediaStreamTrack | null;
+  /** トーチ点灯・消灯変化時の通知コールバック */
+  onStateChange?: (state: boolean) => void;
+}
 
 /**
- * スマートフォンのLEDトーチ・点滅・復帰処理を管理するカスタムフック。
+ * Androidキオスク端末 & Webハイブリッド対応のトーチ制御フック。
  *
- * @param {(state: boolean) => void} [onStateChange] トーチの点灯・消灯状態が変化した際の通知コールバック
- * @returns フック操作用オブジェクト
+ * @param onStateChangeOrOptions コールバック関数またはオプションオブジェクト
  */
-export function useTorch(onStateChange?: (state: boolean) => void) {
+export function useTorch(
+  onStateChangeOrOptions?: ((state: boolean) => void) | UseTorchOptions
+) {
+  const onStateChange =
+    typeof onStateChangeOrOptions === 'function'
+      ? onStateChangeOrOptions
+      : onStateChangeOrOptions?.onStateChange;
+
+  const externalTrack =
+    typeof onStateChangeOrOptions === 'object'
+      ? onStateChangeOrOptions?.externalTrack
+      : undefined;
+
   /** 現在のトーチ論理状態 (true: 点灯, false: 消灯) */
-  const [torchOn, setTorchOn] = useState(false);
+  const [torchOn, setTorchOn] = useState<boolean>(false);
+
+  /** ネイティブトーチが利用可能か（カメラ専有中などは false） */
+  const [isTorchAvailable, setIsTorchAvailable] = useState<boolean>(true);
+
+  /** トーチ関連の警告メッセージ */
+  const [torchWarning, setTorchWarning] = useState<string | null>(null);
+
+  /** トーチ関連のエラーメッセージ */
+  const [torchError, setTorchError] = useState<string | null>(null);
 
   /** 画面全体を白く発光させる視覚フォールバック用状態 */
-  const [screenFlashActive, setScreenFlashActive] = useState(false);
+  const [screenFlashActive, setScreenFlashActive] = useState<boolean>(false);
 
-  /** カメラMediaStreamの参照（再オープン遅延を防ぐためシングルトン保持） */
+  /** 内部保持用カメラMediaStreamの参照（Web fallback用） */
   const streamRef = useRef<MediaStream | null>(null);
 
-  /** トーチ制約を適用するビデオトラック参照 */
+  /** 内部保持用ビデオトラック参照 */
   const trackRef = useRef<MediaStreamTrack | null>(null);
-
-  /** Web fallback 点滅用タイマーID */
-  const flickerTimerRef = useRef<NodeJS.Timeout | number | null>(null);
 
   /** 期待されるトーチ点灯状態（カメラ撮影から復帰時やフォーカス復帰時の整合性維持用） */
   const desiredTorchStateRef = useRef<boolean>(false);
 
-  /** ブラウザがWeb標準のtorch制約に対応しているかの判定キャッシュ */
-  const isWebTorchSupportedRef = useRef<boolean | null>(null);
+  /** 点滅用タイマーID（ネイティブ非対応環境用フォールバック） */
+  const fallbackTimerRef = useRef<NodeJS.Timeout | number | null>(null);
 
   // ==========================================================================
-  // A. ネイティブBridge連携レイヤー
+  // 1. ネイティブBridge取得
   // ==========================================================================
 
-  /**
-   * windowオブジェクトに注入された各種ネイティブBridgeインスタンスを取得します。
-   * @private
-   */
-  const getNativeBridge = useCallback((): NativeTorchBridge | null => {
+  const getNativeBridge = useCallback((): AndroidNativeBridge | null => {
     if (typeof window === 'undefined') return null;
-    const w = window as unknown as Record<string, unknown>;
+    const w = window as unknown as {
+      AndroidBridge?: AndroidNativeBridge;
+      AndroidKioskBridge?: AndroidNativeBridge;
+      Android?: AndroidNativeBridge;
+      [key: string]: unknown;
+    };
     return (
-      (w.Android as NativeTorchBridge) ||
-      (w.AndroidBridge as NativeTorchBridge) ||
-      (w.android as NativeTorchBridge) ||
-      (w.FlashlightBridge as NativeTorchBridge) ||
-      (w.TorchBridge as NativeTorchBridge) ||
+      w.AndroidBridge ||
+      w.AndroidKioskBridge ||
+      w.Android ||
       null
     );
   }, []);
 
-  /**
-   * ネイティブBridgeを同期呼び出しし、LEDを制御します。
-   *
-   * @param {boolean} state 点灯(true) / 消灯(false)
-   * @returns {boolean} ネイティブ側で処理が完了した場合は true
-   * @private
-   */
-  const invokeNativeBridge = useCallback(
-    (state: boolean): boolean => {
-      const bridge = getNativeBridge();
-      if (!bridge) return false;
-
-      try {
-        if (state) {
-          if (typeof bridge.turnOnFlash === 'function') {
-            bridge.turnOnFlash();
-            return true;
-          } else if (typeof bridge.turnOnTorch === 'function') {
-            bridge.turnOnTorch();
-            return true;
-          } else if (typeof bridge.toggleFlash === 'function') {
-            bridge.toggleFlash();
-            return true;
-          } else if (typeof bridge.setFlashlight === 'function') {
-            bridge.setFlashlight(true);
-            return true;
-          } else if (typeof bridge.setTorch === 'function') {
-            bridge.setTorch(true);
-            return true;
-          } else if (typeof bridge.setFlash === 'function') {
-            bridge.setFlash(true);
-            return true;
-          }
-        } else {
-          if (typeof bridge.turnOffFlash === 'function') {
-            bridge.turnOffFlash();
-            return true;
-          } else if (typeof bridge.turnOffTorch === 'function') {
-            bridge.turnOffTorch();
-            return true;
-          } else if (typeof bridge.setFlashlight === 'function') {
-            bridge.setFlashlight(false);
-            return true;
-          } else if (typeof bridge.setTorch === 'function') {
-            bridge.setTorch(false);
-            return true;
-          } else if (typeof bridge.setFlash === 'function') {
-            bridge.setFlash(false);
-            return true;
-          }
-        }
-      } catch (err) {
-        console.warn('[useTorch] Native Bridge execution error:', err);
-      }
-      return false;
-    },
-    [getNativeBridge]
-  );
-
   // ==========================================================================
-  // B. Web MediaStream レイヤー (ブラウザ標準)
+  // 2. Web MediaStream レイヤー (CCTV・getUserMedia動作中のフォールバック)
   // ==========================================================================
 
-  /**
-   * カメラストリームを取得し、トーチ機能を持つトラックを返します。
-   * 毎回カメラを起動すると500〜1000msの遅延が生じるため、同一トラックを保持・再利用します。
-   *
-   * @returns {Promise<MediaStreamTrack | null>}
-   * @private
-   */
-  const getWebTrack = useCallback(async (): Promise<MediaStreamTrack | null> => {
+  const getEffectiveTrack = useCallback((): MediaStreamTrack | null => {
+    if (externalTrack && externalTrack.readyState === 'live') {
+      return externalTrack;
+    }
     if (trackRef.current && trackRef.current.readyState === 'live') {
       return trackRef.current;
     }
+    return null;
+  }, [externalTrack]);
+
+  const getWebTrack = useCallback(async (): Promise<MediaStreamTrack | null> => {
+    const existing = getEffectiveTrack();
+    if (existing) return existing;
 
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       return null;
@@ -182,47 +136,19 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
 
       streamRef.current = stream;
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities ? (track.getCapabilities() as { torch?: boolean }) : {};
-
-      if ('torch' in capabilities) {
-        isWebTorchSupportedRef.current = true;
+      if (track) {
         trackRef.current = track;
         return track;
-      } else {
-        isWebTorchSupportedRef.current = false;
-        track.stop();
-        return null;
       }
+      return null;
     } catch (err) {
       console.warn('[useTorch] Web Torch getUserMedia request failed or denied:', err);
-      isWebTorchSupportedRef.current = false;
       return null;
     }
-  }, []);
+  }, [getEffectiveTrack]);
 
-  // ==========================================================================
-  // C. トーチ基本制御 (点灯・消灯・切替)
-  // ==========================================================================
-
-  /**
-   * トーチの点灯/消灯状態を設定します。
-   * 1. ネイティブBridge -> 2. Web MediaStream Track の優先順位で適用します。
-   *
-   * @param {boolean} state 点灯(true) / 消灯(false)
-   * @returns {Promise<boolean>} 点灯適用に成功した場合 true
-   */
-  const setTorch = useCallback(
+  const applyWebTorch = useCallback(
     async (state: boolean): Promise<boolean> => {
-      desiredTorchStateRef.current = state;
-      setTorchOn(state);
-      if (onStateChange) onStateChange(state);
-
-      // 1. ネイティブBridgeの呼び出し
-      if (invokeNativeBridge(state)) {
-        return true;
-      }
-
-      // 2. ブラウザ標準 Web Torch の適用
       try {
         const track = await getWebTrack();
         if (track && track.readyState === 'live') {
@@ -233,88 +159,176 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
           return true;
         }
       } catch (err) {
-        console.warn('[useTorch] applyConstraints torch error:', err);
+        console.warn('[useTorch] applyWebTorch error:', err);
       }
-
       return false;
     },
-    [onStateChange, invokeNativeBridge, getWebTrack]
+    [getWebTrack]
   );
 
-  /** トーチの点灯状態を反転します */
-  const toggleTorch = useCallback(() => {
-    setTorch(!torchOn);
-  }, [torchOn, setTorch]);
-
   // ==========================================================================
-  // D. 点滅・フリッカー演出制御
+  // 3. 基本トーチ制御 (turnOn, turnOff, setTorch, toggleTorch)
   // ==========================================================================
 
   /**
-   * 現在進行中の点滅タイマーおよびネイティブ側の点滅ループを直ちに停止します。
+   * ネイティブBridgeを優先してトーチを制御します。
    */
-  const stopBlink = useCallback(() => {
-    if (flickerTimerRef.current !== null) {
-      clearInterval(flickerTimerRef.current as NodeJS.Timeout);
-      flickerTimerRef.current = null;
+  const invokeNativeSetTorch = useCallback(
+    (state: boolean): boolean => {
+      const bridge = getNativeBridge();
+      if (!bridge) return false;
+
+      try {
+        if (typeof bridge.setTorch === 'function') {
+          bridge.setTorch(state);
+          return true;
+        }
+
+        if (state) {
+          if (typeof bridge.turnOnTorch === 'function') {
+            bridge.turnOnTorch();
+            return true;
+          }
+          if (typeof bridge.turnOnFlash === 'function') {
+            bridge.turnOnFlash();
+            return true;
+          }
+        } else {
+          if (typeof bridge.turnOffTorch === 'function') {
+            bridge.turnOffTorch();
+            return true;
+          }
+          if (typeof bridge.turnOffFlash === 'function') {
+            bridge.turnOffFlash();
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn('[useTorch] invokeNativeSetTorch error:', err);
+      }
+      return false;
+    },
+    [getNativeBridge]
+  );
+
+  /**
+   * トーチの点灯/消灯状態を設定します。
+   * ネイティブBridge優先で実行し、カメラ専有時またはネイティブ非対応時はWebTrackへフォールバックします。
+   */
+  const setTorch = useCallback(
+    async (state: boolean): Promise<boolean> => {
+      desiredTorchStateRef.current = state;
+      setTorchOn(state);
+      if (onStateChange) {
+        onStateChange(state);
+      }
+
+      // 1. ネイティブBridgeの呼び出し
+      const nativeOk = invokeNativeSetTorch(state);
+
+      // 2. カメラ専有時（isTorchAvailable === false）またはネイティブが存在しない場合はWebTrackを適用
+      const activeTrack = getEffectiveTrack();
+      if (!nativeOk || !isTorchAvailable || activeTrack) {
+        const webOk = await applyWebTorch(state);
+        if (webOk) return true;
+      }
+
+      return nativeOk;
+    },
+    [invokeNativeSetTorch, isTorchAvailable, getEffectiveTrack, applyWebTorch, onStateChange]
+  );
+
+  const turnOn = useCallback(async () => {
+    return setTorch(true);
+  }, [setTorch]);
+
+  const turnOff = useCallback(async () => {
+    return setTorch(false);
+  }, [setTorch]);
+
+  const toggleTorch = useCallback(() => {
+    const bridge = getNativeBridge();
+    if (bridge && typeof bridge.toggleFlash === 'function' && isTorchAvailable) {
+      try {
+        bridge.toggleFlash();
+        const nextState = !torchOn;
+        desiredTorchStateRef.current = nextState;
+        setTorchOn(nextState);
+        if (onStateChange) onStateChange(nextState);
+        return;
+      } catch (e) {
+        console.warn('[useTorch] bridge.toggleFlash error:', e);
+      }
+    }
+    setTorch(!torchOn);
+  }, [getNativeBridge, isTorchAvailable, torchOn, setTorch, onStateChange]);
+
+  // ==========================================================================
+  // 4. ストロボ・点滅演出 (flashBurst, strobeTorch, stopStrobe)
+  // ==========================================================================
+
+  /**
+   * 点滅・ストロボを停止します。
+   */
+  const stopStrobe = useCallback(() => {
+    if (fallbackTimerRef.current !== null) {
+      clearInterval(fallbackTimerRef.current as NodeJS.Timeout);
+      fallbackTimerRef.current = null;
     }
 
     const bridge = getNativeBridge();
-    if (bridge && typeof bridge.stopBlink === 'function') {
+    if (bridge) {
       try {
-        bridge.stopBlink();
+        if (typeof bridge.stopStrobe === 'function') {
+          bridge.stopStrobe();
+        } else if (typeof bridge.stopFlash === 'function') {
+          bridge.stopFlash();
+        }
       } catch (e) {
-        console.warn('[useTorch] bridge.stopBlink error:', e);
+        console.warn('[useTorch] stopStrobe error:', e);
       }
     }
   }, [getNativeBridge]);
 
+  const stopBlink = stopStrobe;
+
   /**
-   * 高速フリッカー（点滅）演出を実行します。
-   * ネイティブに専用API (blink) がある場合はJSメインスレッドをブロックしないよう完全委譲します。
-   *
-   * @param {number} [count=5] 点滅回数
-   * @param {number} [intervalMs=100] 点滅間隔 (ミリ秒)
-   * @param {boolean} [finalState=false] 点滅完了後の最終状態 (true: 点灯, false: 消灯)
+   * 単一API呼び出しによる高速ストロボ点滅。
+   * JS側でループを回さず、ネイティブの strobeTorch / flashBurst を直接実行。
    */
-  const flicker = useCallback(
-    (count = 5, intervalMs = 100, finalState = false) => {
-      stopBlink();
+  const strobe = useCallback(
+    (onDurationMs = 80, offDurationMs = 80, repeatCount = 10) => {
+      stopStrobe();
 
       const bridge = getNativeBridge();
 
-      // 1. Androidネイティブハードウェアループ (最速・ラグなし)
-      if (bridge && typeof bridge.blink === 'function') {
+      // 1. ネイティブの strobeTorch(onMs, offMs, count) または flashBurst(interval, count)
+      if (bridge && isTorchAvailable) {
         try {
-          bridge.blink(count, intervalMs);
-          desiredTorchStateRef.current = finalState;
-          if (finalState) {
-            setTimeout(() => {
-              if (desiredTorchStateRef.current) {
-                setTorch(true);
-              }
-            }, count * 2 * intervalMs + 50);
-          } else {
-            setTorchOn(false);
-            if (onStateChange) onStateChange(false);
+          if (typeof bridge.strobeTorch === 'function') {
+            bridge.strobeTorch(onDurationMs, offDurationMs, repeatCount);
+            return;
           }
-          return;
+          if (typeof bridge.flashBurst === 'function') {
+            bridge.flashBurst(onDurationMs + offDurationMs, repeatCount);
+            return;
+          }
         } catch (e) {
-          console.warn('[useTorch] bridge.blink error, falling back to timer:', e);
+          console.warn('[useTorch] Native strobe failed, falling back to timer:', e);
         }
       }
 
-      // 2. Web標準 / レガシーBridge用 タイマーループ
+      // 2. フォールバック（WebTrack または JS タイマーループ）
       let current = 0;
       let currentState = false;
-      const totalSteps = count * 2;
-      const speed = Math.max(50, intervalMs);
+      const totalSteps = repeatCount * 2;
+      const interval = Math.max(40, Math.floor((onDurationMs + offDurationMs) / 2));
 
-      flickerTimerRef.current = setInterval(() => {
+      fallbackTimerRef.current = setInterval(() => {
         current++;
         if (current > totalSteps) {
-          stopBlink();
-          setTorch(finalState);
+          stopStrobe();
+          setTorch(false);
           return;
         }
 
@@ -323,59 +337,38 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
         setTorchOn(currentState);
         if (onStateChange) onStateChange(currentState);
 
-        if (bridge) {
-          if (typeof bridge.toggleFlash === 'function') {
-            bridge.toggleFlash();
-          } else {
-            invokeNativeBridge(currentState);
-          }
-        } else if (trackRef.current && trackRef.current.readyState === 'live') {
+        const activeTrack = getEffectiveTrack();
+        if (activeTrack && activeTrack.readyState === 'live') {
           const constraints: { advanced: ExtendedMediaTrackConstraintSet[] } = {
             advanced: [{ torch: currentState }],
           };
-          trackRef.current.applyConstraints(constraints).catch(() => {});
+          activeTrack.applyConstraints(constraints).catch(() => {});
+        } else {
+          invokeNativeSetTorch(currentState);
         }
-      }, speed);
+      }, interval);
     },
-    [stopBlink, getNativeBridge, setTorch, onStateChange]
+    [stopStrobe, getNativeBridge, isTorchAvailable, getEffectiveTrack, onStateChange, setTorch, invokeNativeSetTorch]
   );
 
-  /**
-   * カスタムリズム/パターン点滅演出を実行します。
-   *
-   * @param {string} pattern 点滅パターン文字列 (例: "1,0,1,1,0" または "10110")
-   * @param {number} [intervalMs=100] ステップごとの時間 (ミリ秒)
-   * @param {boolean} [finalState=false] 点滅完了後の最終状態
-   */
+  /** レガシー互換のフリッカーメソッド */
+  const flicker = useCallback(
+    (count = 5, intervalMs = 100, finalState = false) => {
+      strobe(intervalMs / 2, intervalMs / 2, count);
+      if (finalState) {
+        setTimeout(() => {
+          setTorch(true);
+        }, count * intervalMs + 50);
+      }
+    },
+    [strobe, setTorch]
+  );
+
+  /** パターン点滅 */
   const blinkPattern = useCallback(
     (pattern: string, intervalMs = 100, finalState = false) => {
-      stopBlink();
+      stopStrobe();
 
-      const bridge = getNativeBridge();
-
-      // 1. AndroidネイティブパターンAPI
-      if (bridge && typeof bridge.blinkPattern === 'function') {
-        try {
-          bridge.blinkPattern(pattern, intervalMs);
-          desiredTorchStateRef.current = finalState;
-          if (finalState) {
-            const stepsCount = pattern.includes(',') ? pattern.split(',').length : pattern.length;
-            setTimeout(() => {
-              if (desiredTorchStateRef.current) {
-                setTorch(true);
-              }
-            }, stepsCount * intervalMs + 50);
-          } else {
-            setTorchOn(false);
-            if (onStateChange) onStateChange(false);
-          }
-          return;
-        } catch (e) {
-          console.warn('[useTorch] bridge.blinkPattern error, falling back to timer:', e);
-        }
-      }
-
-      // 2. パターン文字列のパース ("1,0,1,0" または "1010")
       const tokens: boolean[] = pattern.includes(',')
         ? pattern.split(',').map((t) => {
             const s = t.trim().toLowerCase();
@@ -386,9 +379,9 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
       if (tokens.length === 0) return;
 
       let idx = 0;
-      flickerTimerRef.current = setInterval(() => {
+      fallbackTimerRef.current = setInterval(() => {
         if (idx >= tokens.length) {
-          stopBlink();
+          stopStrobe();
           setTorch(finalState);
           return;
         }
@@ -398,33 +391,31 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
         setTorchOn(state);
         if (onStateChange) onStateChange(state);
 
-        if (bridge) {
-          invokeNativeBridge(state);
-        } else if (trackRef.current && trackRef.current.readyState === 'live') {
+        const activeTrack = getEffectiveTrack();
+        if (activeTrack && activeTrack.readyState === 'live') {
           const constraints: { advanced: ExtendedMediaTrackConstraintSet[] } = {
             advanced: [{ torch: state }],
           };
-          trackRef.current.applyConstraints(constraints).catch(() => {});
+          activeTrack.applyConstraints(constraints).catch(() => {});
+        } else {
+          invokeNativeSetTorch(state);
         }
         idx++;
-      }, Math.max(50, intervalMs));
+      }, Math.max(40, intervalMs));
     },
-    [stopBlink, getNativeBridge, setTorch, onStateChange]
+    [stopStrobe, setTorch, onStateChange, getEffectiveTrack, invokeNativeSetTorch]
   );
 
   // ==========================================================================
-  // E. リソース解放 & 自動復帰 (Watchdog)
+  // 5. リソース解放
   // ==========================================================================
 
-  /**
-   * すべてのトーチハードウェアを安全に停止し、カメラトラックをOSに返却します。
-   */
   const releaseTorch = useCallback(() => {
     desiredTorchStateRef.current = false;
     setTorchOn(false);
-    stopBlink();
+    stopStrobe();
 
-    invokeNativeBridge(false);
+    invokeNativeSetTorch(false);
 
     if (trackRef.current) {
       const constraints: { advanced: ExtendedMediaTrackConstraintSet[] } = {
@@ -434,23 +425,59 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
       trackRef.current.stop();
       trackRef.current = null;
     }
-  }, [invokeNativeBridge, stopBlink]);
+  }, [stopStrobe, invokeNativeSetTorch]);
 
-  /**
-   * 復帰監視 & ウォッチドッグタイマー:
-   * ユーザーがHTML写真撮影から戻った際や、画面復帰時にLEDが消灯してしまうブラウザの挙動を防ぎ、
-   * アトラクションの没入感を損なわないよう状態を自動復元します。
-   */
+  // ==========================================================================
+  // 6. CustomEvent リスナー (torchStatusChange & torchError) & 復帰監視
+  // ==========================================================================
+
   useEffect(() => {
+    // ネイティブ側からの torchStatusChange イベント
+    const handleTorchStatusChange = (e: Event) => {
+      const customEvent = e as CustomEvent<TorchStatusChangeDetail>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+
+      console.log('[useTorch] torchStatusChange event:', detail);
+      setTorchOn(detail.enabled);
+      setIsTorchAvailable(detail.available);
+      setTorchWarning(detail.warning);
+
+      if (onStateChange) {
+        onStateChange(detail.enabled);
+      }
+
+      // カメラ専有でネイティブが利用不能になった場合、もしWeb側でMediaStreamTrackがあればそちらへtorchを即同期
+      if (!detail.available && desiredTorchStateRef.current) {
+        const activeTrack = getEffectiveTrack();
+        if (activeTrack && activeTrack.readyState === 'live') {
+          console.log('[useTorch] Native torch unavailable (camera in use). Applying web track constraints fallback.');
+          const constraints: { advanced: ExtendedMediaTrackConstraintSet[] } = {
+            advanced: [{ torch: true }],
+          };
+          activeTrack.applyConstraints(constraints).catch(() => {});
+        }
+      }
+    };
+
+    // ネイティブ側からの torchError イベント
+    const handleTorchError = (e: Event) => {
+      const customEvent = e as CustomEvent<TorchErrorDetail>;
+      const detail = customEvent.detail;
+      console.warn('[useTorch] torchError event received:', detail);
+      if (detail?.error) {
+        setTorchError(detail.error);
+      }
+    };
+
+    window.addEventListener('torchStatusChange', handleTorchStatusChange);
+    window.addEventListener('torchError', handleTorchError);
+
+    // 画面フォーカス復帰時の復元処理
     const handleRestoreTorch = () => {
       if (desiredTorchStateRef.current) {
         console.log('[useTorch] Auto-restoring torch after camera return / focus...');
         setTorch(true);
-        setTimeout(() => {
-          if (desiredTorchStateRef.current) {
-            setTorch(true);
-          }
-        }, 300);
       }
     };
 
@@ -458,44 +485,39 @@ export function useTorch(onStateChange?: (state: boolean) => void) {
     window.addEventListener('pageshow', handleRestoreTorch);
     document.addEventListener('visibilitychange', handleRestoreTorch);
 
-    // 1.5秒ごとのウォッチドッグ（点灯指示中にもかかわらず消灯していた場合の自己修復）
-    const watchdogInterval = setInterval(() => {
-      if (desiredTorchStateRef.current && document.visibilityState === 'visible') {
-        const bridge = getNativeBridge();
-        if (bridge) {
-          const isActuallyOn =
-            typeof bridge.isFlashOn === 'function'
-              ? bridge.isFlashOn()
-              : typeof bridge.isTorchOn === 'function'
-              ? bridge.isTorchOn()
-              : null;
-
-          if (isActuallyOn === false || isActuallyOn === null) {
-            invokeNativeBridge(true);
-          }
-        } else if (trackRef.current && trackRef.current.readyState === 'live') {
-          const constraints: { advanced: ExtendedMediaTrackConstraintSet[] } = {
-            advanced: [{ torch: true }],
-          };
-          trackRef.current.applyConstraints(constraints).catch(() => {});
-        }
-      }
-    }, 1500);
+    // ネイティブ初期状態のポーリング同期 (マウント直後)
+    const bridge = getNativeBridge();
+    if (bridge && typeof bridge.isTorchOn === 'function') {
+      try {
+        const isOn = bridge.isTorchOn();
+        setTorchOn(isOn);
+      } catch {}
+    }
 
     return () => {
+      window.removeEventListener('torchStatusChange', handleTorchStatusChange);
+      window.removeEventListener('torchError', handleTorchError);
       window.removeEventListener('focus', handleRestoreTorch);
       window.removeEventListener('pageshow', handleRestoreTorch);
       document.removeEventListener('visibilitychange', handleRestoreTorch);
-      clearInterval(watchdogInterval);
+      stopStrobe();
       releaseTorch();
     };
-  }, [setTorch, invokeNativeBridge, releaseTorch, getNativeBridge]);
+  }, [getNativeBridge, onStateChange, setTorch, stopStrobe, releaseTorch, getEffectiveTrack]);
 
   return {
     torchOn,
+    isTorchOn: torchOn,
+    isTorchAvailable,
+    torchWarning,
+    torchError,
     screenFlashActive,
+    turnOn,
+    turnOff,
     setTorch,
     toggleTorch,
+    strobe,
+    stopStrobe,
     flicker,
     blinkPattern,
     stopBlink,

@@ -10,11 +10,11 @@ import { FullscreenButton } from '../../components/common/FullscreenButton';
 import { ReconnectingModal } from '../../components/common/ReconnectingModal';
 import { HorrorCanvasOverlay } from '../../components/client/HorrorCanvasOverlay';
 import { PhaseInit } from '../../components/client/PhaseInit';
-import { PhaseZone1 } from '../../components/client/PhaseZone1';
-import { PhaseElevator } from '../../components/client/PhaseElevator';
-import { PhaseArea2Conveyor } from '../../components/client/PhaseArea2Conveyor';
-import { PhaseArea3Video } from '../../components/client/PhaseArea3Video';
-import { PhasePanicEscape } from '../../components/client/PhasePanicEscape';
+import { PhasePreshow } from '../../components/client/PhasePreshow';
+import { PhaseQualityControl } from '../../components/client/PhaseQualityControl';
+import { PhaseElevatorSeq } from '../../components/client/PhaseElevatorSeq';
+import { PhaseManufacturingLine } from '../../components/client/PhaseManufacturingLine';
+import { PhaseMonitorRoom } from '../../components/client/PhaseMonitorRoom';
 import { PhaseReturn } from '../../components/client/PhaseReturn';
 import {
   DevicePhase,
@@ -67,6 +67,16 @@ function ClientContent() {
   const [tasks, setTasks] = useState<InspectionTask[]>(INITIAL_TASKS);
   const [glitchOptions, setGlitchOptions] = useState<GlitchEffectOptions | null>(null);
   const [elevatorFloor, setElevatorFloor] = useState<ElevatorFloorState>('FLOOR_1');
+
+  // 各フェーズの局所ステート
+  const [preshowEnded, setPreshowEnded] = useState<boolean>(false);
+  const [qualityControlArrived, setQualityControlArrived] = useState<boolean>(false);
+  const [manufacturingLineArrived, setManufacturingLineArrived] = useState<boolean>(false);
+  const [manufacturingPhotoApproved, setManufacturingPhotoApproved] = useState<boolean>(false);
+  const [manufacturingPhotoStatus, setManufacturingPhotoStatus] = useState<'UNINSPECTED' | 'PENDING' | 'APPROVED' | 'REJECTED'>('UNINSPECTED');
+  const [monitorRoomArrived, setMonitorRoomArrived] = useState<boolean>(false);
+  const [monitorVideoPlaying, setMonitorVideoPlaying] = useState<boolean>(false);
+  const [panicActive, setPanicActive] = useState<boolean>(false);
 
   const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
   const soundEngine = useSoundEngine();
@@ -121,34 +131,82 @@ function ClientContent() {
       if (!targetDevId || targetDevId === deviceId) {
         console.log(`[Client] Phase updated to: ${newPhase}`);
         setPhase(newPhase);
+
+        // 各フェーズへの状態同期
+        if (newPhase === 'quality_control' || newPhase === 'AREA_1_PHOTO') {
+          setPreshowEnded(true);
+        } else if (newPhase === 'manufacturing_line' || newPhase === 'AREA_2_CONVEYOR') {
+          setQualityControlArrived(true);
+        } else if (newPhase === 'monitor_room' || newPhase === 'AREA_3_VIDEO') {
+          setManufacturingLineArrived(true);
+          setManufacturingPhotoApproved(true);
+        } else if (newPhase === 'escape' || newPhase === 'PANIC_ESCAPE') {
+          setPanicActive(true);
+        }
       }
     });
 
-    // Elevator state
+    // プレショー終了イベント
+    socket.on('preshow:ended', () => {
+      console.log('[Client] Preshow ended event received!');
+      setPreshowEnded(true);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([150, 80, 200, 100, 300]);
+      }
+      soundEngine.playSound('lowImpact', 3);
+    });
+
+    // エレベーター階数状態
     socket.on('elevator:state', ({ floor }) => {
       console.log(`[Client] Elevator state updated: ${floor}`);
       setElevatorFloor(floor);
     });
 
-    // Review result
+    // 写真審査結果
     socket.on('task:review_result', ({ taskId, status, reason }) => {
       console.log(`[Client] Review result received for Task ${taskId}: ${status}`);
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId ? { ...t, status, rejectionReason: reason } : t
-        )
-      );
 
-      if (status === 'APPROVED') {
-        soundEngine.playTaskSuccess();
-        if ('vibrate' in navigator) navigator.vibrate([80, 40, 140]);
-      } else if (status === 'REJECTED') {
-        soundEngine.playBeep(440, 0.2);
-        if ('vibrate' in navigator) navigator.vibrate(300);
+      if (taskId === 10) {
+        setManufacturingPhotoStatus(status);
+        if (status === 'APPROVED') {
+          setManufacturingPhotoApproved(true);
+          soundEngine.playSound('lowImpact', 5);
+          if ('vibrate' in navigator) navigator.vibrate([200, 100, 300, 100, 500]);
+        } else if (status === 'REJECTED') {
+          soundEngine.playBeep(440, 0.2);
+          if ('vibrate' in navigator) navigator.vibrate(300);
+        }
+      } else {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, status, rejectionReason: reason } : t
+          )
+        );
+
+        if (status === 'APPROVED') {
+          soundEngine.playTaskSuccess();
+          if ('vibrate' in navigator) navigator.vibrate([80, 40, 140]);
+        } else if (status === 'REJECTED') {
+          soundEngine.playBeep(440, 0.2);
+          if ('vibrate' in navigator) navigator.vibrate(300);
+        }
       }
     });
 
-    // Glitch effect
+    // ジャンプスケア演出トリガー
+    socket.on('jumpscare:trigger', (payload) => {
+      if (!payload?.targetDeviceId || payload.targetDeviceId === deviceId) {
+        console.log('[Client] JUMPSCARE TRIGGER RECEIVED!', payload);
+        setManufacturingPhotoApproved(true);
+        soundEngine.playSound('lowImpact', 5);
+        if ('vibrate' in navigator) {
+          navigator.vibrate([300, 100, 300, 100, 600]);
+        }
+        flicker(20, 60);
+      }
+    });
+
+    // 画面グリッチ
     socket.on('effect:glitch', (options) => {
       console.log('[Client] Glitch effect triggered:', options);
       setGlitchOptions(options);
@@ -162,7 +220,7 @@ function ClientContent() {
       }, options.duration || 3000);
     });
 
-    // Torch effect
+    // トーチ制御
     socket.on('effect:torch', ({ state, flicker: shouldFlicker, count, intervalMs, pattern, stop }) => {
       console.log('[Client] Torch effect received:', { state, shouldFlicker, pattern, stop });
       if (stop) {
@@ -177,7 +235,7 @@ function ClientContent() {
       }
     });
 
-    // Sound effect
+    // 効果音再生
     socket.on('effect:sound', ({ soundType, level, filename, volume, loop }) => {
       console.log(`[Client] Sound effect received: ${soundType}${filename ? ` (${filename})` : ''}`);
       if (soundType === 'file' && filename) {
@@ -189,33 +247,36 @@ function ClientContent() {
       }
     });
 
-    // Master volume control
+    // 音量制御
     socket.on('effect:volume', ({ volume }) => {
       console.log(`[Client] Master volume changed to: ${volume * 100}%`);
       soundEngine.setVolume(volume);
     });
 
-    // Emergency shutdown
+    // 緊急シャットダウン
     socket.on('effect:shutdown', () => {
       console.log('[Client] Shutdown signal received!');
       setPhase('STANDBY');
     });
 
+    // ビデオ再生トリガー監視
+    socket.on('video:trigger_play', () => {
+      setMonitorVideoPlaying(true);
+    });
+
     // 自動パニック連携 (動画同期またはAdminトリガー)
     const handlePanicTrigger = (payload?: { timestamp?: number; reason?: string }) => {
       console.log('[Client] CRITICAL PANIC EVENT RECEIVED!', payload);
-      setPhase('PANIC_ESCAPE');
+      setPanicActive(true);
+      setPhase('escape');
 
-      // 1. 最大音量アラーム音 (低周波衝撃音 + 高周波ビープ)
       soundEngine.playSound('lowImpact', 5);
       soundEngine.playBeep(980, 0.4);
 
-      // 2. スマホバイブレーション作動
       if ('vibrate' in navigator) {
         navigator.vibrate([250, 100, 250, 100, 500, 150, 500]);
       }
 
-      // 3. 背面カメラトーチの激速点滅
       flicker(30, 70);
     };
 
@@ -223,13 +284,16 @@ function ClientContent() {
 
     return () => {
       socket.off('phase:update');
+      socket.off('preshow:ended');
       socket.off('elevator:state');
       socket.off('task:review_result');
+      socket.off('jumpscare:trigger');
       socket.off('effect:glitch');
       socket.off('effect:torch');
       socket.off('effect:sound');
       socket.off('effect:volume');
       socket.off('effect:shutdown');
+      socket.off('video:trigger_play');
       socket.off('panic:trigger', handlePanicTrigger);
     };
   }, [socket, deviceId, soundEngine, flicker, blinkPattern, stopBlink, setTorch]);
@@ -237,38 +301,55 @@ function ClientContent() {
   // Emit device:ready once connected or deviceId set
   useEffect(() => {
     if (socket && connected) {
-      const location =
-        phase === 'STANDBY'
-          ? '待機室 (オープニング)'
-          : phase === 'AREA_1_PHOTO'
-            ? '品質管理室 (指定3点点検)'
-            : phase === 'ELEVATOR'
-              ? 'エレベータ'
-              : phase === 'AREA_2_CONVEYOR'
-                ? '第零製造ライン (コンベア点検)'
-                : phase === 'AREA_3_VIDEO'
-                  ? 'モニター室 (記録映像アーカイブ)'
-                  : phase === 'PANIC_ESCAPE'
-                    ? '非常脱出路 (地上へ退避中)'
-                    : '受付 (端末返却所)';
+      const locationMap: Record<string, string> = {
+        STANDBY: '待機ホール (受付)',
+        preshow: '待機ホール (プレショー)',
+        quality_control: '1F 品質管理室 (撮影点検)',
+        AREA_1_PHOTO: '1F 品質管理室 (撮影点検)',
+        elevator: '1F〜B1F エレベーター',
+        ELEVATOR: '1F〜B1F エレベーター',
+        manufacturing_line: 'B1F 第零製造ライン (コンベア点検)',
+        AREA_2_CONVEYOR: 'B1F 第零製造ライン (コンベア点検)',
+        monitor_room: 'B1F モニター室 (最終アーカイブ映像)',
+        AREA_3_VIDEO: 'B1F モニター室 (最終アーカイブ映像)',
+        escape: '非常脱出路 (地上へ退避中)',
+        PANIC_ESCAPE: '非常脱出路 (地上へ退避中)',
+        return: '受付 (端末返却所)',
+        RETURN: '受付 (端末返却所)',
+      };
+      const location = locationMap[phase] || '待機中';
       socket.emit('device:ready', { deviceId, phase, location });
     }
   }, [socket, connected, deviceId, phase]);
 
-  // Phase transition handlers
+  // フェーズ移行 & アクションハンドラー
   const handleStartInspection = () => {
     soundEngine.unlockAudio();
     soundEngine.playBeep(880, 0.1);
-    setPhase('AREA_1_PHOTO');
+    // 端末側はプレショーを表示せず、同意直後にエリア1（品質管理室）への移動・到着待ちへ進む
+    setPhase('quality_control');
+    setQualityControlArrived(false);
     if (socket) {
       socket.emit('device:start_inspection', { deviceId });
     }
   };
 
+  const handleArriveAtPhase = (targetPhase: DevicePhase) => {
+    soundEngine.playBeep(920, 0.12);
+    setPhase(targetPhase);
+    if (socket) {
+      socket.emit('device:arrive', { deviceId, phase: targetPhase });
+    }
+  };
+
   const handlePhotoSubmit = (taskId: number, taskTitle: string, imageBase64: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: 'PENDING' } : t))
-    );
+    if (taskId === 10) {
+      setManufacturingPhotoStatus('PENDING');
+    } else {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: 'PENDING' } : t))
+      );
+    }
 
     if (socket) {
       socket.emit('task:photo_submit', {
@@ -280,22 +361,22 @@ function ClientContent() {
     }
   };
 
-  // Elevator power toggle
+  // Elevator controls
   const handleElevatorPower = (powerOn: boolean) => {
     if (socket) {
       socket.emit('elevator:power', { powerOn, deviceId });
     }
   };
 
-  // Conveyor controls
-  const handleConveyorControl = (action: 'forward' | 'reverse' | 'stop' | 'test_run', durationMs?: number) => {
+  const handleElevatorStartMove = () => {
     if (socket) {
-      socket.emit('conveyor:control', { action, speed: 100, durationMs, deviceId });
+      socket.emit('elevator:trigger_move', { from: 'FLOOR_1', to: 'FLOOR_B1', deviceId });
     }
   };
 
   // Video trigger
   const handleTriggerVideo = () => {
+    setMonitorVideoPlaying(true);
     if (socket) {
       socket.emit('video:trigger_play', { deviceId });
     }
@@ -337,8 +418,9 @@ function ClientContent() {
           </div>
         </header>
 
-        {/* Main Phase Container */}
+        {/* Main Phase Container (5 Phases) */}
         <main className="client-main">
+          {/* 待機・初期設定 */}
           {phase === 'STANDBY' && (
             <PhaseInit
               deviceId={deviceId}
@@ -347,12 +429,37 @@ function ClientContent() {
             />
           )}
 
-          {phase === 'AREA_1_PHOTO' && (
-            <PhaseZone1
+          {/* ① プレショー */}
+          {phase === 'preshow' && (
+            <PhasePreshow
+              deviceId={deviceId}
+              preshowEnded={preshowEnded}
+              onConfirmPreshowArrival={() => {
+                if (socket) {
+                  socket.emit('device:arrive', { deviceId, phase: 'preshow' });
+                }
+              }}
+              onArriveQualityControl={() => {
+                setQualityControlArrived(true);
+                handleArriveAtPhase('quality_control');
+              }}
+            />
+          )}
+
+          {/* ② 品質管理室 */}
+          {(phase === 'quality_control' || phase === 'AREA_1_PHOTO') && (
+            <PhaseQualityControl
               deviceId={deviceId}
               tasks={tasks}
+              arrived={qualityControlArrived}
+              onArrive={() => {
+                setQualityControlArrived(true);
+                handleArriveAtPhase('quality_control');
+              }}
               onPhotoSubmit={handlePhotoSubmit}
-              onProceedZone2={() => setPhase('ELEVATOR')}
+              onProceedElevator={() => {
+                handleArriveAtPhase('elevator');
+              }}
               playShutterSound={() => soundEngine.playShutter()}
               onPhotoTaken={() => {
                 if (torchOn) {
@@ -362,47 +469,79 @@ function ClientContent() {
             />
           )}
 
-          {phase === 'ELEVATOR' && (
-            <PhaseElevator
+          {/* ③ エレベーター */}
+          {(phase === 'elevator' || phase === 'ELEVATOR') && (
+            <PhaseElevatorSeq
               deviceId={deviceId}
               currentFloor={elevatorFloor}
               onPowerToggle={handleElevatorPower}
-              playSwitchSound={() => soundEngine.playBeep(600, 0.15)}
-              onProceedZone2={() => setPhase('AREA_2_CONVEYOR')}
-            />
-          )}
-
-          {phase === 'AREA_2_CONVEYOR' && (
-            <PhaseArea2Conveyor
-              deviceId={deviceId}
-              onConveyorControl={handleConveyorControl}
-              onProceedNext={() => setPhase('AREA_3_VIDEO')}
-              playMotorSound={() => soundEngine.playMotor()}
-              playSuccessSound={() => soundEngine.playTaskSuccess()}
-            />
-          )}
-
-          {phase === 'AREA_3_VIDEO' && (
-            <PhaseArea3Video
-              deviceId={deviceId}
-              onTriggerVideo={handleTriggerVideo}
-              playHorrorSound={() => soundEngine.playSound('lowImpact')}
-            />
-          )}
-
-          {phase === 'PANIC_ESCAPE' && (
-            <PhasePanicEscape
-              deviceId={deviceId}
-              onProceedReturn={() => setPhase('RETURN')}
-              triggerEmergencySound={() => {
-                soundEngine.playSound('lowImpact', 5);
-                soundEngine.playBeep(980, 0.4);
+              onStartMove={handleElevatorStartMove}
+              onProceedManufacturing={() => {
+                setManufacturingLineArrived(true);
+                handleArriveAtPhase('manufacturing_line');
               }}
-              triggerFastTorch={() => flicker(30, 70)}
+              playSwitchSound={() => soundEngine.playBeep(600, 0.15)}
             />
           )}
 
-          {phase === 'RETURN' && (
+          {/* ④ 製造ライン */}
+          {(phase === 'manufacturing_line' || phase === 'AREA_2_CONVEYOR') && (
+            <PhaseManufacturingLine
+              deviceId={deviceId}
+              arrived={manufacturingLineArrived}
+              onArrive={() => {
+                setManufacturingLineArrived(true);
+                handleArriveAtPhase('manufacturing_line');
+              }}
+              onConveyorStart={() => {
+                socket?.emit('conveyor:control', { action: 'test_run', durationMs: 6000, deviceId });
+              }}
+              onPhotoSubmit={handlePhotoSubmit}
+              photoApproved={manufacturingPhotoApproved}
+              photoStatus={manufacturingPhotoStatus}
+              onProceedMonitorRoom={() => {
+                setMonitorRoomArrived(true);
+                handleArriveAtPhase('monitor_room');
+              }}
+              playShutterSound={() => soundEngine.playShutter()}
+            />
+          )}
+
+          {/* ⑤ モニター室 */}
+          {(phase === 'monitor_room' || phase === 'AREA_3_VIDEO') && (
+            <PhaseMonitorRoom
+              deviceId={deviceId}
+              arrived={monitorRoomArrived}
+              onArrive={() => {
+                setMonitorRoomArrived(true);
+                handleArriveAtPhase('monitor_room');
+              }}
+              onTriggerVideo={handleTriggerVideo}
+              videoPlaying={monitorVideoPlaying}
+              panicActive={panicActive}
+              onEscapeSuccess={() => {
+                handleArriveAtPhase('return');
+              }}
+            />
+          )}
+
+          {/* クライマックス・パニック脱出 */}
+          {(phase === 'escape' || phase === 'PANIC_ESCAPE') && (
+            <PhaseMonitorRoom
+              deviceId={deviceId}
+              arrived={true}
+              onArrive={() => {}}
+              onTriggerVideo={handleTriggerVideo}
+              videoPlaying={true}
+              panicActive={true}
+              onEscapeSuccess={() => {
+                handleArriveAtPhase('return');
+              }}
+            />
+          )}
+
+          {/* 体験終了・端末返却 */}
+          {(phase === 'return' || phase === 'RETURN') && (
             <PhaseReturn deviceId={deviceId} />
           )}
         </main>
@@ -428,3 +567,4 @@ export default function ClientPage() {
     </Suspense>
   );
 }
+

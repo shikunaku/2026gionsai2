@@ -295,7 +295,7 @@ export const SerialConfigModal: React.FC<SerialConfigModalProps> = ({
               キャンセル
             </button>
             <button type="submit" className="win95-btn serial-modal-save-btn">
-              💾 {mode === 'new' ? '設定を保存して登録' : '変更を保存'}
+              {mode === 'new' ? '設定を保存して登録' : '変更を保存'}
             </button>
           </div>
         </form>

@@ -49,9 +49,9 @@ export function useSerialDevices() {
             { id: 'sw_valve', name: '蒸気バルブ (サーボ)', action: 'valve', state: false },
           ],
           buttons: [
-            { id: 'btn_emergency', name: '🚨 非常全点灯・緊急停止', action: 'emergency' },
-            { id: 'btn_alloff', name: '🛑 全機材強制OFF', action: 'all_off' },
-            { id: 'btn_reset', name: '🔄 状態リセット', action: 'reset' },
+            { id: 'btn_emergency', name: '[EMERGENCY] 非常全点灯・緊急停止', action: 'emergency' },
+            { id: 'btn_alloff', name: '[ALL OFF] 全機材強制OFF', action: 'all_off' },
+            { id: 'btn_reset', name: '[RESET] 状態リセット', action: 'reset' },
           ],
         };
         setDevices([defaultDevice]);

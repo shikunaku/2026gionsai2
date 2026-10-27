@@ -194,6 +194,48 @@ export class McuManager {
   }
 
   /**
+   * 生首ギミック（リレー/アクチュエータ等）の制御
+   *
+   * @param {boolean} [trigger=true] 作動フラグ
+   * @param {number} [durationMs=3000] 作動維持時間(ms)
+   */
+  public handleHeadGimmick(trigger = true, durationMs = 3000): void {
+    console.log(`[McuManager] HEAD GIMMICK TRIGGERED -> state: ${trigger}, duration: ${durationMs}ms`);
+    store.updateEquipmentState('eq_head_gimmick_01', trigger);
+    this.dispatchCommand('mcu/gimmick/head', {
+      action: 'gimmick',
+      target: 'head',
+      state: trigger,
+      power: trigger ? 1 : 0,
+    });
+
+    if (trigger && durationMs > 0) {
+      setTimeout(() => {
+        console.log('[McuManager] Head gimmick auto-reset');
+        store.updateEquipmentState('eq_head_gimmick_01', false);
+        this.dispatchCommand('mcu/gimmick/head', {
+          action: 'gimmick',
+          target: 'head',
+          state: false,
+          power: 0,
+        });
+      }, durationMs);
+    }
+  }
+
+  /**
+   * エレベーターや各フェーズ用の照明異常（明滅・減光）
+   */
+  public handleLightingAnomaly(mode: 'flicker' | 'blackout' | 'normal' = 'flicker', durationMs = 3500): void {
+    console.log(`[McuManager] LIGHTING ANOMALY -> mode: ${mode}, duration: ${durationMs}ms`);
+    this.dispatchCommand('mcu/lighting/anomaly', {
+      action: 'light_anomaly',
+      mode,
+      durationMs,
+    });
+  }
+
+  /**
    * 直近のコマンド送信履歴を取得します。
    * @returns {McuMessage[]} 直近最大50件のメッセージ配列
    */

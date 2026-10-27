@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
+import { DEFAULT_VIDEO_CONFIG } from '../../../lib/types';
 import '../../../styles/video-display.css';
 
 export default function VideoDisplayPlayerPage() {
@@ -87,135 +88,193 @@ export default function VideoDisplayPlayerPage() {
       });
   }, []);
 
-  // Listen to WebSocket events
-  useEffect(() => {
-    if (!socket) return;
+    const [isPreshowMode, setIsPreshowMode] = useState<boolean>(false);
 
-    const handleTriggerPlay = (payload?: { videoSrc?: string; title?: string }) => {
-      console.log('[Video Player] TRIGGER_VIDEO_PLAY received:', payload);
-      hasTriggeredPanicRef.current = false;
-      setPanicEmitted(false);
+    // Listen to WebSocket events
+    useEffect(() => {
+      if (!socket) return;
 
-      // 優先度: payload指定 > public/videos内の最初の実在ファイル > 既定フォールバック
-      let src = payload?.videoSrc;
-      if (!src) {
-        if (availableVideos.length > 0) {
-          src = `/videos/${availableVideos[0]}`;
-        } else {
-          src = '/videos/area3.mp4';
+      const handlePreshowTrigger = (payload?: { videoSrc?: string }) => {
+        console.log('[Video Player] PRESHOW_TRIGGER received:', payload);
+        setIsPreshowMode(true);
+        hasTriggeredPanicRef.current = false;
+        setPanicEmitted(false);
+
+        let src = payload?.videoSrc;
+        if (!src) {
+          if (availableVideos.length > 0) {
+            src = `/videos/${availableVideos[0]}`;
+          } else {
+            src = '/videos/preshow.mp4';
+          }
         }
-      }
 
-      setVideoSrc(src);
-      setIsPlaying(true);
-      setUseProcedural(false);
+        setVideoSrc(src);
+        setIsPlaying(true);
+        setUseProcedural(false);
 
-      if (videoRef.current) {
-        videoRef.current.src = src;
-        videoRef.current.currentTime = 0;
-
-        // 音声アンロック状態に応じて音声を有効化（未アンロック時はブラウザポリシー制限回避のためmutedで確実に再生）
-        videoRef.current.muted = !audioUnlocked;
-
-        videoRef.current
-          .play()
-          .then(() => {
-            console.log(`[Video Player] Video playback started successfully for: ${src} (muted: ${videoRef.current?.muted})`);
-          })
-          .catch((err) => {
-            console.warn(`[Video Player] Video playback failed for ${src}, trying muted autoPlay fallback:`, err);
+        if (videoRef.current) {
+          videoRef.current.src = src;
+          videoRef.current.currentTime = 0;
+          videoRef.current.muted = !audioUnlocked;
+          videoRef.current.play().catch((err) => {
+            console.warn('[Video Player] Preshow play fallback:', err);
             if (videoRef.current) {
               videoRef.current.muted = true;
-              videoRef.current
-                .play()
-                .then(() => {
-                  console.log('[Video Player] Muted fallback playback succeeded.');
-                })
-                .catch((e2) => {
-                  console.warn('[Video Player] Both direct and muted video failed. Falling back to procedural horror synth:', e2);
-                  setUseProcedural(true);
-                  playProceduralHorrorShow();
-                });
-            } else {
-              setUseProcedural(true);
-              playProceduralHorrorShow();
+              videoRef.current.play().catch(() => {});
             }
           });
-      } else {
-        setUseProcedural(true);
-        playProceduralHorrorShow();
-      }
-    };
-
-    const handleVideoReset = () => {
-      console.log('[Video Player] Video reset received');
-      hasTriggeredPanicRef.current = false;
-      setPanicEmitted(false);
-      if (videoRef.current) {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      }
-      setIsPlaying(false);
-      setUseProcedural(false);
-    };
-
-    socket.on('video:trigger_play', handleTriggerPlay);
-    socket.on('video:reset', handleVideoReset);
-
-    return () => {
-      socket.off('video:trigger_play', handleTriggerPlay);
-      socket.off('video:reset', handleVideoReset);
-    };
-  }, [socket, availableVideos, audioUnlocked]);
-
-  // Audio unlock click handler
-  const handleUnlockAudio = async () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        const ctx = new AudioContextClass();
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
         }
-        audioCtxRef.current = ctx;
+      };
 
-        // Play brief sub-bass unlock sound
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(120, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
+      const handleTriggerPlay = (payload?: { videoSrc?: string; title?: string }) => {
+        console.log('[Video Player] TRIGGER_VIDEO_PLAY received:', payload);
+        setIsPreshowMode(false);
+        hasTriggeredPanicRef.current = false;
+        setPanicEmitted(false);
+
+        // 優先度: payload指定 > DEFAULT_VIDEO_CONFIG.area3 > 'area3'を含む実在ファイル > preshow以外の実在ファイル > フォールバック
+        let src = payload?.videoSrc;
+        if (!src) {
+          const defaultArea3File = DEFAULT_VIDEO_CONFIG.area3;
+          if (availableVideos.includes(defaultArea3File)) {
+            src = `/videos/${defaultArea3File}`;
+          } else {
+            const area3Match = availableVideos.find((f) => {
+              const lower = f.toLowerCase();
+              return (lower.includes('area3') || lower.includes('monitor') || lower.includes('final')) && !lower.includes('preshow');
+            });
+            if (area3Match) {
+              src = `/videos/${area3Match}`;
+            } else {
+              // preshow以外のファイル
+              const nonPreshow = availableVideos.find((f) => !f.toLowerCase().includes('preshow'));
+              if (nonPreshow) {
+                src = `/videos/${nonPreshow}`;
+              } else {
+                src = `/videos/${defaultArea3File}`;
+              }
+            }
+          }
+        }
+
+        setVideoSrc(src);
+        setIsPlaying(true);
+        setUseProcedural(false);
+
+        if (videoRef.current) {
+          videoRef.current.src = src;
+          videoRef.current.currentTime = 0;
+
+          // 音声アンロック状態に応じて音声を有効化（未アンロック時はブラウザポリシー制限回避のためmutedで確実に再生）
+          videoRef.current.muted = !audioUnlocked;
+
+          videoRef.current
+            .play()
+            .then(() => {
+              console.log(`[Video Player] Video playback started successfully for: ${src} (muted: ${videoRef.current?.muted})`);
+            })
+            .catch((err) => {
+              console.warn(`[Video Player] Video playback failed for ${src}, trying muted autoPlay fallback:`, err);
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                videoRef.current
+                  .play()
+                  .then(() => {
+                    console.log('[Video Player] Muted fallback playback succeeded.');
+                  })
+                  .catch((e2) => {
+                    console.warn('[Video Player] Both direct and muted video failed. Falling back to procedural horror synth:', e2);
+                    setUseProcedural(true);
+                    playProceduralHorrorShow();
+                  });
+              } else {
+                setUseProcedural(true);
+                playProceduralHorrorShow();
+              }
+            });
+        } else {
+          setUseProcedural(true);
+          playProceduralHorrorShow();
+        }
+      };
+
+      const handleVideoReset = () => {
+        console.log('[Video Player] Video reset received');
+        hasTriggeredPanicRef.current = false;
+        setPanicEmitted(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+        setIsPlaying(false);
+        setUseProcedural(false);
+      };
+
+      socket.on('preshow:trigger', handlePreshowTrigger);
+      socket.on('video:trigger_play', handleTriggerPlay);
+      socket.on('video:reset', handleVideoReset);
+
+      return () => {
+        socket.off('preshow:trigger', handlePreshowTrigger);
+        socket.off('video:trigger_play', handleTriggerPlay);
+        socket.off('video:reset', handleVideoReset);
+      };
+    }, [socket, availableVideos, audioUnlocked]);
+
+    // Audio unlock click handler
+    const handleUnlockAudio = async () => {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+          }
+          audioCtxRef.current = ctx;
+
+          // Play brief sub-bass unlock sound
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(120, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        }
+      } catch (e) {
+        console.warn('AudioContext unlock failed:', e);
       }
-    } catch (e) {
-      console.warn('AudioContext unlock failed:', e);
-    }
 
-    // Also attempt fullscreen
-    try {
-      if (document.documentElement && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
+      // Also attempt fullscreen
+      try {
+        if (document.documentElement && !document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (e) {
+        // Fullscreen optional
       }
-    } catch (e) {
-      // Fullscreen optional
-    }
 
-    setAudioUnlocked(true);
-  };
+      setAudioUnlocked(true);
+    };
 
-  // Video element playback events
-  const handleVideoEnded = () => {
-    console.log('[Video Player] Video ended.');
-    setIsPlaying(false);
-    if (socket) {
-      socket.emit('video:ended');
-    }
-  };
+    // Video element playback events
+    const handleVideoEnded = () => {
+      console.log('[Video Player] Video ended.');
+      setIsPlaying(false);
+      if (socket) {
+        if (isPreshowMode) {
+          console.log('[Video Player] Emitting preshow:ended to notify clients');
+          socket.emit('preshow:ended');
+        } else {
+          socket.emit('video:ended');
+        }
+      }
+    };
 
   // 動画再生中のタイムスタンプ監視（特定秒数で自動パニックを発動）
   const handleTimeUpdate = () => {

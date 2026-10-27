@@ -12,6 +12,7 @@ function CameraStreamerContent() {
   const searchParams = useSearchParams();
   const initialCamId = (searchParams.get('id') as CctvCameraId) || 'cam1';
   const [selectedCamId, setSelectedCamId] = useState<CctvCameraId>(initialCamId);
+  const { socket, connected } = useSocket();
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState<number>(0);
@@ -21,7 +22,7 @@ function CameraStreamerContent() {
   // ビューアーごとの PeerConnection 管理 (key: viewerSocketId)
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-  const { socket, connected } = useSocket();
+  const [activeVideoTrack, setActiveVideoTrack] = useState<MediaStreamTrack | null>(null);
 
   // フラッシュライト（Torch）制御
   const handleTorchChange = useCallback(
@@ -37,7 +38,10 @@ function CameraStreamerContent() {
     [socket, connected, selectedCamId, isStreaming]
   );
 
-  const { torchOn, setTorch, toggleTorch } = useTorch(handleTorchChange);
+  const { torchOn, setTorch, toggleTorch, isTorchAvailable, torchWarning } = useTorch({
+    externalTrack: activeVideoTrack,
+    onStateChange: handleTorchChange,
+  });
 
   // バッテリー監視
   const handleBatterySync = useCallback(
@@ -73,6 +77,9 @@ function CameraStreamerContent() {
       });
 
       mediaStreamRef.current = stream;
+      const vTrack = stream.getVideoTracks()[0] || null;
+      setActiveVideoTrack(vTrack);
+
       if (videoPreviewRef.current) {
         videoPreviewRef.current.srcObject = stream;
         videoPreviewRef.current.play().catch(() => {});
@@ -94,6 +101,7 @@ function CameraStreamerContent() {
       console.error('[CCTV Camera] getUserMedia error:', err);
       setStreamError(err.message || 'カメラへのアクセスが拒否されたか、利用できません。');
       setIsStreaming(false);
+      setActiveVideoTrack(null);
     }
   };
 
@@ -103,6 +111,7 @@ function CameraStreamerContent() {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
+    setActiveVideoTrack(null);
     if (videoPreviewRef.current) {
       videoPreviewRef.current.srcObject = null;
     }

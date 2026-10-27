@@ -102,9 +102,16 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
         <button
           onClick={handleStartClick}
           disabled={!agreed || isStarting}
-          className={`win95-btn phase-start-btn${agreed ? ' agreed' : ''}`}
+          className={`win95-btn phase-start-btn btn-natural-wrap break-keep leading-snug${agreed ? ' agreed' : ''}`}
         >
-          {isStarting ? 'システム初期化中...' : '点検業務を開始 [ENTER]'}
+          {isStarting ? (
+            'システム初期化中...'
+          ) : (
+            <>
+              <span className="inline-block">同意して点検を開始</span>{' '}
+              <span className="inline-block">[エリア1へ向かう]</span>
+            </>
+          )}
         </button>
       </div>
     </div>

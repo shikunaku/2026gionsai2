@@ -163,6 +163,22 @@ export default function AdminPage() {
     socket?.emit('video:trigger_play', {});
   };
 
+  const handleTriggerPreshow = () => {
+    socket?.emit('preshow:start', {});
+  };
+
+  const handleTriggerPreshowEnd = () => {
+    socket?.emit('preshow:ended', {});
+  };
+
+  const handleTriggerHeadGimmick = () => {
+    socket?.emit('gimmick:trigger', { gimmickId: 'head', action: 'trigger' });
+  };
+
+  const handleTriggerJumpscare = () => {
+    socket?.emit('admin:trigger_jumpscare', {});
+  };
+
   const handleTriggerPanic = () => {
     socket?.emit('panic:trigger', { reason: 'ADMIN_MANUAL_TRIGGER' });
   };
@@ -261,6 +277,10 @@ export default function AdminPage() {
             onElevatorGlitch={handleElevatorGlitch}
             onConveyorControl={handleConveyorControl}
             onTriggerVideoPlay={handleTriggerVideoPlay}
+            onTriggerPreshow={handleTriggerPreshow}
+            onTriggerPreshowEnd={handleTriggerPreshowEnd}
+            onTriggerHeadGimmick={handleTriggerHeadGimmick}
+            onTriggerJumpscare={handleTriggerJumpscare}
           />
         </div>
       </div>

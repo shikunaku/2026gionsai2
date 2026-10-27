@@ -595,6 +595,28 @@
   line-height: 1.3;
 }
 
+/* ===== Text and Button Wrapping Optimization ===== */
+.break-keep {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.leading-snug {
+  line-height: 1.35;
+}
+
+.leading-normal {
+  line-height: 1.5;
+}
+
+.btn-natural-wrap {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+}
+
 /* ===== HorrorCanvasOverlay ===== */
 .horror-noise-canvas {
   position: fixed;

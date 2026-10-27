@@ -121,10 +121,10 @@ export const PhasePanicEscape: React.FC<PhasePanicEscapeProps> = ({
         <div style={{ width: '100%', flexShrink: 0 }}>
           <button
             onClick={onProceedReturn}
-            className="win95-btn"
+            className="win95-btn btn-natural-wrap break-keep leading-snug"
             style={{
               width: '100%',
-              padding: '18px',
+              padding: '18px 12px',
               fontSize: '16px',
               fontWeight: 'bold',
               backgroundColor: '#d50000',
@@ -134,7 +134,8 @@ export const PhasePanicEscape: React.FC<PhasePanicEscapeProps> = ({
               boxShadow: '0 0 15px rgba(255, 23, 68, 0.7)',
             }}
           >
-            非常脱出完了 (受付返却所へ到着) -&gt;
+            <span className="inline-block">非常脱出完了</span>{' '}
+            <span className="inline-block">(受付返却所へ到着) -&gt;</span>
           </button>
         </div>
       )}

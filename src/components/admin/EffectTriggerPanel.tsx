@@ -39,6 +39,12 @@ interface EffectTriggerPanelProps {
   onElevatorGlitch?: () => void;
   onConveyorControl?: (action: 'forward' | 'reverse' | 'stop') => void;
   onTriggerVideoPlay?: () => void;
+  /** プレショー演出制御 */
+  onTriggerPreshow?: () => void;
+  onTriggerPreshowEnd?: () => void;
+  /** ギミック強制トリガー (生首・ジャンプスケア) */
+  onTriggerHeadGimmick?: () => void;
+  onTriggerJumpscare?: () => void;
 }
 
 const GLITCH_MODES: { mode: GlitchMode; label: string; title: string }[] = [
@@ -79,6 +85,10 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   onElevatorGlitch,
   onConveyorControl,
   onTriggerVideoPlay,
+  onTriggerPreshow,
+  onTriggerPreshowEnd,
+  onTriggerHeadGimmick,
+  onTriggerJumpscare,
 }) => {
   const [glitchLevel, setGlitchLevel] = useState<number>(2);
   const [glitchDuration, setGlitchDuration] = useState<number>(3000);
@@ -118,71 +128,112 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar effect-titlebar">
-        <span>[演出・機材制御]</span>
+        <span>[演出・機材・5フェーズ進行制御]</span>
       </div>
 
       <div className="effect-body">
-        {/* Phase Overrides (7 stages) */}
+        {/* Phase Overrides (全5フェーズ構成) */}
         <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">全端末 進行フェーズ手動切替</legend>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginTop: '4px' }}>
+          <legend className="win95-groupbox-legend">全端末 体験フェーズ手動切替 (全5フェーズ)</legend>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '3px', marginTop: '4px' }}>
+            <button
+              onClick={() => onOverrideAllPhase('preshow')}
+              className="win95-btn effect-btn-phase"
+              style={{ fontWeight: 'bold' }}
+              title="① プレショー: 待機ホール・ガイダンス映像"
+            >
+              ①プレショー
+            </button>
+            <button
+              onClick={() => onOverrideAllPhase('quality_control')}
+              className="win95-btn effect-btn-phase"
+              style={{ fontWeight: 'bold' }}
+              title="② 品質管理室: 到着確認・資料撮影提出"
+            >
+              ②品質管理室
+            </button>
+            <button
+              onClick={() => onOverrideAllPhase('elevator')}
+              className="win95-btn effect-btn-phase"
+              style={{ fontWeight: 'bold' }}
+              title="③ エレベーター: 扉閉鎖・降下・照明明滅"
+            >
+              ③エレベータ
+            </button>
+            <button
+              onClick={() => onOverrideAllPhase('manufacturing_line')}
+              className="win95-btn effect-btn-phase"
+              style={{ fontWeight: 'bold' }}
+              title="④ 製造ライン: コンベア起動・撮影・生首ギミック"
+            >
+              ④製造ライン
+            </button>
+            <button
+              onClick={() => onOverrideAllPhase('monitor_room')}
+              className="win95-btn effect-btn-phase"
+              style={{ fontWeight: 'bold', backgroundColor: '#6a1b9a', color: '#fff' }}
+              title="⑤ モニター室: 最終映像・脱出"
+            >
+              ⑤モニター室
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px', marginTop: '4px' }}>
             <button
               onClick={() => onOverrideAllPhase('STANDBY')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ1: 待機・オープニング"
+              style={{ fontSize: '10px' }}
+              title="待機初期状態へリセット"
             >
-              1.待機
+              待機(リセット)
             </button>
             <button
-              onClick={() => onOverrideAllPhase('AREA_1_PHOTO')}
+              onClick={() => onOverrideAllPhase('escape')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ2: 品質管理室 撮影提出"
+              style={{ backgroundColor: '#b71c1c', color: '#fff', fontWeight: 'bold', fontSize: '10px' }}
+              title="パニック非常脱出状態"
             >
-              2.写真
+              非常脱出[パニック]
             </button>
             <button
-              onClick={() => onOverrideAllPhase('ELEVATOR')}
+              onClick={() => onOverrideAllPhase('return')}
               className="win95-btn effect-btn-phase"
-              title="フェーズ3: エレベータ昇降"
+              style={{ backgroundColor: '#2e5b3e', color: '#fff', fontWeight: 'bold', fontSize: '10px' }}
+              title="端末返却案内"
             >
-              3.昇降
+              端末返却案内
+            </button>
+          </div>
+        </fieldset>
+
+        {/* プレショー操作パネル */}
+        <fieldset className="win95-groupbox">
+          <legend className="win95-groupbox-legend">① プレショー演出制御</legend>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+            <button
+              onClick={() => onTriggerPreshow && onTriggerPreshow()}
+              className="win95-btn btn-natural-wrap break-keep leading-snug"
+              style={{ padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#0d47a1', color: '#fff' }}
+              title="プレショー映像の再生をトリガー"
+            >
+              <span className="inline-block">プレショー映像</span>{' '}
+              <span className="inline-block">再生</span>
             </button>
             <button
-              onClick={() => onOverrideAllPhase('AREA_2_CONVEYOR')}
-              className="win95-btn effect-btn-phase"
-              title="フェーズ4: 第零製造ライン コンベア"
+              onClick={() => onTriggerPreshowEnd && onTriggerPreshowEnd()}
+              className="win95-btn btn-natural-wrap break-keep leading-snug"
+              style={{ padding: '6px 4px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#1b5e20', color: '#fff' }}
+              title="映像終了イベントを送信し、スマホ端末へ振動+アラート音通知と品質管理室移動を指示"
             >
-              4.ライン
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('AREA_3_VIDEO')}
-              className="win95-btn effect-btn-phase"
-              title="フェーズ5: モニター室 映像トリガー"
-            >
-              5.映像
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('PANIC_ESCAPE')}
-              className="win95-btn effect-btn-phase"
-              style={{ backgroundColor: '#b71c1c', color: '#fff', fontWeight: 'bold' }}
-              title="フェーズ6: 非常事態発生 パニック退避"
-            >
-              6.退避
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('RETURN')}
-              className="win95-btn effect-btn-phase"
-              style={{ backgroundColor: '#2e5b3e', color: '#fff', fontWeight: 'bold' }}
-              title="フェーズ7: 業務完了・端末返却案内"
-            >
-              7.返却
+              <span className="inline-block">上映終了 -&gt;</span>{' '}
+              <span className="inline-block">点検指示通知</span>
             </button>
           </div>
         </fieldset>
 
         {/* Dedicated Elevator Display & MCU Test Panel */}
         <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">エレベータ階数表示 &amp; 駆動テスト</legend>
+          <legend className="win95-groupbox-legend">③ エレベーター降下 &amp; 階数表示</legend>
           <div className="effect-grid cols-4">
             <button
               onClick={() => onElevatorSetFloor && onElevatorSetFloor('FLOOR_1')}
@@ -215,38 +266,39 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
           </div>
           <button
             onClick={() => onElevatorTriggerMove && onElevatorTriggerMove()}
-            className="win95-btn"
-            style={{ width: '100%', marginTop: '4px', padding: '5px', fontSize: '11px', fontWeight: 'bold' }}
+            className="win95-btn btn-natural-wrap break-keep leading-snug"
+            style={{ width: '100%', marginTop: '4px', padding: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#263238', color: '#fff' }}
           >
-            昇降シーケンス実行 (1F ➔ 降下 ➔ B1チラつき点灯)
+            <span className="inline-block">降下シーケンス実行</span>{' '}
+            <span className="inline-block">(扉閉鎖 -&gt; 降下音 -&gt; 照明明滅 -&gt; 暗転 -&gt; 到着)</span>
           </button>
         </fieldset>
 
-        {/* Dedicated Conveyor & Video Manual Panel */}
+        {/* ④ 製造ライン ＆ ギミック・生首制御 */}
         <fieldset className="win95-groupbox">
           <legend className="win95-groupbox-legend">
-            コンベア稼働ステータス &amp; 映像・パニック制御
+            ④ 製造ライン (コンベア・生首・ジャンプスケア)
           </legend>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '11px' }}>
-            <span>第零搬送コンベア:</span>
+            <span>ベルトコンベア:</span>
             <span style={{ fontWeight: 'bold', color: isConveyorActive ? '#4caf50' : '#888' }}>
               {isConveyorActive ? '[通電中: 稼働中]' : '[停止中: 待機]'}
             </span>
           </div>
-          <div className="effect-grid cols-3">
+          <div className="effect-grid cols-3" style={{ marginBottom: '6px' }}>
             <button
               onClick={() => onConveyorControl && onConveyorControl('forward')}
               className="win95-btn"
               style={{ padding: '4px 2px', fontSize: '10px' }}
             >
-              正転(6s稼働)
+              コンベア正転(6s)
             </button>
             <button
               onClick={() => onConveyorControl && onConveyorControl('reverse')}
               className="win95-btn"
               style={{ padding: '4px 2px', fontSize: '10px' }}
             >
-              逆転(6s稼働)
+              コンベア逆転(6s)
             </button>
             <button
               onClick={() => onConveyorControl && onConveyorControl('stop')}
@@ -256,22 +308,47 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               緊急停止
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+            <button
+              onClick={() => onTriggerHeadGimmick && onTriggerHeadGimmick()}
+              className="win95-btn"
+              style={{ padding: '6px 2px', fontSize: '11px', fontWeight: 'bold', color: '#fff', backgroundColor: '#e65100' }}
+              title="ESP32リレー/アクチュエータへ生首ギミック作動信号を送出"
+            >
+              生首ギミック強制作動
+            </button>
+            <button
+              onClick={() => onTriggerJumpscare && onTriggerJumpscare()}
+              className="win95-btn"
+              style={{ padding: '6px 2px', fontSize: '11px', fontWeight: 'bold', color: '#fff', backgroundColor: '#b71c1c' }}
+              title="生首ギミック作動 + 会場大音量悲鳴 + スマホ赤点滅・大音量SEのジャンプスケア一斉起爆"
+            >
+              ジャンプスケア一斉発火
+            </button>
+          </div>
+        </fieldset>
+
+        {/* ⑤ モニター室・最終演出 */}
+        <fieldset className="win95-groupbox">
+          <legend className="win95-groupbox-legend">
+            ⑤ モニター室 (最終映像 &amp; パニック脱出)
+          </legend>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
             <button
               onClick={() => onTriggerVideoPlay && onTriggerVideoPlay()}
               className="win95-btn"
               style={{ padding: '6px 2px', fontSize: '10px', fontWeight: 'bold', color: '#fff', backgroundColor: '#6a1b9a' }}
-              title="モニター室の大型ディスプレイで記録映像アーカイブを再生"
+              title="プロジェクター（/display/video）で最終映像を再生"
             >
-              映像アーカイブ再生
+              最終映像 再生
             </button>
             <button
               onClick={() => onTriggerPanic && onTriggerPanic()}
               className="win95-btn"
               style={{ padding: '6px 2px', fontSize: '10px', fontWeight: 'bold', color: '#ffffff', backgroundColor: '#d50000', border: '1px solid #ff5252' }}
-              title="フェイルセーフ: 全PDA端末を即座に赤点滅・大音量警報・ライト激速点滅のパニック退避状態へ"
+              title="全端末をパニック逃走状態へ（キャスト飛び出し指示・照明オフ）"
             >
-              [手動] パニック発火
+              [合図] パニック脱出発火
             </button>
           </div>
         </fieldset>

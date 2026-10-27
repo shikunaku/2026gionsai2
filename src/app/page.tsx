@@ -42,11 +42,18 @@ const PORTAL_CARDS = [
     launchLabel: 'CCTV モニターを起動 (/admin/cctv) ->',
   },
   {
+    key: 'preshow',
+    href: '/display/preshow',
+    title: '[演出] プレショー映像 (Pre-show Display)',
+    description: '待機ホール正面スクリーン用フルスクリーン再生プレイヤー。管理卓からの上映トリガー・映像終了時のスマホ点検通知連動対応。',
+    launchLabel: 'プレショー映像を起動 (/display/preshow) ->',
+  },
+  {
     key: 'video',
     href: '/display/video',
-    title: '[演出] エリア3 映像再生用端末',
-    description: '別置き大型モニター/タブレット用フルスクリーン再生プレイヤー。自動再生アンロック＆ノイズ待機画面。',
-    launchLabel: '映像プレイヤーを起動 (/display/video) ->',
+    title: '[演出] エリア3/モニター室 最終映像再生端末',
+    description: 'エリア3（モニター室）大型プロジェクター/モニター用フルスクリーン再生プレイヤー。怪異タイムスタンプ検知＆パニック連動。',
+    launchLabel: 'モニター室映像を起動 (/display/video) ->',
   },
 ];
 

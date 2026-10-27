@@ -203,13 +203,22 @@ export const DeviceMonitor: React.FC<DeviceMonitorProps> = ({
                         onChange={(e) => onPhaseChange(dev.deviceId, e.target.value as DevicePhase)}
                         className="win95-inset device-phase-select"
                       >
-                        <option value="STANDBY">1: 待機</option>
-                        <option value="AREA_1_PHOTO">2: 写真</option>
-                        <option value="ELEVATOR">3: 昇降</option>
-                        <option value="AREA_2_CONVEYOR">4: ライン</option>
-                        <option value="AREA_3_VIDEO">5: 映像</option>
-                        <option value="PANIC_ESCAPE">6: 退避</option>
-                        <option value="RETURN">7: 返却</option>
+                        <option value="STANDBY">待機 (STANDBY)</option>
+                        <option value="preshow">① プレショー</option>
+                        <option value="quality_control">② 品質管理室</option>
+                        <option value="elevator">③ エレベーター</option>
+                        <option value="manufacturing_line">④ 製造ライン</option>
+                        <option value="monitor_room">⑤ モニター室</option>
+                        <option value="escape">非常脱出 (パニック)</option>
+                        <option value="return">返却 (終了)</option>
+                        <optgroup label="── 旧フェーズ互換 ──">
+                          <option value="AREA_1_PHOTO">AREA_1_PHOTO</option>
+                          <option value="ELEVATOR">ELEVATOR</option>
+                          <option value="AREA_2_CONVEYOR">AREA_2_CONVEYOR</option>
+                          <option value="AREA_3_VIDEO">AREA_3_VIDEO</option>
+                          <option value="PANIC_ESCAPE">PANIC_ESCAPE</option>
+                          <option value="RETURN">RETURN</option>
+                        </optgroup>
                       </select>
                     </div>
                   ) : isElevator ? (

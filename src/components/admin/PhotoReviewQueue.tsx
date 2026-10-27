@@ -59,11 +59,16 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                       <div>
                         <div className="review-meta-head">
                           <span className="review-meta-title">
-                            [{sub.deviceId}] Task #{sub.taskId}
+                            [{sub.deviceId}] {sub.taskId === 10 ? '【④製造ライン】' : '【②品質管理室】'} Task #{sub.taskId}
                           </span>
                           <span className="review-meta-badge">{getStatusBadge(sub)}</span>
                         </div>
                         <div className="review-task-title">{sub.taskTitle}</div>
+                        {sub.taskId === 10 && (
+                          <div style={{ fontSize: '10px', color: '#ff5252', fontWeight: 'bold' }}>
+                            ※ 合格承認と同時に「生首ギミック &amp; 悲鳴SE」が発火します
+                          </div>
+                        )}
                         <div className="review-time">
                           {new Date(sub.timestamp).toLocaleTimeString()}
                         </div>

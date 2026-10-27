@@ -9,8 +9,19 @@
 // 1. デバイスフェーズ & 端末ロール定義
 // ============================================================================
 
-/** 参加者端末（PDA）の進行フェーズ */
+/** 5段階の体験シナリオフェーズ型 */
+export type Phase =
+  | 'preshow'
+  | 'quality_control'
+  | 'elevator'
+  | 'manufacturing_line'
+  | 'monitor_room'
+  | 'escape'
+  | 'return';
+
+/** 参加者端末（PDA）の進行フェーズ (互換性維持) */
 export type DevicePhase =
+  | Phase
   | 'STANDBY'
   | 'AREA_1_PHOTO'
   | 'ELEVATOR'
@@ -38,6 +49,14 @@ export const CCTV_CAMERAS: CctvCameraConfig[] = [
   { id: 'cam2', name: 'CAM-2: 通路・EV前', location: '1F〜B1F エレベータ前通路' },
   { id: 'cam3', name: 'CAM-3: 製造ライン・モニター室', location: 'B1F 第零製造ライン / モニター室' },
 ];
+
+/** 各ディスプレイ端末の既定動画ファイル名設定 */
+export const DEFAULT_VIDEO_CONFIG = {
+  /** プレショー用動画 (public/videos/ 配下) */
+  preshow: process.env.NEXT_PUBLIC_PRESHOW_VIDEO || 'preshow.mp4',
+  /** エリア3/モニター室用動画 (public/videos/ 配下) */
+  area3: process.env.NEXT_PUBLIC_AREA3_VIDEO || 'area3.mp4',
+} as const;
 
 /** CCTV WebRTCシグナリングペイロード */
 export interface CctvSignalPayload {
@@ -85,8 +104,45 @@ export interface ConveyorControlPayload {
 }
 
 // ============================================================================
-// 2. ブラウザ / ネイティブ環境拡張
+// 2. ブラウザ / ネイティブ環境拡張 (AndroidKioskBridge & CustomEvents)
 // ============================================================================
+
+/** ネイティブ側（AndroidKioskBridge）から注入されるBridgeインターフェース */
+export interface AndroidNativeBridge {
+  turnOnTorch?: () => void;
+  turnOffTorch?: () => void;
+  setTorch?: (enabled: boolean) => void;
+  flashBurst?: (intervalMs: number, times: number) => void;
+  strobeTorch?: {
+    (intervalMs: number, count: number): void;
+    (onDurationMs: number, offDurationMs: number, repeatCount: number): void;
+  };
+  stopFlash?: () => void;
+  stopStrobe?: () => void;
+  toggleFlash?: () => void;
+  isTorchOn?: () => boolean;
+  // レガシー互換
+  turnOnFlash?: () => void;
+  turnOffFlash?: () => void;
+  getBatteryLevel?: () => number;
+}
+
+/** ネイティブから発火される torchStatusChange CustomEvent の payload */
+export interface TorchStatusChangeDetail {
+  enabled: boolean;
+  available: boolean;
+  warning: string | null;
+  timestamp: number;
+}
+
+/** ネイティブから発火される torchError CustomEvent の payload */
+export interface TorchErrorDetail {
+  error: string;
+  timestamp: number;
+}
+
+export type TorchStatusChangeEvent = CustomEvent<TorchStatusChangeDetail>;
+export type TorchErrorEvent = CustomEvent<TorchErrorDetail>;
 
 declare global {
   interface Navigator {
@@ -99,12 +155,13 @@ declare global {
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void;
   }
   interface Window {
-    Android?: {
-      turnOnFlash?: () => void;
-      turnOffFlash?: () => void;
-      toggleFlash?: () => void;
-      getBatteryLevel?: () => number;
-    };
+    Android?: AndroidNativeBridge;
+    AndroidBridge?: AndroidNativeBridge;
+    AndroidKioskBridge?: AndroidNativeBridge;
+  }
+  interface WindowEventMap {
+    torchStatusChange: CustomEvent<TorchStatusChangeDetail>;
+    torchError: CustomEvent<TorchErrorDetail>;
   }
 }
 
@@ -290,6 +347,14 @@ export interface ServerToClientEvents {
   // パニック脱出トリガーイベント（映像タイムスタンプ連動または管理者手動）
   'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
 
+  // プレショー・各フェーズ演出イベント
+  'preshow:trigger': (payload?: { videoSrc?: string; targetDeviceId?: string }) => void;
+  'preshow:start': (payload?: { videoSrc?: string; targetDeviceId?: string }) => void;
+  'preshow:ended': (payload?: { targetDeviceId?: string }) => void;
+  'phase:arrival_confirmed': (payload: { phase: DevicePhase; deviceId: string }) => void;
+  'gimmick:trigger': (payload: { gimmickId: string; action?: string; value?: unknown }) => void;
+  'jumpscare:trigger': (payload?: { targetDeviceId?: string; soundType?: string; durationMs?: number }) => void;
+
   // サウンド専用端末（Sound Node）向けイベント
   'sound:play': (payload: SoundNodePlayPayload) => void;
   'sound:stop': (payload?: { targetDeviceId?: string }) => void;
@@ -310,6 +375,7 @@ export interface ClientToServerEvents {
     role?: DeviceRole;
   }) => void;
   'device:start_inspection': (payload: { deviceId: string }) => void;
+  'device:arrive': (payload: { deviceId: string; phase: DevicePhase }) => void;
   'device:battery_update': (payload: {
     deviceId: string;
     batteryLevel: number | string;
@@ -337,8 +403,15 @@ export interface ClientToServerEvents {
   'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
   'video:ended': (payload?: { deviceId?: string }) => void;
 
+  // プレショートリガー
+  'preshow:start': (payload?: { targetDeviceId?: string; videoSrc?: string }) => void;
+  'preshow:ended': (payload?: { targetDeviceId?: string }) => void;
+
   // パニック脱出トリガー（ビデオ再生画面またはAdminからの送信）
   'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
+
+  // ギミックトリガー（生首・リレー等）
+  'gimmick:trigger': (payload: { gimmickId: string; action?: string; value?: unknown }) => void;
 
   // サウンド専用端末（Sound Node）登録およびトリガー
   'sound:register_node': (payload: { deviceId: string; location?: string }) => void;
@@ -366,6 +439,7 @@ export interface ClientToServerEvents {
     effectType: 'glitch' | 'torch' | 'sound' | 'volume' | 'shutdown';
     options: unknown;
   }) => void;
+  'admin:trigger_jumpscare': (payload?: { targetDeviceId?: string }) => void;
   'admin:emergency_all_light': () => void;
   'equipment:get_all': () => void;
   'equipment:add': (equipment: Omit<EquipmentItem, 'updatedAt'>) => void;
