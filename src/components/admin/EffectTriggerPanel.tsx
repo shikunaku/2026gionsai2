@@ -4,7 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { DeviceInfo, DevicePhase, TorchEffectOptions, EquipmentItem } from '../../lib/types';
 import '../../styles/admin.css';
 
-type GlitchMode = 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
+type GlitchMode =
+  | 'violent'
+  | 'creepy'
+  | 'invert'
+  | 'blackout'
+  | 'redout'
+  | 'static'
+  | 'nightmare'
+  | 'hallucination'
+  | 'corruption'
+  | 'stalker'
+  | 'heartbeat'
+  | 'signalLoss';
 
 interface EffectTriggerPanelProps {
   devices?: DeviceInfo[];
@@ -48,17 +60,29 @@ interface EffectTriggerPanelProps {
 }
 
 const GLITCH_MODES: { mode: GlitchMode; label: string; title: string }[] = [
-  { mode: 'creepy', label: '不穏(歪み)', title: '不穏な波打ち・微細な歪み' },
-  { mode: 'violent', label: '激震(裂け)', title: '激しいRGBズレ・画面裂け' },
+  { mode: 'creepy', label: '不穏(波打ち)', title: '不穏な波打ち・微細な歪み・囁き音' },
+  { mode: 'violent', label: '激震(裂け)', title: '激しいRGBズレ・画面裂け・火花音' },
+  { mode: 'nightmare', label: '悪夢(絶叫)', title: '狂気の激震・サブリミナル目・金属絶叫' },
+  { mode: 'hallucination', label: '幻覚(侵食)', title: '空間歪曲・怪異接近・幻聴囁き' },
+  { mode: 'corruption', label: '汚染(破損)', title: 'データ崩壊・文字化けモザイク・スパーク' },
+  { mode: 'stalker', label: '凝視(気配)', title: '周囲暗闇・息苦しい脈動・血の手形' },
+  { mode: 'heartbeat', label: '心拍(瀕死)', title: '激しい心臓拍動拡縮・血潮パルス・低音心拍' },
+  { mode: 'signalLoss', label: '断絶(消失)', title: '画面縦ロール同期崩壊・電波混線ノイズ' },
   { mode: 'invert', label: '色反転', title: '白黒・色彩の急激な反転妨害' },
-  { mode: 'blackout', label: '突発暗転', title: '突発的な暗転・チカチカ点滅' },
+  { mode: 'blackout', label: '突発暗転', title: '突発的な暗転・チカチカ点滅・重低音' },
   { mode: 'redout', label: '血色赤転', title: '警告警報・血色赤転フラッシュ' },
-  { mode: 'static', label: '砂嵐ノイズ', title: 'アナログ砂嵐・走査線ノイズ' },
+  { mode: 'static', label: '砂嵐ノイズ', title: 'アナログVHS砂嵐・走査線ノイズ' },
 ];
 
 const SOUND_BUTTONS: { type: string; label: string; level?: number }[] = [
   { type: 'beep', label: '確認ビープ' },
   { type: 'lowImpact', label: '衝撃重低音' },
+  { type: 'scream', label: '絶叫金属音' },
+  { type: 'whisper', label: '不気味な囁き' },
+  { type: 'glitchBurst', label: 'スパーク放電' },
+  { type: 'heartbeat', label: '急迫心拍音' },
+  { type: 'interference', label: '電波妨害混線' },
+  { type: 'eerieTone', label: '不吉な鐘音' },
   { type: 'geiger', label: 'ガイガー異変', level: 4 },
   { type: 'drone', label: '不穏ドローン' },
   { type: 'motor', label: 'モーター稼働' },
@@ -374,7 +398,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
 
             <div className="effect-mode-block">
               <span className="effect-label">妨害タイプ (モード):</span>
-              <div className="effect-grid cols-3">
+              <div className="effect-grid cols-4">
                 {GLITCH_MODES.map(({ mode, label, title }) => (
                   <button
                     key={mode}

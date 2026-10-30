@@ -82,35 +82,51 @@ html, body {
   box-shadow: 0 0 60px 20px rgba(255, 243, 208, 0.75), inset 0 0 40px rgba(255, 220, 160, 0.5);
 }
 
-/* Realistic vintage fluorescent / incandescent flicker glitch */
+/* Realistic vintage fluorescent / incandescent dying flicker glitch */
 .elevator-light-box.flicker {
-  animation: lampFlicker 0.12s infinite alternate;
+  animation: lampFlicker 0.08s infinite alternate;
 }
 
 @keyframes lampFlicker {
   0% {
-    opacity: 0.15;
-    background-color: #554820;
+    opacity: 0.02;
+    background-color: #000000;
     box-shadow: none;
+    transform: scale(0.99);
   }
-  25% {
-    opacity: 0.9;
-    background-color: #fff3d0;
-    box-shadow: 0 0 40px rgba(255, 243, 208, 0.5);
+  15% {
+    opacity: 0.95;
+    background-color: #ff3311;
+    box-shadow: 0 0 100px 30px rgba(255, 40, 20, 0.9), inset 0 0 50px rgba(255, 0, 0, 0.7);
+    transform: scale(1.02);
   }
-  50% {
-    opacity: 0.05;
+  30% {
+    opacity: 0.0;
     background-color: #000000;
     box-shadow: none;
   }
-  75% {
+  45% {
+    opacity: 0.8;
+    background-color: #fff3d0;
+    box-shadow: 0 0 40px rgba(255, 243, 208, 0.5);
+    transform: scale(1.0);
+  }
+  60% {
+    opacity: 0.05;
+    background-color: #330000;
+    box-shadow: none;
+  }
+  80% {
     opacity: 1;
-    background-color: #fff8e8;
-    box-shadow: 0 0 80px 25px rgba(255, 243, 208, 0.9);
+    background-color: #ff2200;
+    box-shadow: 0 0 120px 40px rgba(255, 0, 0, 0.95);
+    transform: scale(1.03);
   }
   100% {
-    opacity: 0.7;
-    background-color: #edd8a0;
+    opacity: 0.2;
+    background-color: #443310;
+    box-shadow: none;
+    transform: scale(0.98);
   }
 }
 

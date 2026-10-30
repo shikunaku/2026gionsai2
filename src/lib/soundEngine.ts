@@ -28,6 +28,12 @@ export const SOUND_PRESETS: SoundPresetItem[] = [
   { type: 'powerDown', label: '電源降下音', description: '非常停止・電圧降下音' },
   { type: 'shutter', label: 'メカシャッター', description: 'カメラシャッター・絞り音' },
   { type: 'taskSuccess', label: 'タスク完了音', description: '点検合格・認証成功サイン' },
+  { type: 'scream', label: '絶叫金属音 (恐怖)', description: '耳を劈く不協和音・金属スクリーチ' },
+  { type: 'whisper', label: '不気味な囁き (怪異)', description: '低音囁き・不協和ステレオノイズ' },
+  { type: 'glitchBurst', label: 'グリッチ破裂音', description: '激しい電気火花・破裂ノイズ' },
+  { type: 'heartbeat', label: '急迫心拍 (生体パニック)', description: '低音サブウーファー心拍・ドクンドクン' },
+  { type: 'interference', label: '電波妨害ノイズ', description: 'AMラジオ周波数混線・ヘテロダイン発振' },
+  { type: 'eerieTone', label: '不吉な鐘・金属残響', description: '不気味な減衰金属音・廃墟の鐘' },
 ];
 
 // ============================================================================
@@ -404,6 +410,240 @@ export class SoundEngine {
     osc.stop(now + duration + 0.1);
   }
 
+  /** 絶叫金属音 (耳を劈く不協和音・金属スクリーチによるジャンプスケア音) */
+  public playScream(duration = 1.8): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // 不協和な多重オシレーター (鋸歯状波 + FM変調)
+    const freqs = [840, 895, 1260, 1340, 2400];
+    freqs.forEach((baseFreq, i) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = i % 2 === 0 ? 'sawtooth' : 'square';
+      
+      // 悲鳴のように急上昇してからピッチが乱高下
+      osc.frequency.setValueAtTime(baseFreq * 0.7, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, now + 0.15);
+      osc.frequency.linearRampToValueAtTime(baseFreq * 0.9, now + duration * 0.7);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, now + duration);
+
+      // 高出力で立ち上がり、徐々に歪みながら減衰
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.55 / freqs.length, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(600, now);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.getDest());
+
+      osc.start(now);
+      osc.stop(now + duration + 0.1);
+    });
+
+    // 激しいホワイトノイズバースト（金属の擦れる悲鳴感）
+    const bufLen = Math.floor(this.ctx.sampleRate * Math.min(duration, 1.2));
+    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+    const output = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) {
+      output[i] = (Math.random() * 2 - 1) * 0.8;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime(3200, now);
+    noiseFilter.Q.setValueAtTime(3.5, now);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.7, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.getDest());
+    noise.start(now);
+    noise.stop(now + duration + 0.05);
+  }
+
+  /** 不気味な囁き音 (ステレオ怪異・息遣い) */
+  public playWhisper(duration = 2.5): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const bufLen = Math.floor(this.ctx.sampleRate * duration);
+    const buf = this.ctx.createBuffer(2, bufLen, this.ctx.sampleRate);
+    const left = buf.getChannelData(0);
+    const right = buf.getChannelData(1);
+
+    // 有色ノイズで人の息や囁きの周波数帯を再現
+    for (let i = 0; i < bufLen; i++) {
+      const envelope = Math.sin((i / bufLen) * Math.PI);
+      const mod = Math.sin((i / this.ctx.sampleRate) * 7.5);
+      left[i] = (Math.random() * 2 - 1) * envelope * (0.5 + 0.5 * mod);
+      right[i] = (Math.random() * 2 - 1) * envelope * (0.5 - 0.5 * mod);
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1400, now);
+    filter.frequency.linearRampToValueAtTime(900, now + duration);
+    filter.Q.setValueAtTime(4.0, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.45, now + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.getDest());
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+  }
+
+  /** グリッチ破裂音 (ショート・電子回路スパーク・不穏な電気ノイズ) */
+  public playGlitchBurst(duration = 0.35): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    const bufLen = Math.floor(this.ctx.sampleRate * duration);
+    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+    const out = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) {
+      // 激しいデジタルクラッシュ・矩形波ノイズ
+      out[i] = Math.random() > 0.4 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(800, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.65, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.getDest());
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+
+  /** 急迫心拍音 (緊迫感・生体パニック「ドクン...ドクン...」) */
+  public playHeartbeat(bpm = 135, beats = 6): void {
+    this.init();
+    if (!this.ctx) return;
+    const interval = 60 / bpm;
+    const baseNow = this.ctx.currentTime;
+
+    for (let b = 0; b < beats; b++) {
+      const beatTime = baseNow + b * interval;
+      // 1回の心拍で2連打（「ド・クン」弁の開閉）
+      [0, 0.12].forEach((offset, idx) => {
+        if (!this.ctx) return;
+        const t = beatTime + offset;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        // 45Hz -> 25Hzの超低周波サブベース
+        osc.frequency.setValueAtTime(idx === 0 ? 55 : 42, t);
+        osc.frequency.exponentialRampToValueAtTime(22, t + 0.15);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(idx === 0 ? 0.8 : 0.6, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.getDest());
+        osc.start(t);
+        osc.stop(t + 0.2);
+      });
+    }
+  }
+
+  /** 電波混線・AMヘテロダイン干渉音 (アナログホラーのラジオノイズ) */
+  public playInterference(duration = 2.2): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // 2つの近接した高周波オシレーターによるうなり（ビート）
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sine';
+    osc2.type = 'sawtooth';
+
+    osc1.frequency.setValueAtTime(950, now);
+    osc1.frequency.linearRampToValueAtTime(1400, now + duration * 0.4);
+    osc1.frequency.linearRampToValueAtTime(600, now + duration);
+
+    osc2.frequency.setValueAtTime(955, now);
+    osc2.frequency.linearRampToValueAtTime(1412, now + duration * 0.4);
+    osc2.frequency.linearRampToValueAtTime(608, now + duration);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1100, now);
+    filter.Q.setValueAtTime(5.0, now);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(filter);
+    filter.connect(this.getDest());
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + duration + 0.05);
+    osc2.stop(now + duration + 0.05);
+  }
+
+  /** 不吉な金属ベル・残響音 (廃墟の警鐘・不気味な減衰ベル) */
+  public playEerieTone(duration = 3.5): void {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // 非調和な倍音を持つ複数オシレーター
+    const partials = [220, 311, 440, 587, 880];
+    partials.forEach((f, i) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(f, now);
+
+      const decay = duration / (1 + i * 0.5);
+      gain.gain.setValueAtTime(0.3 / partials.length, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+
+      osc.connect(gain);
+      gain.connect(this.getDest());
+      osc.start(now);
+      osc.stop(now + decay + 0.1);
+    });
+  }
+
   /** 電源喪失・ダウン音（周波数が落ちていく演出） */
   public playPowerDown(): void {
     this.init();
@@ -623,12 +863,40 @@ export class SoundEngine {
     switch (soundType) {
       case 'beep': return this.playBeep();
       case 'shutter': return this.playShutter();
-      case 'lowImpact': return this.playLowImpact();
+      case 'lowImpact': {
+        this.playAudioFile('horror_jumpscare.mp3', { volume: 1.2 }).catch(() => {});
+        return this.playLowImpact();
+      }
       case 'taskSuccess': return this.playTaskSuccess();
       case 'geiger': return this.playGeiger(level);
-      case 'drone': return this.playDrone();
+      case 'drone': {
+        this.playAudioFile('horror_creepy1.mp3', { volume: 0.9 }).catch(() => {});
+        return this.playDrone();
+      }
       case 'motor': return this.playMotor();
       case 'powerDown': return this.playPowerDown();
+      case 'scream': {
+        // 実音サンプリング（horror_scream.mp3）と激しい金属シンセをハイブリッド再生
+        this.playAudioFile('horror_scream.mp3', { volume: 1.4 }).catch(() => {});
+        return this.playScream();
+      }
+      case 'whisper': {
+        this.playAudioFile('horror_creepy2.mp3', { volume: 1.0 }).catch(() => {});
+        return this.playWhisper();
+      }
+      case 'glitchBurst': {
+        this.playAudioFile('horror_shatter.mp3', { volume: 1.1 }).catch(() => {});
+        return this.playGlitchBurst();
+      }
+      case 'heartbeat': return this.playHeartbeat();
+      case 'interference': {
+        this.playAudioFile('horror_radio.mp3', { volume: 1.0 }).catch(() => {});
+        return this.playInterference();
+      }
+      case 'eerieTone': {
+        this.playAudioFile('horror_bell.mp3', { volume: 1.2 }).catch(() => {});
+        return this.playEerieTone();
+      }
       default: return this.playBeep();
     }
   }

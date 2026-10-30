@@ -617,10 +617,58 @@
   white-space: normal;
 }
 
-/* ===== HorrorCanvasOverlay ===== */
+/* ===== HorrorCanvasOverlay & Realistic Cinematic Overlays ===== */
 .horror-noise-canvas {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9500;
+}
+
+.horror-blood-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9400;
+  overflow: hidden;
+  mix-blend-mode: multiply;
+  transition: opacity 0.3s ease;
+}
+
+.horror-blood-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: contrast(180%) brightness(75%) drop-shadow(0 0 15px rgba(0, 0, 0, 0.9));
+}
+
+.horror-blood-layer.splatter {
+  background-image: url('/blood_splatter.jpg');
+  opacity: 0.85;
+  mix-blend-mode: multiply;
+  animation: blood-drip-pulse 3s ease-in-out infinite alternate;
+}
+
+.horror-blood-layer.handprint {
+  background-image: url('/blood_handprint.jpg');
+  opacity: 0.9;
+  mix-blend-mode: screen;
+  filter: contrast(220%) invert(0%) sepia(80%) hue-rotate(330deg);
+  animation: blood-hand-tremble 0.15s steps(2) infinite;
+}
+
+@keyframes blood-drip-pulse {
+  0% { transform: scale(1.0) translateY(0); filter: contrast(160%) brightness(80%); }
+  50% { transform: scale(1.02) translateY(4px); filter: contrast(200%) brightness(65%); }
+  100% { transform: scale(1.01) translateY(2px); filter: contrast(180%) brightness(75%); }
+}
+
+@keyframes blood-hand-tremble {
+  0% { transform: translate(0, 0) scale(1.0); }
+  25% { transform: translate(-2px, 1px) scale(1.01); }
+  50% { transform: translate(2px, -2px) scale(0.99); }
+  75% { transform: translate(-1px, -1px) scale(1.005); }
+  100% { transform: translate(1px, 2px) scale(1.0); }
 }

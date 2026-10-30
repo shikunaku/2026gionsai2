@@ -215,7 +215,19 @@ export interface GlitchEffectOptions {
   level: number;
   duration: number;
   vibrate?: boolean;
-  mode?: 'violent' | 'creepy' | 'invert' | 'blackout' | 'redout' | 'static';
+  mode?:
+    | 'violent'
+    | 'creepy'
+    | 'invert'
+    | 'blackout'
+    | 'redout'
+    | 'static'
+    | 'nightmare'
+    | 'hallucination'
+    | 'corruption'
+    | 'stalker'
+    | 'heartbeat'
+    | 'signalLoss';
 }
 
 /** LEDトーチ点滅エフェクトのオプション */
@@ -230,7 +242,22 @@ export interface TorchEffectOptions {
 
 /** 効果音エフェクトのオプション（内蔵プロシージャル音源またはMP3音声ファイル） */
 export interface SoundEffectOptions {
-  soundType: 'beep' | 'shutter' | 'lowImpact' | 'geiger' | 'drone' | 'motor' | 'powerDown' | 'taskSuccess' | 'file';
+  soundType:
+    | 'beep'
+    | 'shutter'
+    | 'lowImpact'
+    | 'geiger'
+    | 'drone'
+    | 'motor'
+    | 'powerDown'
+    | 'taskSuccess'
+    | 'scream'
+    | 'whisper'
+    | 'glitchBurst'
+    | 'heartbeat'
+    | 'interference'
+    | 'eerieTone'
+    | 'file';
   level?: number;
   /** 再生する音声ファイル名 (public/audio/ 配下、例: "alarm.mp3") */
   filename?: string;

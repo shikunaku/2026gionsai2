@@ -33,6 +33,12 @@ const GLITCH_CLASS: Record<string, string> = {
   blackout: 'glitch-blackout',
   redout: 'glitch-redout',
   static: 'glitch-static',
+  nightmare: 'glitch-nightmare',
+  hallucination: 'glitch-hallucination',
+  corruption: 'glitch-corruption',
+  stalker: 'glitch-stalker',
+  heartbeat: 'glitch-heartbeat',
+  signalLoss: 'glitch-signalLoss',
 };
 
 const INITIAL_TASKS: InspectionTask[] = [
@@ -193,26 +199,66 @@ function ClientContent() {
       }
     });
 
-    // ジャンプスケア演出トリガー
+    // ジャンプスケア演出トリガー (恐怖演出: 低周波衝撃+絶叫+激震バイブレーション+高速ストロボ)
     socket.on('jumpscare:trigger', (payload) => {
       if (!payload?.targetDeviceId || payload.targetDeviceId === deviceId) {
         console.log('[Client] JUMPSCARE TRIGGER RECEIVED!', payload);
         setManufacturingPhotoApproved(true);
+        // 重低音衝撃 + 金属絶叫の複合再生
         soundEngine.playSound('lowImpact', 5);
+        soundEngine.playSound('scream');
         if ('vibrate' in navigator) {
-          navigator.vibrate([300, 100, 300, 100, 600]);
+          navigator.vibrate([100, 40, 200, 50, 400, 60, 600]);
         }
-        flicker(20, 60);
+        flicker(25, 50);
+        // 瞬間的な激震ナイトメアグリッチを連動
+        setGlitchOptions({
+          level: 3,
+          duration: payload?.durationMs || 2500,
+          mode: 'nightmare',
+          vibrate: true,
+        });
+        setTimeout(() => {
+          setGlitchOptions(null);
+        }, payload?.durationMs || 2500);
       }
     });
 
-    // 画面グリッチ
+    // 画面グリッチ妨害トリガー
     socket.on('effect:glitch', (options) => {
       console.log('[Client] Glitch effect triggered:', options);
       setGlitchOptions(options);
 
+      // モードに応じた不穏・恐怖音響の自動連動
+      if (options.mode === 'nightmare') {
+        soundEngine.playSound('scream');
+      } else if (options.mode === 'violent' || options.mode === 'corruption') {
+        soundEngine.playSound('glitchBurst');
+      } else if (options.mode === 'stalker') {
+        soundEngine.playSound('whisper');
+      } else if (options.mode === 'heartbeat') {
+        soundEngine.playSound('heartbeat');
+      } else if (options.mode === 'signalLoss') {
+        soundEngine.playSound('interference');
+      } else if (options.mode === 'creepy' || options.mode === 'hallucination') {
+        soundEngine.playSound('whisper');
+      } else if (options.mode === 'static') {
+        soundEngine.playSound('glitchBurst');
+      } else if (options.mode === 'redout' || options.mode === 'blackout') {
+        soundEngine.playSound('lowImpact', 4);
+      }
+
       if (options.vibrate && 'vibrate' in navigator) {
-        navigator.vibrate(options.mode === 'violent' ? [150, 80, 200, 100, 300] : [200, 100, 200]);
+        if (options.mode === 'nightmare' || options.mode === 'violent' || options.mode === 'corruption') {
+          navigator.vibrate([200, 60, 150, 40, 300, 80, 500]);
+        } else if (options.mode === 'heartbeat') {
+          // 生体の不規則急迫心拍バイブレーション
+          navigator.vibrate([80, 120, 140, 350, 90, 110, 150, 320, 100, 90, 180]);
+        } else if (options.mode === 'stalker') {
+          navigator.vibrate([50, 800, 70, 700, 120, 500]);
+        } else {
+          navigator.vibrate([120, 80, 200, 100, 150]);
+        }
       }
 
       setTimeout(() => {
