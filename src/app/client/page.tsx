@@ -44,23 +44,23 @@ const GLITCH_CLASS: Record<string, string> = {
 const INITIAL_TASKS: InspectionTask[] = [
   {
     id: 1,
-    title: '検査試薬保管キャビネットの施錠確認',
-    location: '1F 品質管理室 (北壁面)',
-    targetDescription: '保管庫のメカニカルロックおよび密閉パッキンを撮影し、破損や薬品漏洩がないか確認してください。',
+    title: '社員証の撮影１',
+    location: '1F 品質管理室',
+    targetDescription: '業務開始時に通達されたNoの社員証を見つけて撮影し送信してください。',
     status: 'UNINSPECTED',
   },
   {
     id: 2,
-    title: '水質・成分分析計の液晶インジケーター',
-    location: '1F 品質管理室 (中央検査台)',
-    targetDescription: '分析装置の中央ディスプレイを撮影し、エラーランプ消灯および測定数値が安定しているか確認してください。',
+    title: '社員証の撮影２',
+    location: '1F 品質管理室',
+    targetDescription: '業務開始時に通達されたNoの社員証を見つけて撮影し送信してください。',
     status: 'UNINSPECTED',
   },
   {
     id: 3,
-    title: '廃液中和ドレンバルブの開閉状態',
-    location: '1F 品質管理室 (南側排水孔)',
-    targetDescription: '床面付近の赤いドレンハンドルを撮影し、バルブが「閉」位置で固定されているか記録してください。',
+    title: '当時に発刊された新聞の撮影',
+    location: '1F 品質管理室',
+    targetDescription: '事件が起きた当時に発刊された新聞を撮影し送信してください。',
     status: 'UNINSPECTED',
   },
 ];

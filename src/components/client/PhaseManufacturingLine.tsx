@@ -94,7 +94,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
           >
-            <span>第④フェーズ: 製造ライン (移動中)</span>
+            <span>第零製造ライン (移動中)</span>
             <span className="phase-init-title-tag">ID: {deviceId}</span>
           </div>
           <div style={{ padding: '18px 16px', textAlign: 'center' }}>
@@ -107,7 +107,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                 marginBottom: '12px',
               }}
             >
-              地下製造ラインへ移動してください。
+              地下にある第零製造ラインへ移動してください。
             </div>
             <div
               className="win95-inset"
@@ -153,11 +153,11 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
           className="win95-titlebar"
           style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
         >
-          <span>第④フェーズ: 製造ライン - ベルトコンベア点検</span>
+          <span>第零製造ライン - ベルトコンベア点検</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          稼働中のベルトコンベア周辺の安全を確認し、指定箇所を撮影して管理卓へ送信してください。
+          稼働中のベルトコンベア周辺の安全を確認し、指定箇所を撮影して本部へ送信してください。
         </div>
       </div>
 
@@ -184,7 +184,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
           {!photoApproved ? (
             <div>
               <div style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>
-                点検対象: ベルトコンベア稼働部および搬送パレット
+                点検対象: ベルトコンベア全体像
               </div>
               <div
                 className="win95-inset"
@@ -212,7 +212,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                     fontWeight: 'bold',
                   }}
                 >
-                  写真を管理PCへ送信しました。スタッフが確認・承認するまでその場でお待ちください...
+                  写真を本部へ送信しました。確認・承認までその場でお待ちください...
                 </div>
               )}
 
@@ -266,7 +266,6 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                 ) : (
                   <>
                     <span className="inline-block">ベルトコンベアを撮影して送信</span>{' '}
-                    <span className="inline-block">[CAPTURE]</span>
                   </>
                 )}
               </button>
@@ -304,7 +303,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
               >
                 <div>[CRITICAL] コンベア奥より怪異生首ギミックが突如作動</div>
                 <div>[ALARM] 悲鳴・警告音響を全スピーカーより出力中</div>
-                <div>[ORDER] その場を離れ、第⑤フェーズ「モニター室」へ即座に移動せよ！</div>
+                <div>[ORDER] その場を離れ、「モニター室」へ即座に移動せよ！</div>
               </div>
 
               <button
@@ -321,7 +320,6 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                   boxShadow: '0 0 16px rgba(213, 0, 0, 0.7)',
                 }}
               >
-                <span className="inline-block">第⑤フェーズ:</span>{' '}
                 <span className="inline-block">モニター室へ逃げる -&gt;</span>
               </button>
             </div>

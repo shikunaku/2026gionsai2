@@ -48,11 +48,11 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
           className="win95-titlebar"
           style={{ background: 'linear-gradient(90deg, #1f2429, #37474f)' }}
         >
-          <span>第③フェーズ: エレベーター (1F ➔ B1F 降下)</span>
+          <span>1F ➔ B1F へエレベータを使って降下</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          全員乗車後、扉を閉鎖してエレベーター降下シーケンスを開始してください。
+          全員乗車後、扉を閉鎖してエレベーター降下を開始してください。
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
               boxShadow: powerOn ? '0 0 10px rgba(46, 125, 50, 0.4)' : 'none',
             }}
           >
-            {powerOn ? '■ 主電源投入済 [通電中]' : '▲ エレベーター主電源を投入する'}
+            {powerOn ? '■ 主電源投入済' : '▲ エレベーター主電源を投入する'}
           </button>
         </div>
       </div>
@@ -85,13 +85,13 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
       {/* Descent Trigger / Status Box */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: '#263238' }}>
-          <span>運行ステータス &amp; 降下シーケンス</span>
+          <span>運行ステータス</span>
           <span>[{isArrivedB1 ? 'B1F 到着' : isMoving ? '降下中...' : '1F 待機'}]</span>
         </div>
         <div style={{ padding: '18px 16px', textAlign: 'center' }}>
           {!powerOn ? (
             <div style={{ color: '#d32f2f', fontWeight: 'bold', fontSize: '14px' }}>
-              主電源が遮断されています。上のボタンを押してください。
+              主電源が遮断されています。上のボタンを押して電源を投入してください。
             </div>
           ) : !sequenceStarted && !isArrivedB1 ? (
             <div>
@@ -104,7 +104,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                   marginBottom: '12px',
                 }}
               >
-                扉を閉め、安全を確認してから「降下開始」を押してください。
+                安全を確認してから「降下開始」を押してください。
               </div>
 
               <button
@@ -167,7 +167,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                 B1F (第零製造ライン) に到着しました。
               </div>
               <div style={{ fontSize: '12px', color: '#555', marginBottom: '14px' }}>
-                扉が開きました。足元に注意して「製造ライン」へ移動してください。
+                足元に注意して「第零製造ライン」へ移動してください。
               </div>
             </div>
           )}
@@ -190,8 +190,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
               boxShadow: '0 0 12px rgba(27, 94, 32, 0.5)',
             }}
           >
-            <span className="inline-block">扉が開きました:</span>{' '}
-            <span className="inline-block">第④フェーズ (製造ライン) へ進む -&gt;</span>
+            <span className="inline-block">第零製造ラインへ進む -&gt;</span>
           </button>
         </div>
       )}

@@ -118,7 +118,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
           >
-            <span>エリア1: 品質管理室 (移動中)</span>
+            <span>品質管理室 (移動中)</span>
             <span className="phase-init-title-tag">ID: {deviceId}</span>
           </div>
           <div style={{ padding: '16px', textAlign: 'center' }}>
@@ -131,7 +131,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 marginBottom: '12px',
               }}
             >
-              1F エリア1「品質管理室」へ向かってください。
+              1F 品質管理室へ向かってください。
             </div>
             <div
               className="win95-inset"
@@ -144,7 +144,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 textAlign: 'left',
               }}
             >
-              通路を進み、1F「品質管理室」に入室したら下の【到着した】ボタンを押して点検を開始してください。
+              通路を進み、1F「品質管理室」に入室したら下のボタンを押して点検を開始してください。
             </div>
 
             <button
@@ -160,8 +160,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 boxShadow: '0 0 12px rgba(27, 94, 32, 0.4)',
               }}
             >
-              <span className="inline-block">エリア1（品質管理室）に到着した</span>{' '}
-              <span className="inline-block">[点検開始]</span>
+              <span className="inline-block">品質管理室に到着し、業務を開始する</span>{' '}
             </button>
           </div>
         </div>
@@ -175,7 +174,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
       {/* Task List Window */}
       <div className="win95-window">
         <div className="win95-titlebar zone1-titlebar">
-          <span className="zone1-titlebar-text">第②フェーズ: 品質管理室 - 指定資料撮影点検</span>
+          <span className="zone1-titlebar-text">品質管理室 - 指定資料撮影点検</span>
           <span className="zone1-titlebar-tag">ID: {deviceId}</span>
         </div>
         <div className="zone1-task-list-body">
@@ -232,7 +231,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 fontWeight: 'bold',
               }}
             >
-              スタッフが管理画面で写真を確認・審査中です。お待ちください...
+              本部が管理画面で写真を確認・審査中です。お待ちください...
             </div>
           )}
 
@@ -251,9 +250,9 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
             className={`win95-btn zone1-capture-btn btn-natural-wrap break-keep leading-snug${isCurrentApproved ? ' approved' : ''}`}
           >
             {isProcessing ? (
-              '写真圧縮・管理卓へ即時送信中...'
+              '写真圧縮・本部へ送信中...'
             ) : isCurrentApproved ? (
-              <span className="inline-block">点検完了 [スタッフ承認済]</span>
+              <span className="inline-block">点検完了 [本部承認済]</span>
             ) : currentTask.status === 'PENDING' ? (
               <>
                 <span className="inline-block">再撮影して再提出</span>{' '}
@@ -262,7 +261,6 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
             ) : (
               <>
                 <span className="inline-block">指定資料を撮影して送信</span>{' '}
-                <span className="inline-block">[CAMERA CAPTURE]</span>
               </>
             )}
           </button>
@@ -287,7 +285,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
             >
               品質管理室の全点検が承認されました。
               <br />
-              地下へ向かうため、エレベーターへ移動してください。
+              地下へ向かうため、エレベーターへ移動を開始してください。
             </div>
             <button
               onClick={onProceedElevator}

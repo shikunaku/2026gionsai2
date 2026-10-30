@@ -31,7 +31,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}
           >
-            <span>第⑤フェーズ: モニター室 (移動中)</span>
+            <span>モニター室 (移動中)</span>
             <span className="phase-init-title-tag">ID: {deviceId}</span>
           </div>
           <div style={{ padding: '18px 16px', textAlign: 'center' }}>
@@ -98,7 +98,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
           <span>
             {panicActive
               ? '[緊急事態発令] 出口へ逃走せよ！'
-              : '第⑤フェーズ: モニター室 - 最終アーカイブ映像'}
+              : 'モニター室 - 最終アーカイブ映像'}
           </span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
@@ -113,7 +113,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
             color: '#fff',
           }}
         >
-          <span>{panicActive ? '【怪異侵入・キャスト突入】' : '【プロジェクター最終上映】'}</span>
+          <span>{panicActive ? '【怪異侵入・キャスト突入】' : '【プロジェクター上映】'}</span>
         </div>
 
         <div style={{ padding: '16px', textAlign: 'center' }}>

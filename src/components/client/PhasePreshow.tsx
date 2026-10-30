@@ -34,7 +34,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
           className="win95-titlebar"
           style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
         >
-          <span>第①フェーズ: プレショー (待機ホール)</span>
+          <span>待機ホール</span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
         </div>
         <div style={{ padding: '10px', fontSize: '12px', color: '#27292e', lineHeight: 1.6 }}>

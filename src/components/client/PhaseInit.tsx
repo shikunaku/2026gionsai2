@@ -76,11 +76,11 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
         <div className="win95-inset-dark phase-init-rules">
           <p className="phase-init-rules-heading">[保安注意事項]</p>
           <p className="rule">1. 本端末は第零製造区画の巡視保守用専用端末です。</p>
-          <p className="rule">2. 各ポイントで指示された対象の撮影点検を行ってください。</p>
+          <p className="rule">2. 各エリアで指示された点検内容に従ってください。</p>
           <p className="rule">3. 異常振動・異音・照明明滅の可能性があります。</p>
           <p className="rule">4. 業務中は画面から目を離さず、必ず管理者の指示に従ってください。</p>
           <p className="phase-init-rules-note">
-            ※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。
+            ※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。<p>※ なお、点検業務中における貴殿の損失に関しては負いかねますのでご了承ください。</p>
           </p>
         </div>
 
@@ -92,7 +92,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
             />
-            <span>上記安全規定および機能連動に同意する</span>
+            <span>上記安全規定に同意する</span>
           </label>
         </div>
       </div>
@@ -109,7 +109,6 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
           ) : (
             <>
               <span className="inline-block">同意して点検を開始</span>{' '}
-              <span className="inline-block">[エリア1へ向かう]</span>
             </>
           )}
         </button>
