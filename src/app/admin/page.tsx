@@ -183,6 +183,10 @@ export default function AdminPage() {
     socket?.emit('panic:trigger', { reason: 'ADMIN_MANUAL_TRIGGER' });
   };
 
+  const handleSwitchCctv = (camId: 'cam1' | 'cam2' | 'cam3' | 'grid3') => {
+    socket?.emit('cctv:monitor_switch', { camId });
+  };
+
   return (
     <div className="app-shell">
       {/* オフライン・再接続通知ダイアログ */}
@@ -281,6 +285,7 @@ export default function AdminPage() {
             onTriggerPreshowEnd={handleTriggerPreshowEnd}
             onTriggerHeadGimmick={handleTriggerHeadGimmick}
             onTriggerJumpscare={handleTriggerJumpscare}
+            onSwitchCctv={handleSwitchCctv}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
 import { DEFAULT_VIDEO_CONFIG } from '../../../lib/types';
+import { requestFullscreenSafe } from '../../../lib/fullscreen';
 import '../../../styles/video-display.css';
 
 export default function PreshowDisplayPlayerPage() {
@@ -168,13 +169,8 @@ export default function PreshowDisplayPlayerPage() {
       console.warn('AudioContext unlock failed:', e);
     }
 
-    try {
-      if (document.documentElement && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      }
-    } catch (e) {
-      // Fullscreen optional
-    }
+    // Fullscreen request
+    await requestFullscreenSafe();
 
     setAudioUnlocked(true);
   };

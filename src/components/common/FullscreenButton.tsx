@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+import { requestFullscreenSafe, exitFullscreenSafe, isFullscreenActive } from '../../lib/fullscreen';
+
 interface FullscreenButtonProps {
   className?: string;
 }
@@ -11,15 +13,7 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
 
   useEffect(() => {
     const handleFsChange = () => {
-      const doc = document as any;
-      setIsFullscreen(
-        !!(
-          doc.fullscreenElement ||
-          doc.webkitFullscreenElement ||
-          doc.mozFullScreenElement ||
-          doc.msFullscreenElement
-        )
-      );
+      setIsFullscreen(isFullscreenActive());
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
@@ -34,40 +28,10 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
   }, []);
 
   const toggleFullscreen = async () => {
-    try {
-      const doc = document as any;
-      const docEl = document.documentElement as any;
-
-      const isFs = !!(
-        doc.fullscreenElement ||
-        doc.webkitFullscreenElement ||
-        doc.mozFullScreenElement ||
-        doc.msFullscreenElement
-      );
-
-      if (!isFs) {
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) {
-          await docEl.webkitRequestFullscreen();
-        } else if (docEl.mozRequestFullScreen) {
-          await docEl.mozRequestFullScreen();
-        } else if (docEl.msRequestFullscreen) {
-          await docEl.msRequestFullscreen();
-        }
-      } else {
-        if (doc.exitFullscreen) {
-          await doc.exitFullscreen();
-        } else if (doc.webkitExitFullscreen) {
-          await doc.webkitExitFullscreen();
-        } else if (doc.mozCancelFullScreen) {
-          await doc.mozCancelFullScreen();
-        } else if (doc.msExitFullscreen) {
-          await doc.msExitFullscreen();
-        }
-      }
-    } catch (e) {
-      console.warn('Fullscreen request failed:', e);
+    if (!isFullscreenActive()) {
+      await requestFullscreenSafe();
+    } else {
+      await exitFullscreenSafe();
     }
   };
 

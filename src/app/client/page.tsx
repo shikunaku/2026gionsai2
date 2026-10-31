@@ -82,6 +82,7 @@ function ClientContent() {
   const [manufacturingPhotoStatus, setManufacturingPhotoStatus] = useState<'UNINSPECTED' | 'PENDING' | 'APPROVED' | 'REJECTED'>('UNINSPECTED');
   const [monitorRoomArrived, setMonitorRoomArrived] = useState<boolean>(false);
   const [monitorVideoPlaying, setMonitorVideoPlaying] = useState<boolean>(false);
+  const [monitorVideoEnded, setMonitorVideoEnded] = useState<boolean>(false);
   const [panicActive, setPanicActive] = useState<boolean>(false);
 
   const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
@@ -308,9 +309,17 @@ function ClientContent() {
     // ビデオ再生トリガー監視
     socket.on('video:trigger_play', () => {
       setMonitorVideoPlaying(true);
+      setMonitorVideoEnded(false);
     });
 
-    // 自動パニック連携 (動画同期またはAdminトリガー)
+    // ビデオ終了・CCTV移行監視
+    socket.on('video:ended', () => {
+      console.log('[Client] Video ended signal received -> CCTV mode');
+      setMonitorVideoPlaying(false);
+      setMonitorVideoEnded(true);
+    });
+
+    // 自動パニック連携 (Admin手動トリガーまたは非常発火)
     const handlePanicTrigger = (payload?: { timestamp?: number; reason?: string }) => {
       console.log('[Client] CRITICAL PANIC EVENT RECEIVED!', payload);
       setPanicActive(true);
@@ -340,6 +349,7 @@ function ClientContent() {
       socket.off('effect:volume');
       socket.off('effect:shutdown');
       socket.off('video:trigger_play');
+      socket.off('video:ended');
       socket.off('panic:trigger', handlePanicTrigger);
     };
   }, [socket, deviceId, soundEngine, flicker, blinkPattern, stopBlink, setTorch]);
@@ -564,6 +574,7 @@ function ClientContent() {
               }}
               onTriggerVideo={handleTriggerVideo}
               videoPlaying={monitorVideoPlaying}
+              videoEnded={monitorVideoEnded}
               panicActive={panicActive}
               onEscapeSuccess={() => {
                 handleArriveAtPhase('return');
@@ -578,7 +589,8 @@ function ClientContent() {
               arrived={true}
               onArrive={() => {}}
               onTriggerVideo={handleTriggerVideo}
-              videoPlaying={true}
+              videoPlaying={false}
+              videoEnded={true}
               panicActive={true}
               onEscapeSuccess={() => {
                 handleArriveAtPhase('return');

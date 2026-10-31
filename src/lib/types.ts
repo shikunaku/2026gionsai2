@@ -369,7 +369,9 @@ export interface ServerToClientEvents {
 
   // エリア3 ビデオ表示画面向けイベント
   'video:trigger_play': (payload?: { videoSrc?: string; title?: string }) => void;
+  'video:ended': (payload?: { deviceId?: string }) => void;
   'video:reset': () => void;
+  'cctv:monitor_switch': (payload: { camId: CctvCameraId | 'grid3'; autoSwitchOnEnd?: boolean }) => void;
 
   // パニック脱出トリガーイベント（映像タイムスタンプ連動または管理者手動）
   'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
@@ -429,6 +431,7 @@ export interface ClientToServerEvents {
   // ビデオトリガー
   'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
   'video:ended': (payload?: { deviceId?: string }) => void;
+  'cctv:monitor_switch': (payload: { camId: CctvCameraId | 'grid3'; autoSwitchOnEnd?: boolean }) => void;
 
   // プレショートリガー
   'preshow:start': (payload?: { targetDeviceId?: string; videoSrc?: string }) => void;

@@ -57,6 +57,8 @@ interface EffectTriggerPanelProps {
   /** ギミック強制トリガー (生首・ジャンプスケア) */
   onTriggerHeadGimmick?: () => void;
   onTriggerJumpscare?: () => void;
+  /** エリア3モニター室 CCTV映像切り替え */
+  onSwitchCctv?: (camId: import('../../lib/types').CctvCameraId | 'grid3') => void;
 }
 
 const GLITCH_MODES: { mode: GlitchMode; label: string; title: string }[] = [
@@ -113,6 +115,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   onTriggerPreshowEnd,
   onTriggerHeadGimmick,
   onTriggerJumpscare,
+  onSwitchCctv,
 }) => {
   const [glitchLevel, setGlitchLevel] = useState<number>(2);
   const [glitchDuration, setGlitchDuration] = useState<number>(3000);
@@ -355,14 +358,14 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
         {/* ⑤ モニター室・最終演出 */}
         <fieldset className="win95-groupbox">
           <legend className="win95-groupbox-legend">
-            ⑤ モニター室 (最終映像 &amp; パニック脱出)
+            ⑤ モニター室 (映像・CCTV切替 &amp; パニック脱出)
           </legend>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginBottom: '6px' }}>
             <button
               onClick={() => onTriggerVideoPlay && onTriggerVideoPlay()}
               className="win95-btn"
               style={{ padding: '6px 2px', fontSize: '10px', fontWeight: 'bold', color: '#fff', backgroundColor: '#6a1b9a' }}
-              title="プロジェクター（/display/video）で最終映像を再生"
+              title="プロジェクター（/display/video）で最終アーカイブ映像を再生"
             >
               最終映像 再生
             </button>
@@ -374,6 +377,47 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
             >
               [合図] パニック脱出発火
             </button>
+          </div>
+
+          {/* CCTV切替コントロール (モニター室プロジェクター連動) */}
+          <div style={{ borderTop: '1px dashed #555', paddingTop: '4px', marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', color: '#38bdf8', fontWeight: 'bold', marginBottom: '3px' }}>
+              [モニター室 CCTV遠隔切替]
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '3px' }}>
+              <button
+                onClick={() => onSwitchCctv && onSwitchCctv('cam3')}
+                className="win95-btn"
+                style={{ fontSize: '9px', padding: '4px 1px', fontWeight: 'bold', backgroundColor: '#0f172a', color: '#38bdf8', border: '1px solid #0284c7' }}
+                title="CAM-3 (製造ライン/モニター室) をモニターに大画面表示"
+              >
+                CAM-3
+              </button>
+              <button
+                onClick={() => onSwitchCctv && onSwitchCctv('cam1')}
+                className="win95-btn"
+                style={{ fontSize: '9px', padding: '4px 1px', backgroundColor: '#0f172a', color: '#cbd5e1' }}
+                title="CAM-1 (品質管理室) をモニターに大画面表示"
+              >
+                CAM-1
+              </button>
+              <button
+                onClick={() => onSwitchCctv && onSwitchCctv('cam2')}
+                className="win95-btn"
+                style={{ fontSize: '9px', padding: '4px 1px', backgroundColor: '#0f172a', color: '#cbd5e1' }}
+                title="CAM-2 (EV前通路) をモニターに大画面表示"
+              >
+                CAM-2
+              </button>
+              <button
+                onClick={() => onSwitchCctv && onSwitchCctv('grid3')}
+                className="win95-btn"
+                style={{ fontSize: '9px', padding: '4px 1px', backgroundColor: '#1e293b', color: '#e2e8f0' }}
+                title="全3カメラをモニター室に3分割表示"
+              >
+                3分割
+              </button>
+            </div>
           </div>
         </fieldset>
 

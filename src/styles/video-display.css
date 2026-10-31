@@ -170,3 +170,160 @@
 .video-hud.ready {
   color: #48bb78;
 }
+
+.video-hud-fs-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #a0aec0;
+  font-size: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.video-hud-fs-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: #38bdf8;
+}
+
+/* CCTV Live Mode on Video Display (/display/video) */
+.video-cctv-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 25;
+  background-color: #05080c;
+  display: flex;
+  box-sizing: border-box;
+}
+
+.video-cctv-wrapper {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.video-cctv-container.cctv-layout-grid3 .video-cctv-wrapper {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.video-cctv-container.cctv-layout-single .video-cctv-wrapper {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.video-cctv-card {
+  position: relative;
+  background-color: #03060a;
+  border: 1px solid #1e293b;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-cctv-card.is-active-cam {
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+}
+
+.video-cctv-card-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  font-family: monospace;
+}
+
+.video-cctv-badge {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.video-cctv-badge.live {
+  background: #dc2626;
+  color: #fff;
+  animation: cctvBlink 1.2s infinite;
+}
+
+.video-cctv-badge.offline {
+  background: #334155;
+  color: #94a3b8;
+}
+
+@keyframes cctvBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.video-cctv-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.video-cctv-clock {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.video-cctv-media-box {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+}
+
+.video-cctv-stream-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #000;
+}
+
+.video-cctv-no-signal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  text-align: center;
+  padding: 16px;
+}
+
+.video-cctv-no-signal-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #94a3b8;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.video-cctv-no-signal-desc {
+  font-size: 11px;
+  color: #475569;
+}
+

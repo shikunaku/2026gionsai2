@@ -10,6 +10,7 @@ interface PhaseMonitorRoomProps {
   onTriggerVideo: () => void;
   onEscapeSuccess: () => void;
   videoPlaying: boolean;
+  videoEnded?: boolean;
   panicActive: boolean;
 }
 
@@ -20,6 +21,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
   onTriggerVideo,
   onEscapeSuccess,
   videoPlaying,
+  videoEnded = false,
   panicActive,
 }) => {
   // 1. 到着前: 到着ボタン
@@ -91,6 +93,8 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
           style={{
             background: panicActive
               ? 'linear-gradient(90deg, #b71c1c, #d50000)'
+              : videoEnded
+              ? 'linear-gradient(90deg, #0284c7, #0369a1)'
               : 'linear-gradient(90deg, #4a148c, #6a1b9a)',
             color: '#fff',
           }}
@@ -98,6 +102,8 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
           <span>
             {panicActive
               ? '[緊急事態発令] 出口へ逃走せよ！'
+              : videoEnded
+              ? 'モニター室 - CCTV監視カメラ受信中'
               : 'モニター室 - 最終アーカイブ映像'}
           </span>
           <span className="phase-init-title-tag">ID: {deviceId}</span>
@@ -109,11 +115,17 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
         <div
           className="win95-titlebar"
           style={{
-            background: panicActive ? '#d50000' : '#311b92',
+            background: panicActive ? '#d50000' : videoEnded ? '#0369a1' : '#311b92',
             color: '#fff',
           }}
         >
-          <span>{panicActive ? '【怪異侵入・キャスト突入】' : '【プロジェクター上映】'}</span>
+          <span>
+            {panicActive
+              ? '【怪異侵入・キャスト突入】'
+              : videoEnded
+              ? '【CCTV監視カメラ映像 放映中】'
+              : '【プロジェクター上映】'}
+          </span>
         </div>
 
         <div style={{ padding: '16px', textAlign: 'center' }}>
@@ -123,16 +135,19 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 style={{
                   fontSize: '16px',
                   fontWeight: 'bold',
-                  color: videoPlaying ? '#b71c1c' : '#4a148c',
+                  color: videoEnded ? '#0284c7' : videoPlaying ? '#b71c1c' : '#4a148c',
                   marginBottom: '12px',
+                  lineHeight: '1.5',
                 }}
               >
-                {videoPlaying
+                {videoEnded
+                  ? '大型スクリーンに監視カメラ（CCTV）の生映像が映し出されています。画面を注視してください…'
+                  : videoPlaying
                   ? '大型スクリーンにて最終映像を上映中...'
                   : 'モニター室の大型プロジェクターで最終記録を再生してください'}
               </div>
 
-              {!videoPlaying && (
+              {!videoPlaying && !videoEnded && (
                 <button
                   onClick={onTriggerVideo}
                   className="win95-btn btn-natural-wrap break-keep leading-snug"
@@ -156,13 +171,23 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 style={{
                   padding: '12px',
                   fontSize: '11px',
-                  color: '#ce93d8',
+                  color: videoEnded ? '#7dd3fc' : '#ce93d8',
                   lineHeight: '1.7',
                   textAlign: 'left',
                 }}
               >
-                <div>[STATUS] プロジェクター (/display/video) 映像同期中</div>
-                <div>[NOTICE] 映像終盤、現場照明オフおよび異変の発生にご注意ください</div>
+                <div>
+                  [STATUS]{' '}
+                  {videoEnded
+                    ? 'CCTV監視映像中継中（異常発生を警戒中）'
+                    : 'プロジェクター (/display/video) 映像同期中'}
+                </div>
+                <div>
+                  [NOTICE]{' '}
+                  {videoEnded
+                    ? '施設内の異変および緊急指示に備えて待機してください'
+                    : '映像終盤、現場照明オフおよび異変の発生にご注意ください'}
+                </div>
               </div>
             </div>
           ) : (

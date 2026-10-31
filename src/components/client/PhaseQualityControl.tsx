@@ -29,6 +29,17 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // 承認されたら自動で次の未承認タスクを選択
+  React.useEffect(() => {
+    const current = tasks.find((t) => t.id === selectedTaskId);
+    if (current && current.status === 'APPROVED') {
+      const nextUnapproved = tasks.find((t) => t.status !== 'APPROVED');
+      if (nextUnapproved) {
+        setSelectedTaskId(nextUnapproved.id);
+      }
+    }
+  }, [tasks, selectedTaskId]);
+
   const currentTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
 
   const handleCaptureClick = () => {

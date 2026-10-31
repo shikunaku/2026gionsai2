@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { requestFullscreenSafe } from '../../lib/fullscreen';
 import '../../styles/client.css';
 
 interface PhaseInitProps {
@@ -22,13 +23,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
     setIsStarting(true);
 
     // 1. Fullscreen request
-    try {
-      if (document.documentElement && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      }
-    } catch (e) {
-      console.warn('Fullscreen request failed:', e);
-    }
+    await requestFullscreenSafe();
 
     // 2. Screen WakeLock
     try {
@@ -79,9 +74,10 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
           <p className="rule">2. 各エリアで指示された点検内容に従ってください。</p>
           <p className="rule">3. 異常振動・異音・照明明滅の可能性があります。</p>
           <p className="rule">4. 業務中は画面から目を離さず、必ず管理者の指示に従ってください。</p>
-          <p className="phase-init-rules-note">
-            ※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。<p>※ なお、点検業務中における貴殿の損失に関しては負いかねますのでご了承ください。</p>
-          </p>
+          <div className="phase-init-rules-note">
+            <p>※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。</p>
+            <p>※ なお、点検業務中における貴殿の損失に関しては負いかねますのでご了承ください。</p>
+          </div>
         </div>
 
         {/* Checkbox */}

@@ -35,6 +35,13 @@ const PORTAL_CARDS = [
     launchLabel: 'エレベータ表示を起動 (/elevator-display) ->',
   },
   {
+    key: 'elevator-bg',
+    href: '/display/elevator',
+    title: '[背景] エレベーター背景映像・CCTV演出端末',
+    description: 'モニター室技術を適用したエレベーター専用背景画面。1F〜B1F降下シークエンス連動・シャフトアニメーション・CCTV中継対応。',
+    launchLabel: 'エレベーター背景画面を起動 (/display/elevator) ->',
+  },
+  {
     key: 'cctv',
     href: '/admin/cctv',
     title: '[監視] 監視カメラ CCTV モニター',

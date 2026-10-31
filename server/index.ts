@@ -390,7 +390,14 @@ async function main() {
 
     socket.on('video:ended', ({ deviceId } = {}) => {
       console.log(`[Socket] Video ended on player terminal (reporter: ${deviceId || socket.id})`);
+      io.emit('video:ended', { deviceId });
       broadcastAdminState();
+    });
+
+    // エリア3モニター室 CCTV映像切り替え指示 (コンソール -> モニター端末)
+    socket.on('cctv:monitor_switch', (payload) => {
+      console.log('[Socket] CCTV monitor switch requested:', payload);
+      io.emit('cctv:monitor_switch', payload);
     });
 
     // パニック演出トリガー（ビデオ怪異タイムスタンプ検知またはAdmin手動）
