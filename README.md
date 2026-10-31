@@ -261,7 +261,10 @@ graph TD
 | `effect:sound` | PDA端末 | `SoundEffectOptions` | プロシージャル効果音またはMP3ファイル再生 |
 | `jumpscare:trigger` | PDA端末 | `{ targetDeviceId?, soundType?, durationMs? }` | 生首ギミック連動ジャンプスケア（振動・爆音・閃光） |
 | `elevator:state` | エレベータ表示 | `ElevatorStatePayload` | 階数表示（FLOOR_1 / MOVING / FLOOR_B1）の更新 |
-| `admin:state_sync` | 管理コンソール | `{ devices, submissions, equipments, ... }` | 全接続端末・機材状態のリアルタイム一括同期 |
+| `admin:state_sync` | 管理コンソール | `{ devices, submissions, equipments, ... }` | 管理画面への初回・再接続時の完全同期 |
+| `admin:devices_sync` | 管理コンソール | `DeviceInfo[]` | 端末状態だけの軽量な差分同期 |
+| `admin:submission_added/updated` | 管理コンソール | `PhotoSubmission` | 写真キューの追加・審査結果差分 |
+| `admin:submissions_cleared` | 管理コンソール | `{ deviceId? }` | 全体または端末別の写真キュー削除 |
 
 ---
 
@@ -276,11 +279,18 @@ graph TD
 npm install
 ```
 
-### C. サーバー起動
+### C. 開発サーバー起動
 ```bash
 npm run dev
 ```
-`tsx server/index.ts` が実行され、Express + Socket.IO サーバーと Next.js App Router が同一ポート（デフォルト: `3000`）で起動します。
+`npm run dev` は開発・デバッグ専用です。`tsx server/index.ts` が実行され、Express + Socket.IO サーバーと Next.js App Router が同一ポート（デフォルト: `3000`）で起動します。
+
+### D. 会場での本番起動（推奨）
+```bash
+npm run build
+npm start
+```
+会場で複数端末を接続するときは、必ず最適化済みの本番ビルドを使用してください。Windowsでも同じコマンドで起動できます。
 
 ---
 

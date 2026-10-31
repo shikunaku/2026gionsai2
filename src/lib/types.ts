@@ -359,6 +359,10 @@ export interface ServerToClientEvents {
     equipments: EquipmentItem[];
     currentElevatorState?: ElevatorStatePayload;
   }) => void;
+  'admin:devices_sync': (devices: DeviceInfo[]) => void;
+  'admin:submission_added': (submission: PhotoSubmission) => void;
+  'admin:submission_updated': (submission: PhotoSubmission) => void;
+  'admin:submissions_cleared': (payload: { deviceId?: string }) => void;
   'equipment:init': (equipments: EquipmentItem[]) => void;
   'equipment:updated': (equipment: EquipmentItem) => void;
   'equipment:removed': (payload: { id: string }) => void;

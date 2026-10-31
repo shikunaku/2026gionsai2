@@ -30,12 +30,16 @@ export default function PreshowConsolePage() {
 
   // Socket通信とステート同期
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     socket.emit('admin:join');
 
     socket.on('admin:state_sync', (state) => {
       setDevices(state.devices || []);
+    });
+
+    socket.on('admin:devices_sync', (nextDevices) => {
+      setDevices(nextDevices);
     });
 
     socket.on('preshow:start', () => {
@@ -50,10 +54,11 @@ export default function PreshowConsolePage() {
 
     return () => {
       socket.off('admin:state_sync');
+      socket.off('admin:devices_sync');
       socket.off('preshow:start');
       socket.off('preshow:ended');
     };
-  }, [socket]);
+  }, [socket, connected]);
 
   // --------------------------------------------------------------------------
   // エフェクト発火（フラッシュライト・グリッチ）

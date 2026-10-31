@@ -35,7 +35,7 @@ export default function AdminPage() {
   const [equipments, setEquipments] = useState<EquipmentItem[]>([]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     socket.emit('admin:join');
 
@@ -45,10 +45,50 @@ export default function AdminPage() {
       setEquipments(state.equipments);
     });
 
+    socket.on('admin:devices_sync', (nextDevices) => {
+      setDevices(nextDevices);
+    });
+
+    socket.on('admin:submission_added', (submission) => {
+      setSubmissions((current) => [submission, ...current.filter((item) => item.id !== submission.id)]);
+    });
+
+    socket.on('admin:submission_updated', (submission) => {
+      setSubmissions((current) =>
+        current.map((item) => (item.id === submission.id ? submission : item))
+      );
+    });
+
+    socket.on('admin:submissions_cleared', ({ deviceId }) => {
+      setSubmissions((current) =>
+        deviceId ? current.filter((item) => item.deviceId !== deviceId) : []
+      );
+    });
+
+    socket.on('equipment:updated', (equipment) => {
+      setEquipments((current) => {
+        const index = current.findIndex((item) => item.id === equipment.id);
+        if (index === -1) return [...current, equipment];
+        const next = [...current];
+        next[index] = equipment;
+        return next;
+      });
+    });
+
+    socket.on('equipment:removed', ({ id }) => {
+      setEquipments((current) => current.filter((item) => item.id !== id));
+    });
+
     return () => {
       socket.off('admin:state_sync');
+      socket.off('admin:devices_sync');
+      socket.off('admin:submission_added');
+      socket.off('admin:submission_updated');
+      socket.off('admin:submissions_cleared');
+      socket.off('equipment:updated');
+      socket.off('equipment:removed');
     };
-  }, [socket]);
+  }, [socket, connected]);
 
   // --------------------------------------------------------------------------
   // エフェクト & 端末操作ハンドラー

@@ -108,14 +108,19 @@ async function main() {
     { socketId: string; deviceId?: string; lightOn: boolean; batteryLevel?: number | string }
   >();
 
-  /** 管理コンソール画面 (Admin) に最新の全体状態を一括同期 */
-  const broadcastAdminState = () => {
-    io.emit('admin:state_sync', {
+  /** 管理系画面への完全同期。初回参加・明示再取得時だけ使用する。 */
+  const emitAdminState = (target: Socket) => {
+    target.emit('admin:state_sync', {
       devices: store.getAllDevices(),
       submissions: store.getSubmissions(),
       equipments: store.getEquipments(),
       currentElevatorState: store.getElevatorState(),
     });
+  };
+
+  /** 高頻度に変化する端末情報だけを管理系ルームへ配信する。 */
+  const broadcastDevices = () => {
+    io.to('admin_room').emit('admin:devices_sync', store.getAllDevices());
   };
 
   io.on('connection', (socket: Socket) => {
@@ -134,7 +139,7 @@ async function main() {
 
       // 接続端末へ現在のエレベータ状態を初期配信
       socket.emit('elevator:state', store.getElevatorState());
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // 端末初期化リセット（同意画面復帰時）
@@ -144,7 +149,8 @@ async function main() {
       store.clearDeviceSubmissions(deviceId);
       io.to(`device:${deviceId}`).emit('phase:update', { phase: 'STANDBY', deviceId });
       io.to(`device:${deviceId}`).emit('device:reset', { deviceId });
-      broadcastAdminState();
+      io.to('admin_room').emit('admin:submissions_cleared', { deviceId });
+      broadcastDevices();
     });
 
     // 探索・点検の開始トリガー（端末側はプレショーをスキップしエリア1品質管理室へ直行）
@@ -152,7 +158,7 @@ async function main() {
       console.log(`[Socket] Device start inspection (skip preshow -> quality_control): ${deviceId}`);
       store.updateDevice(deviceId, { phase: 'quality_control' });
       io.to(`device:${deviceId}`).emit('phase:update', { phase: 'quality_control', deviceId });
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // お客さんスマホからの各エリア「到着」通知ハンドラー
@@ -176,11 +182,10 @@ async function main() {
           store.updateEquipmentState('eq_conveyor_01', false);
           const stopEq = store.getEquipments().find((e) => e.id === 'eq_conveyor_01');
           if (stopEq) io.emit('equipment:updated', stopEq);
-          broadcastAdminState();
         }, 6000);
       }
 
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // プレショー開始トリガー (Adminまたはクライアントから)
@@ -188,7 +193,6 @@ async function main() {
       console.log('[Socket] Preshow start triggered:', payload);
       io.emit('preshow:trigger', payload || {});
       io.emit('preshow:start', payload || {});
-      broadcastAdminState();
     });
 
     // プレショー終了トリガー (映像終了イベント検知でスマホへ振動+アラート通知、品質管理室誘導)
@@ -217,19 +221,19 @@ async function main() {
           }
         }
       }
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // バッテリー残量・充電状態のテレメトリ更新
     socket.on('device:battery_update', ({ deviceId, batteryLevel, charging }) => {
       store.updateDevice(deviceId, { batteryLevel, charging });
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // フラッシュライトの物理状態テレメトリ更新
     socket.on('device:flash_state', ({ deviceId, flashState }) => {
       store.updateDevice(deviceId, { flashState });
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // ------------------------------------------------------------------------
@@ -238,12 +242,14 @@ async function main() {
 
     socket.on('task:photo_submit', ({ deviceId, taskId, taskTitle, imageBase64 }) => {
       console.log(`[Socket] Photo submitted by ${deviceId} for task ${taskId}: ${taskTitle}`);
-      const { deduped } = store.addSubmission(deviceId, taskId, taskTitle, imageBase64);
+      const { submission, deduped } = store.addSubmission(deviceId, taskId, taskTitle, imageBase64);
       if (deduped) {
         console.log(`[Socket] Debounced duplicate submission from ${deviceId} on task ${taskId}`);
         return;
       }
-      broadcastAdminState();
+      if (submission) {
+        io.to('admin_room').emit('admin:submission_added', submission);
+      }
     });
 
     // ------------------------------------------------------------------------
@@ -257,7 +263,6 @@ async function main() {
         mcuManager.handleHeadGimmick(true, 3000);
       }
       io.emit('gimmick:trigger', { gimmickId, action, value });
-      broadcastAdminState();
     });
 
     // 個別機材の直接トグル操作
@@ -268,7 +273,6 @@ async function main() {
       if (eq) {
         io.emit('equipment:updated', eq);
       }
-      broadcastAdminState();
     });
 
     // 搬送コンベア制御（テスト稼働・自動停止タイマー対応）
@@ -283,7 +287,6 @@ async function main() {
         if (eq) {
           io.emit('equipment:updated', eq);
         }
-        broadcastAdminState();
 
         // 指定秒数後に自動停止（管理者介入不要）
         setTimeout(() => {
@@ -294,7 +297,6 @@ async function main() {
           if (stopEq) {
             io.emit('equipment:updated', stopEq);
           }
-          broadcastAdminState();
         }, durationMs);
       } else {
         mcuManager.handleConveyorControl('stop');
@@ -303,7 +305,6 @@ async function main() {
         if (eq) {
           io.emit('equipment:updated', eq);
         }
-        broadcastAdminState();
       }
     });
 
@@ -314,7 +315,6 @@ async function main() {
       store.setElevatorState({ ...current, powerOn });
       io.emit('elevator:power', { powerOn });
       io.emit('elevator:state', { ...current, powerOn });
-      broadcastAdminState();
     });
 
     // エレベータフロアの直接指定
@@ -326,7 +326,6 @@ async function main() {
       if (floor === 'FLOOR_1' || floor === 'FLOOR_B1' || floor === 'MOVING') {
         mcuManager.handleElevatorMove(floor);
       }
-      broadcastAdminState();
     });
 
     // エレベータ移動演出シーケンス (降下シーケンス: 扉閉鎖、降下音、照明明滅、ディスプレイ階数降下、スマホグリッチ・暗転)
@@ -373,7 +372,6 @@ async function main() {
         }
       }, 1200);
 
-      broadcastAdminState();
 
       // 2. 移動時間待機後、到着時のグリッチ演出と目標階層を適用 (扉が開き、スマホに製造ラインへの移動指示が表示可能に)
       setTimeout(() => {
@@ -382,7 +380,6 @@ async function main() {
         io.emit('elevator:state', { floor: to, glitch: true, powerOn: true });
         mcuManager.handleElevatorMove(to);
         mcuManager.handleLightingAnomaly('normal', 1000);
-        broadcastAdminState();
       }, EFFECT_TIMINGS.ELEVATOR_MOVE_DURATION_MS);
     });
 
@@ -407,7 +404,6 @@ async function main() {
     socket.on('video:ended', ({ deviceId } = {}) => {
       console.log(`[Socket] Video ended on player terminal (reporter: ${deviceId || socket.id})`);
       io.emit('video:ended', { deviceId });
-      broadcastAdminState();
     });
 
     // エリア3モニター室 CCTV映像切り替え指示 (コンソール -> モニター端末)
@@ -429,7 +425,7 @@ async function main() {
           io.to(`device:${dev.deviceId}`).emit('phase:update', { phase: 'escape', deviceId: dev.deviceId });
         }
       }
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // ------------------------------------------------------------------------
@@ -442,7 +438,7 @@ async function main() {
       socket.join('sound_nodes');
       store.registerDevice(deviceId, socket.id, 'STANDBY', location, 'sound_node');
       console.log(`[Socket] Sound Node explicitly registered: ${deviceId} (Loc: ${location || 'N/A'})`);
-      broadcastAdminState();
+      broadcastDevices();
     });
 
     // サウンドノード向け再生トリガー (個別端末宛て、または全体配信)
@@ -464,21 +460,11 @@ async function main() {
 
     socket.on('admin:join', () => {
       socket.join('admin_room');
-      socket.emit('admin:state_sync', {
-        devices: store.getAllDevices(),
-        submissions: store.getSubmissions(),
-        equipments: store.getEquipments(),
-        currentElevatorState: store.getElevatorState(),
-      });
+      emitAdminState(socket);
     });
 
     socket.on('admin:get_state', () => {
-      socket.emit('admin:state_sync', {
-        devices: store.getAllDevices(),
-        submissions: store.getSubmissions(),
-        equipments: store.getEquipments(),
-        currentElevatorState: store.getElevatorState(),
-      });
+      emitAdminState(socket);
     });
 
     // 写真判定（承認 / 却下）
@@ -486,6 +472,7 @@ async function main() {
       console.log(`[Admin] Review photo: ${submissionId} -> ${status} (${reason || ''})`);
       const updated = store.updateSubmissionStatus(submissionId, status, reason);
       if (updated) {
+        io.to('admin_room').emit('admin:submission_updated', updated);
         io.to(`device:${updated.deviceId}`).emit('task:review_result', {
           submissionId,
           taskId: updated.taskId,
@@ -525,7 +512,6 @@ async function main() {
           });
         }
       }
-      broadcastAdminState();
     });
 
     // ジャンプスケア手動トリガー (Admin手動実行用)
@@ -583,7 +569,10 @@ async function main() {
           io.to(`device:${dev.deviceId}`).emit('phase:update', { phase, deviceId: dev.deviceId });
         }
       }
-      broadcastAdminState();
+      if (phase === 'STANDBY') {
+        io.to('admin_room').emit('admin:submissions_cleared', { deviceId: targetDeviceId });
+      }
+      broadcastDevices();
     });
 
     // 管理コンソールからの写真キュー手動クリア
@@ -595,7 +584,7 @@ async function main() {
         console.log('[Admin] Clear all submissions');
         store.clearAllSubmissions();
       }
-      broadcastAdminState();
+      io.to('admin_room').emit('admin:submissions_cleared', deviceId ? { deviceId } : {});
     });
 
     // 各種恐怖演出（グリッチ・トーチ点滅・低周波音・シャットダウン）の手動起爆
@@ -652,10 +641,10 @@ async function main() {
       // 登録されている全ての照明機材をONへ
       for (const eq of store.getEquipments()) {
         if (eq.type === 'light') {
-          store.updateEquipmentState(eq.id, true);
+          const updated = store.updateEquipmentState(eq.id, true);
+          if (updated) io.emit('equipment:updated', updated);
         }
       }
-      broadcastAdminState();
     });
 
     // ------------------------------------------------------------------------
@@ -669,14 +658,12 @@ async function main() {
     socket.on('equipment:add', (item: Omit<EquipmentItem, 'updatedAt'>) => {
       const added = store.addEquipment(item);
       io.emit('equipment:updated', added);
-      broadcastAdminState();
     });
 
     socket.on('equipment:remove', ({ id }) => {
       const removed = store.removeEquipment(id);
       if (removed) {
         io.emit('equipment:removed', { id });
-        broadcastAdminState();
       }
     });
 
@@ -689,7 +676,6 @@ async function main() {
           updated.protocol || 'serial'
         );
         io.emit('equipment:updated', updated);
-        broadcastAdminState();
       }
     });
 
@@ -805,7 +791,7 @@ async function main() {
       const removed = store.removeDeviceBySocketId(socket.id);
       if (removed) {
         console.log(`[Socket] Device disconnected: ${removed.deviceId}`);
-        broadcastAdminState();
+        broadcastDevices();
       }
     });
   });
