@@ -14,15 +14,15 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
       {/* Title */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1b3a27, #2e5b3e)' }}>
-          <span>[業務完了] 巡視保守業務 終了</span>
-          <span className="phase-init-title-tag">ID: {deviceId}</span>
+          <span>体験終了</span>
+          <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>
       </div>
 
       {/* Return Notice Card */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: '#253d2d' }}>
-          <span>端末返却案内</span>
+          <span>端末を返却してください</span>
         </div>
         <div style={{ padding: '24px 16px', textAlign: 'center' }}>
           <div
@@ -35,9 +35,9 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
               marginBottom: '16px',
             }}
           >
-            点検業務お疲れさまでした。
+            体験は終了です。
             <br />
-            端末を所定の位置にお戻しください。
+            端末を受付スタッフへ返してください。
           </div>
 
           <div
@@ -50,9 +50,9 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
               textAlign: 'left',
             }}
           >
-            <div>[LOG] 巡回ログ同期: 完了</div>
-            <div>[SECURITY] 機器操作権限: 自動失効</div>
-            <div>[TERMINAL] 端末ロック: 施錠済</div>
+            <div>[LOG] 体験データの保存: 完了</div>
+            <div>[SECURITY] 端末の操作: 終了</div>
+            <div>[TERMINAL] 返却待ち</div>
           </div>
         </div>
       </div>
@@ -62,13 +62,14 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
         className="win95-inset"
         style={{
           padding: '12px',
-          fontSize: '11px',
+          fontSize: '14px',
+          lineHeight: '1.6',
           color: '#555960',
           textAlign: 'center',
           backgroundColor: '#dedbd4',
         }}
       >
-        ※ 本端末の点検操作はすべて終了しロックされています。所定の位置に端末を返却後ご退室お願いいたします。最後まで点検業務お疲れさまでした。
+        受付で端末を返却してから、ご退場ください。ご参加ありがとうございました。
       </div>
 
       {/* Reception Staff Reset Action */}
@@ -79,11 +80,11 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
           </div>
           <div style={{ padding: '14px', textAlign: 'center' }}>
             <div style={{ fontSize: '11px', color: '#455a64', marginBottom: '10px' }}>
-              次の体験者を案内する前に端末を完全初期化し、同意画面に戻します。
+              次の体験者を案内する前に、写真と進行状況を消去して開始画面に戻します。
             </div>
             <button
               onClick={() => {
-                if (window.confirm('端末の撮影写真とステータスを全初期化し、同意画面に戻しますか？')) {
+                if (window.confirm('写真と進行状況を消去して、開始画面に戻しますか？')) {
                   onResetToInit();
                 }
               }}
@@ -98,7 +99,7 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
                 boxShadow: '0 0 10px rgba(21, 101, 192, 0.4)',
               }}
             >
-              端末を初期化して同意画面へ戻す
+              端末をリセットして開始画面へ戻す
             </button>
           </div>
         </div>

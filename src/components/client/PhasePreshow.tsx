@@ -35,10 +35,10 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
           style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
         >
           <span>待機ホール</span>
-          <span className="phase-init-title-tag">ID: {deviceId}</span>
+          <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>
-        <div style={{ padding: '10px', fontSize: '12px', color: '#27292e', lineHeight: 1.6 }}>
-          待機ホールにて正面スクリーン上映の「保安点検ガイダンス映像」を注視してください。
+        <div style={{ padding: '10px', fontSize: '14px', color: '#27292e', lineHeight: 1.6 }}>
+          正面スクリーンで案内映像を上映します。
         </div>
       </div>
 
@@ -50,10 +50,10 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
         >
           <span>
             {preshowEnded
-              ? '[指示受信] 品質管理室へ移動'
+              ? '次の場所へ移動'
               : !hasArrivedHall
-              ? '[待機位置へ移動中] 到着確認'
-              : '[上映中] スクリーン映像注視'}
+              ? '待機ホールへ移動'
+              : '案内映像を上映中'}
           </span>
         </div>
         <div style={{ padding: '20px 16px', textAlign: 'center' }}>
@@ -71,7 +71,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                     lineHeight: '1.6',
                   }}
                 >
-                  待機ホールの正面スクリーン前へ
+                  正面スクリーンの前へ
                   <br />
                   移動してください。
                 </div>
@@ -87,8 +87,8 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                     marginBottom: '18px',
                   }}
                 >
-                  <div>[GUIDE] 待機ホールの指定枠内に整列してください</div>
-                  <div>[NOTICE] 位置に到着したら下の到着ボタンを押してください</div>
+                  <div>[GUIDE] 床の案内に沿って並んでください</div>
+                  <div>[NOTICE] 到着したら下のボタンを押してください</div>
                 </div>
 
                 <button
@@ -104,8 +104,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                     boxShadow: '0 0 12px rgba(13, 71, 161, 0.4)',
                   }}
                 >
-                  <span className="inline-block">プレショー待機位置に</span>{' '}
-                  <span className="inline-block">到着した [確認]</span>
+                  <span className="inline-block">スクリーン前に到着した</span>
                 </button>
               </div>
             ) : (
@@ -123,10 +122,10 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                   正面スクリーンをご覧ください
                 </div>
 
-                <div style={{ fontSize: '13px', color: '#37474f', marginBottom: '14px', lineHeight: '1.6' }}>
-                  スクリーンにて保安点検ガイダンス映像を上映中です。
+                <div style={{ fontSize: '14px', color: '#37474f', marginBottom: '14px', lineHeight: '1.6' }}>
+                  案内映像を上映しています。
                   <br />
-                  （※本端末上では動画再生は行われません）
+                  この端末ではなく、正面スクリーンをご覧ください。
                 </div>
 
                 <div
@@ -139,9 +138,9 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                     lineHeight: '1.8',
                   }}
                 >
-                  <div>[STATUS] 正面スクリーン上映待機中</div>
-                  <div>[SIGNAL] 映像終了と同時に本端末へ点検開始合図が届きます</div>
-                  <div>[CAUTION] バイブレーションおよび通知音にご注意ください</div>
+                  <div>[STATUS] 案内映像を上映中</div>
+                  <div>[SIGNAL] 映像が終わると次の案内を表示します</div>
+                  <div>[CAUTION] 端末の振動と通知音にご注意ください</div>
                 </div>
               </div>
             )
@@ -157,7 +156,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                   marginBottom: '12px',
                 }}
               >
-                点検を開始します。
+                次の点検を始めます。
                 <br />
                 品質管理室へ向かってください。
               </div>
@@ -166,7 +165,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                 className="win95-inset"
                 style={{
                   padding: '12px',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color: '#2e7d32',
                   backgroundColor: '#e8f5e9',
                   border: '1px solid #81c784',
@@ -174,9 +173,9 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
                   lineHeight: '1.6',
                 }}
               >
-                ガイダンス映像が終了しました。
+                案内映像が終わりました。
                 <br />
-                通路を進み、1F「品質管理室」に到着したら下の【到着】ボタンを押してください。
+                1F「品質管理室」に着いたら、下のボタンを押してください。
               </div>
             </div>
           )}
@@ -199,8 +198,7 @@ export const PhasePreshow: React.FC<PhasePreshowProps> = ({
               boxShadow: '0 0 14px rgba(27, 94, 32, 0.5)',
             }}
           >
-            <span className="inline-block">品質管理室に到着した</span>{' '}
-            <span className="inline-block">[到着確認] -&gt;</span>
+            <span className="inline-block">品質管理室に到着した</span>
           </button>
         </div>
       )}

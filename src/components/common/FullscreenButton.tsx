@@ -6,9 +6,13 @@ import { requestFullscreenSafe, exitFullscreenSafe, isFullscreenActive } from '.
 
 interface FullscreenButtonProps {
   className?: string;
+  variant?: 'default' | 'visitor';
 }
 
-export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = '' }) => {
+export const FullscreenButton: React.FC<FullscreenButtonProps> = ({
+  className = '',
+  variant = 'default',
+}) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -39,9 +43,15 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
     <button
       onClick={toggleFullscreen}
       className={`win95-btn ${className}`}
-      title="全画面表示切替"
+      title={variant === 'visitor' ? '画面表示を切り替える' : '全画面表示切替'}
     >
-      {isFullscreen ? '[通常表示]' : '[全画面]'}
+      {variant === 'visitor'
+        ? isFullscreen
+          ? '元の表示に戻す'
+          : '全画面で見る'
+        : isFullscreen
+        ? '[通常表示]'
+        : '[全画面]'}
     </button>
   );
 };

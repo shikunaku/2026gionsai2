@@ -41,26 +41,43 @@ const GLITCH_CLASS: Record<string, string> = {
   signalLoss: 'glitch-signalLoss',
 };
 
+const PHASE_LABEL: Partial<Record<DevicePhase, string>> = {
+  STANDBY: '開始前',
+  preshow: '案内映像',
+  quality_control: '品質管理室',
+  AREA_1_PHOTO: '品質管理室',
+  elevator: 'エレベーター',
+  ELEVATOR: 'エレベーター',
+  manufacturing_line: '第零製造ライン',
+  AREA_2_CONVEYOR: '第零製造ライン',
+  monitor_room: 'モニター室',
+  AREA_3_VIDEO: 'モニター室',
+  escape: '緊急脱出',
+  PANIC_ESCAPE: '緊急脱出',
+  return: '体験終了',
+  RETURN: '体験終了',
+};
+
 const createInitialTasks = (): InspectionTask[] => [
   {
     id: 1,
-    title: '社員証の撮影１',
+    title: '社員証No.404の撮影',
     location: '1F 品質管理室',
-    targetDescription: '業務開始時に通達されたNoの社員証を見つけて撮影し送信してください。',
+    targetDescription: '社員No.404の社員証を探し、全体がはっきり写るように撮影してください。',
     status: 'UNINSPECTED',
   },
   {
     id: 2,
-    title: '社員証の撮影２',
+    title: '社員証No.87の撮影',
     location: '1F 品質管理室',
-    targetDescription: '業務開始時に通達されたNoの社員証を見つけて撮影し送信してください。',
+    targetDescription: '社員No.87の社員証を探し、全体がはっきり写るように撮影してください。',
     status: 'UNINSPECTED',
   },
   {
     id: 3,
-    title: '当時に発刊された新聞の撮影',
+    title: '事件当時の新聞を撮影',
     location: '1F 品質管理室',
-    targetDescription: '事件が起きた当時に発刊された新聞を撮影し送信してください。',
+    targetDescription: '事件当時の新聞を探し、紙面全体がはっきり写るように撮影してください。',
     status: 'UNINSPECTED',
   },
 ];
@@ -466,7 +483,7 @@ function ClientContent() {
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        throw new Error(result.error || '写真のアップロードに失敗しました');
+        throw new Error(result.error || '写真を送信できませんでした。もう一度お試しください。');
       }
     } catch (error) {
       if (taskId === 10) {
@@ -511,6 +528,7 @@ function ClientContent() {
         isOnline={isOnline}
         reconnectAttempts={reconnectAttempts}
         onManualReconnect={manualReconnect}
+        variant="visitor"
       />
 
       <div
@@ -527,15 +545,15 @@ function ClientContent() {
         <header className="win95-titlebar client-header">
           <div className="client-header-group">
             <span className={`client-link-dot${connected ? ' online' : ''}`} />
-            <strong className="client-device-id">PDA-ID: {isClientMounted ? deviceId : '----'}</strong>
+            <strong className="client-device-id">端末番号: {isClientMounted ? deviceId : '----'}</strong>
           </div>
 
           <div className="client-header-group">
             <span className="client-battery">
-              {charging ? '[CHG]' : '[バッテリー残量]'} {batteryLevel}%
+              {charging ? '[充電中]' : '[バッテリー]'} {batteryLevel}%
             </span>
 
-            <FullscreenButton className="client-fs-btn" />
+            <FullscreenButton className="client-fs-btn" variant="visitor" />
           </div>
         </header>
 
@@ -672,10 +690,10 @@ function ClientContent() {
         {/* Retro Industrial Statusbar at Bottom */}
         <footer className="win95-statusbar client-footer">
           <div className="win95-statusbar-item client-footer-link">
-            {connected ? 'LINK: ONLINE' : 'LINK: OFFLINE'} | PDA-OS v3.84
+            {connected ? '通信: 接続中' : '通信: 切断'} | 点検用端末
           </div>
           <div className="win95-statusbar-item client-footer-phase">
-            [{phase}]
+            [{PHASE_LABEL[phase] ?? '案内中'}]
           </div>
         </footer>
       </div>
@@ -685,7 +703,7 @@ function ClientContent() {
 
 export default function ClientPage() {
   return (
-    <Suspense fallback={<div className="client-loading">Loading PDA Terminal...</div>}>
+    <Suspense fallback={<div className="client-loading">画面を準備しています...</div>}>
       <ClientContent />
     </Suspense>
   );

@@ -48,19 +48,19 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
           className="win95-titlebar"
           style={{ background: 'linear-gradient(90deg, #1f2429, #37474f)' }}
         >
-          <span>1F ➔ B1F へエレベータを使って降下</span>
-          <span className="phase-init-title-tag">ID: {deviceId}</span>
+          <span>エレベーターでB1Fへ移動</span>
+          <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>
-        <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          全員乗車後、扉を閉鎖してエレベーター降下を開始してください。
+        <div style={{ padding: '8px', fontSize: '14px', color: '#27292e', lineHeight: 1.5 }}>
+          全員が乗ったことを確認してから、地下へ移動してください。
         </div>
       </div>
 
       {/* Main Power Switch Box */}
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: powerOn ? '#2e7d32' : '#c62828' }}>
-          <span>ダイアログ</span>
-          <span>{powerOn ? '[通電中]' : '[主電源遮断]'}</span>
+          <span>到着確認</span>
+          <span>{powerOn ? '[到着済み]' : '[移動中]'}</span>
         </div>
         <div style={{ padding: '14px', textAlign: 'center' }}>
           <button
@@ -77,7 +77,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
               boxShadow: powerOn ? '0 0 10px rgba(46, 125, 50, 0.4)' : 'none',
             }}
           >
-            {powerOn ? '到着！' : '到着した？'}
+            {powerOn ? 'エレベーターに到着しました' : 'エレベーターに到着した'}
           </button>
         </div>
       </div>
@@ -86,12 +86,12 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
       <div className="win95-window">
         <div className="win95-titlebar" style={{ background: '#263238' }}>
           <span>ステータス</span>
-          <span>[{isArrivedB1 ? 'B1F 到着' : isMoving ? '降下中...' : '1F 待機'}]</span>
+          <span>[{isArrivedB1 ? 'B1Fに到着' : isMoving ? '地下へ移動中...' : '1Fで待機'}]</span>
         </div>
         <div style={{ padding: '18px 16px', textAlign: 'center' }}>
           {!powerOn ? (
             <div style={{ color: '#d32f2f', fontWeight: 'bold', fontSize: '14px' }}>
-              到着したら上のボタンを押して電源を投入してください。
+              エレベーターに着いたら、上のボタンを押してください。
             </div>
           ) : !sequenceStarted && !isArrivedB1 ? (
             <div>
@@ -104,7 +104,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                   marginBottom: '12px',
                 }}
               >
-                安全を確認してから「降下開始」を押してください。
+                全員が乗ったら「地下へ移動する」を押してください。
               </div>
 
               <button
@@ -121,8 +121,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                   letterSpacing: '1px',
                 }}
               >
-                <span className="inline-block">▼ 降下シーケンス開始</span>{' '}
-                <span className="inline-block">(扉閉鎖・降下)</span>
+                <span className="inline-block">地下へ移動する</span>
               </button>
             </div>
           ) : isMoving || (sequenceStarted && !isArrivedB1) ? (
@@ -136,7 +135,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                   animation: 'pulse 1s infinite alternate',
                 }}
               >
-                降下中... (照明異常・振動発生中)
+                地下へ移動中...（照明と振動にご注意ください）
               </div>
               <div
                 className="win95-inset-dark"
@@ -164,9 +163,9 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
                   marginBottom: '10px',
                 }}
               >
-                B1F (第零製造ライン) に到着しました。
+                B1Fに到着しました。
               </div>
-              <div style={{ fontSize: '12px', color: '#555', marginBottom: '14px' }}>
+              <div style={{ fontSize: '14px', color: '#555', marginBottom: '14px', lineHeight: 1.5 }}>
                 足元に注意して「第零製造ライン」へ移動してください。
               </div>
             </div>
@@ -190,7 +189,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
               boxShadow: '0 0 12px rgba(27, 94, 32, 0.5)',
             }}
           >
-            <span className="inline-block">第零製造ラインへ進む -&gt;</span>
+            <span className="inline-block">第零製造ラインへ向かう</span>
           </button>
         </div>
       )}

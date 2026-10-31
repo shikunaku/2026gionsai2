@@ -33,8 +33,8 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}
           >
-            <span>モニター室 (移動中)</span>
-            <span className="phase-init-title-tag">ID: {deviceId}</span>
+            <span>モニター室へ移動</span>
+            <span className="phase-init-title-tag">端末 {deviceId}</span>
           </div>
           <div style={{ padding: '18px 16px', textAlign: 'center' }}>
             <div
@@ -46,20 +46,20 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 marginBottom: '12px',
               }}
             >
-              奥の「モニター室」へ駆け込んでください！
+              モニター室へ逃げてください！
             </div>
             <div
               className="win95-inset"
               style={{
                 padding: '12px',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: '#333',
                 lineHeight: '1.6',
                 marginBottom: '20px',
                 textAlign: 'left',
               }}
             >
-              製造ラインを抜けて「モニター室」へ全員入室後、下の【到着】ボタンを押してください。最終演出（大型プロジェクター映像）が始まります。
+              全員がモニター室に入ったら、下のボタンを押してください。スクリーンに映像が流れます。
             </div>
 
             <button
@@ -75,7 +75,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 boxShadow: '0 0 14px rgba(106, 27, 154, 0.5)',
               }}
             >
-              モニター室に到着した [最終演出へ]
+              モニター室に到着した
             </button>
           </div>
         </div>
@@ -101,12 +101,12 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
         >
           <span>
             {panicActive
-              ? '[緊急事態発令] 出口へ逃走せよ！'
+              ? '[緊急] 会場の外へ逃げてください！'
               : videoEnded
-              ? 'モニター室 - CCTV監視カメラ受信中'
-              : 'モニター室 - 最終アーカイブ映像'}
+              ? 'モニター室 - スクリーンを確認'
+              : 'モニター室 - 最終映像'}
           </span>
-          <span className="phase-init-title-tag">ID: {deviceId}</span>
+          <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>
       </div>
 
@@ -123,8 +123,8 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
             {panicActive
               ? '【怪異侵入・キャスト突入】'
               : videoEnded
-              ? '【CCTV監視カメラ映像 放映中】'
-              : '【プロジェクター上映】'}
+              ? '【スクリーンに映像を表示中】'
+              : '【最終映像を再生】'}
           </span>
         </div>
 
@@ -141,10 +141,10 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 }}
               >
                 {videoEnded
-                  ? '大型スクリーンに監視カメラ（CCTV）の生映像が映し出されています。画面を注視してください…'
+                  ? '大型スクリーンに映像が流れています。スクリーンをご覧ください。'
                   : videoPlaying
-                  ? '大型スクリーンにて最終映像を上映中...'
-                  : 'モニター室の大型プロジェクターで最終記録を再生してください'}
+                  ? '大型スクリーンで最終映像を上映しています。'
+                  : '準備ができたら、最終映像を再生してください。'}
               </div>
 
               {!videoPlaying && !videoEnded && (
@@ -161,8 +161,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                     marginBottom: '14px',
                   }}
                 >
-                  <span className="inline-block">▶ 最終映像を</span>{' '}
-                  <span className="inline-block">再生する</span>
+                  <span className="inline-block">最終映像を再生する</span>
                 </button>
               )}
 
@@ -179,14 +178,14 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                 <div>
                   [STATUS]{' '}
                   {videoEnded
-                    ? 'CCTV監視映像中継中（異常発生を警戒中）'
-                    : 'プロジェクター (/display/video) 映像同期中'}
+                    ? 'スクリーンに映像を表示中'
+                    : 'スクリーンの映像を準備中'}
                 </div>
                 <div>
                   [NOTICE]{' '}
                   {videoEnded
-                    ? '施設内の異変および緊急指示に備えて待機してください'
-                    : '映像終盤、現場照明オフおよび異変の発生にご注意ください'}
+                    ? '次の案内が表示されるまで、その場でお待ちください'
+                    : '映像が終わるまでスクリーンをご覧ください'}
                 </div>
               </div>
             </div>
@@ -203,9 +202,9 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                   animation: 'pulse 0.6s infinite alternate',
                 }}
               >
-                出口へ逃げろ！！
+                会場の外へ逃げてください！
                 <br />
-                扉から脱出してください！
+                近くの出口から外へ出てください。
               </div>
 
               <div
@@ -240,8 +239,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
                   boxShadow: '0 0 20px rgba(213, 0, 0, 0.8)',
                 }}
               >
-                <span className="inline-block">脱出成功</span>{' '}
-                <span className="inline-block">(受付へ退避完了) -&gt;</span>
+                <span className="inline-block">会場の外へ出た</span>
               </button>
             </div>
           )}

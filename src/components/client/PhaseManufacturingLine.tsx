@@ -48,7 +48,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
       await onPhotoSubmit(10, 'ベルトコンベア稼働部および搬送パレット', compressedImage);
     } catch (err) {
       console.error('Photo processing error:', err);
-      window.alert(err instanceof Error ? err.message : '写真の送信に失敗しました');
+      window.alert(err instanceof Error ? err.message : '写真を送信できませんでした。もう一度お試しください。');
     } finally {
       setIsProcessing(false);
       e.target.value = '';
@@ -64,8 +64,8 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
           >
-            <span>第零製造ライン (移動中)</span>
-            <span className="phase-init-title-tag">ID: {deviceId}</span>
+            <span>第零製造ラインへ移動</span>
+            <span className="phase-init-title-tag">端末 {deviceId}</span>
           </div>
           <div style={{ padding: '18px 16px', textAlign: 'center' }}>
             <div
@@ -83,14 +83,14 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
               className="win95-inset"
               style={{
                 padding: '12px',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: '#333',
                 lineHeight: '1.6',
                 marginBottom: '20px',
                 textAlign: 'left',
               }}
             >
-              エレベーターを出て直進し、B1F「第零製造ライン」に到着したら下の【到着】ボタンを押してください。ベルトコンベアギミックが自動起動します。
+              エレベーターを出て直進してください。到着後に下のボタンを押すと、ベルトコンベアが動きます。
             </div>
 
             <button
@@ -106,7 +106,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                 boxShadow: '0 0 14px rgba(27, 94, 32, 0.4)',
               }}
             >
-              製造ラインに到着した [ギミック起動]
+              第零製造ラインに到着した
             </button>
           </div>
         </div>
@@ -123,11 +123,11 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
           className="win95-titlebar"
           style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
         >
-          <span>第零製造ライン - ベルトコンベア点検</span>
-          <span className="phase-init-title-tag">ID: {deviceId}</span>
+          <span>第零製造ライン - コンベアを撮影</span>
+          <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>
-        <div style={{ padding: '8px', fontSize: '11px', color: '#27292e' }}>
-          稼働中のベルトコンベア周辺の安全を確認し、指定箇所を撮影して本部へ送信してください。
+        <div style={{ padding: '8px', fontSize: '14px', color: '#27292e', lineHeight: 1.5 }}>
+          周囲の安全を確認してから、ベルトコンベアを撮影してください。
         </div>
       </div>
 
@@ -140,40 +140,43 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
             color: '#fff',
           }}
         >
-          <span>{photoApproved ? '[緊急警告] 現場異常発生' : '[点検対象] ベルトコンベア撮影'}</span>
+          <span>{photoApproved ? '[緊急警告] 現場異常発生' : 'ベルトコンベアを撮影'}</span>
           <span>
             {photoApproved
-              ? '[承認済 - パニック]'
+              ? '[異常発生]'
               : photoStatus === 'PENDING'
-              ? '[管理PC審査中]'
-              : '[撮影指示]'}
+              ? '[写真を確認中]'
+              : '[撮影前]'}
           </span>
         </div>
 
         <div style={{ padding: '16px' }}>
           {!photoApproved ? (
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>
-                点検対象: ベルトコンベア全体像
+              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                撮るもの: ベルトコンベア全体
+                <div className="client-camera-target-guide">
+                  下の「カメラを開いて撮影する」ボタンを押してください。撮影した写真は自動でスタッフへ送られます。
+                </div>
               </div>
               <div
                 className="win95-inset"
                 style={{
                   padding: '10px',
-                  fontSize: '11px',
+                  fontSize: '14px',
                   color: '#444',
                   lineHeight: '1.6',
                   marginBottom: '12px',
                 }}
               >
-                自動起動したコンベアの搬送面をカメラで撮影し、異物の混入や部品の欠落がないか記録してください。
+                ベルトと搬送部分の全体が、明るくはっきり写るように撮影してください。
               </div>
 
               {photoStatus === 'PENDING' && (
                 <div
                   style={{
                     padding: '8px',
-                    fontSize: '12px',
+                    fontSize: '13px',
                     backgroundColor: '#fff9c4',
                     color: '#f57f17',
                     border: '1px solid #fbc02d',
@@ -182,7 +185,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                     fontWeight: 'bold',
                   }}
                 >
-                  写真を本部へ送信しました。確認・承認までその場でお待ちください...
+                  スタッフが写真を確認しています。そのままお待ちください。
                 </div>
               )}
 
@@ -190,7 +193,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                 <div
                   style={{
                     padding: '8px',
-                    fontSize: '11px',
+                    fontSize: '13px',
                     backgroundColor: '#ffebee',
                     color: '#c62828',
                     border: '1px solid #ef9a9a',
@@ -198,7 +201,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                     textAlign: 'center',
                   }}
                 >
-                  写真が差戻されました。再度鮮明に撮影してください。
+                  写真を確認できませんでした。明るい場所でもう一度撮影してください。
                 </div>
               )}
 
@@ -227,16 +230,11 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                 }}
               >
                 {isProcessing ? (
-                  '写真送信処理中...'
+                  '写真を送信しています...'
                 ) : photoStatus === 'PENDING' ? (
-                  <>
-                    <span className="inline-block">再撮影して再送信</span>{' '}
-                    <span className="inline-block">[上書き]</span>
-                  </>
+                  <span className="inline-block">カメラを開いて撮り直す</span>
                 ) : (
-                  <>
-                    <span className="inline-block">ベルトコンベアを撮影して送信</span>{' '}
-                  </>
+                  <span className="inline-block">カメラを開いて撮影する</span>
                 )}
               </button>
             </div>
@@ -253,9 +251,9 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                   animation: 'pulse 0.8s infinite alternate',
                 }}
               >
-                生首ギミック作動！
+                異常発生！
                 <br />
-                直ちに逃げてください！
+                モニター室へ逃げてください！
               </div>
 
               <div
@@ -290,7 +288,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
                   boxShadow: '0 0 16px rgba(213, 0, 0, 0.7)',
                 }}
               >
-                <span className="inline-block">モニター室へ逃げる -&gt;</span>
+                <span className="inline-block">モニター室へ向かう</span>
               </button>
             </div>
           )}

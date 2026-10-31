@@ -26,22 +26,14 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
   playShutterSound,
   onPhotoTaken,
 }) => {
-  const [selectedTaskId, setSelectedTaskId] = useState<number>(tasks[0]?.id || 1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 承認されたら自動で次の未承認タスクを選択
-  React.useEffect(() => {
-    const current = tasks.find((t) => t.id === selectedTaskId);
-    if (current && current.status === 'APPROVED') {
-      const nextUnapproved = tasks.find((t) => t.status !== 'APPROVED');
-      if (nextUnapproved) {
-        setSelectedTaskId(nextUnapproved.id);
-      }
-    }
-  }, [tasks, selectedTaskId]);
-
-  const currentTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
+  const allApproved = tasks.length > 0 && tasks.every((task) => task.status === 'APPROVED');
+  const firstIncompleteIndex = tasks.findIndex((task) => task.status !== 'APPROVED');
+  const activeTaskIndex = firstIncompleteIndex >= 0 ? firstIncompleteIndex : tasks.length - 1;
+  const currentTask = tasks[activeTaskIndex] || tasks[0];
+  const progressNumber = allApproved ? tasks.length : activeTaskIndex + 1;
 
   const handleCaptureClick = () => {
     if (fileInputRef.current) {
@@ -62,32 +54,33 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
       await onPhotoSubmit(currentTask.id, currentTask.title, compressedImage);
     } catch (err) {
       console.error('Photo processing error:', err);
-      window.alert(err instanceof Error ? err.message : '写真の送信に失敗しました');
+      window.alert(err instanceof Error ? err.message : '写真を送信できませんでした。もう一度お試しください。');
     } finally {
       setIsProcessing(false);
       e.target.value = '';
     }
   };
 
-  const getStatusBadge = (status: ReviewStatus) => {
+  const getTaskbarStatus = (status: ReviewStatus, index: number) => {
+    if (status === 'APPROVED') {
+      return { label: '完了', className: 'complete' };
+    }
+
+    if (index !== activeTaskIndex) {
+      return { label: '待機', className: 'waiting' };
+    }
+
     switch (status) {
-      case 'UNINSPECTED':
-        return <span className="zone1-badge idle">[未撮影]</span>;
       case 'SUBMITTING':
-        return <span className="zone1-badge submitting">[送信中]</span>;
+        return { label: '送信中', className: 'reviewing' };
       case 'PENDING':
-        return <span className="zone1-badge pending">[審査待ち]</span>;
-      case 'APPROVED':
-        return <span className="zone1-badge approved">[承認 合格]</span>;
+        return { label: '確認中', className: 'reviewing' };
       case 'REJECTED':
-        return <span className="zone1-badge rejected">[要再撮影]</span>;
+        return { label: '要再撮影', className: 'rejected' };
       default:
-        return <span className="zone1-badge idle">[未撮影]</span>;
+        return { label: '現在', className: 'current' };
     }
   };
-
-  const allApproved = tasks.length > 0 && tasks.every((t) => t.status === 'APPROVED');
-  const isCurrentApproved = currentTask.status === 'APPROVED';
 
   // 到着前の状態：到着ボタンを表示
   if (!arrived) {
@@ -98,8 +91,8 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
             className="win95-titlebar"
             style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
           >
-            <span>品質管理室 (移動中)</span>
-            <span className="phase-init-title-tag">ID: {deviceId}</span>
+            <span>品質管理室へ移動</span>
+            <span className="phase-init-title-tag">端末 {deviceId}</span>
           </div>
           <div style={{ padding: '16px', textAlign: 'center' }}>
             <div
@@ -117,14 +110,14 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
               className="win95-inset"
               style={{
                 padding: '12px',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: '#333',
                 lineHeight: '1.6',
                 marginBottom: '20px',
                 textAlign: 'left',
               }}
             >
-              通路を進み、1F「品質管理室」に入室したら下のボタンを押して点検を開始してください。
+              品質管理室に入ったら、下のボタンを押してください。
             </div>
 
             <button
@@ -140,7 +133,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 boxShadow: '0 0 12px rgba(27, 94, 32, 0.4)',
               }}
             >
-              <span className="inline-block">品質管理室に到着し、業務を開始する</span>{' '}
+              <span className="inline-block">品質管理室に到着した</span>{' '}
             </button>
           </div>
         </div>
@@ -151,27 +144,29 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
   // 到着後の撮影ミッション
   return (
     <div className="phase-zone1 phase-container">
-      {/* Task List Window */}
+      {/* Automatic task progress bar */}
       <div className="win95-window">
         <div className="win95-titlebar zone1-titlebar">
-          <span className="zone1-titlebar-text">品質管理室 - 指定資料撮影点検</span>
-          <span className="zone1-titlebar-tag">ID: {deviceId}</span>
+          <span className="zone1-titlebar-text">品質管理室 - 資料を撮影</span>
+          <span className="zone1-titlebar-tag">端末 {deviceId}</span>
         </div>
-        <div className="zone1-task-list-body">
-          <div className="zone1-task-list">
-            {tasks.map((task) => {
-              const isSelected = task.id === selectedTaskId;
+        <div className="zone1-task-progress-body">
+          <div className="zone1-task-progress-heading">
+            点検進行 {progressNumber} / {tasks.length}
+          </div>
+          <div className="zone1-task-progress" role="list" aria-label="撮影タスクの進行状況">
+            {tasks.map((task, index) => {
+              const status = getTaskbarStatus(task.status, index);
+              const isCurrent = !allApproved && index === activeTaskIndex;
               return (
                 <div
                   key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  className={`win95-btn zone1-task-item${isSelected ? ' active selected' : ''}`}
+                  role="listitem"
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={`zone1-progress-item ${status.className}`}
                 >
-                  <div className="zone1-task-label">
-                    <span className="zone1-task-id">#{task.id}</span>
-                    <span>{task.title}</span>
-                  </div>
-                  <div className="zone1-task-status">{getStatusBadge(task.status)}</div>
+                  <span className="zone1-progress-task">TASK {String(index + 1).padStart(2, '0')}</span>
+                  <span className="zone1-progress-status">{status.label}</span>
                 </div>
               );
             })}
@@ -180,78 +175,78 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
       </div>
 
       {/* Selected Task Details & Immediate Camera Action */}
-      <div className="win95-window zone1-detail-window">
-        <div className="win95-titlebar zone1-titlebar zone1-titlebar-detail">
-          <span className="zone1-titlebar-text">
-            資料撮影: #{currentTask.id} {currentTask.title}
-          </span>
-        </div>
-        <div className="zone1-detail-body">
-          <div className="zone1-location">
-            <strong>場所:</strong> {currentTask.location}
+      {!allApproved && (
+        <div className="win95-window zone1-detail-window">
+          <div className="win95-titlebar zone1-titlebar zone1-titlebar-detail">
+            <span className="zone1-titlebar-text">現在の撮影タスク</span>
           </div>
-          <div className="win95-inset zone1-description">{currentTask.targetDescription}</div>
-
-          {currentTask.status === 'REJECTED' && (
-            <div className="zone1-reject-banner">
-              [差戻し理由] {currentTask.rejectionReason || '不鮮明または指定資料と異なります。再撮影してください。'}
+          <div className="zone1-detail-body">
+            <div className="zone1-target-card">
+              <div className="zone1-target-label">撮影するもの</div>
+              <div className="zone1-target-value">{currentTask.title}</div>
+              <div className="client-camera-target-guide">
+                下の「カメラを開いて撮影する」ボタンを押してください。撮影した写真は自動でスタッフへ送られます。
+              </div>
             </div>
-          )}
-
-          {currentTask.status === 'PENDING' && (
-            <div
-              style={{
-                padding: '8px',
-                fontSize: '11px',
-                backgroundColor: '#fff9c4',
-                color: '#f57f17',
-                border: '1px solid #fbc02d',
-                marginBottom: '8px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-              }}
-            >
-              本部が管理画面で写真を確認・審査中です。お待ちください...
+            <div className="zone1-location">
+              <strong>撮影場所:</strong> {currentTask.location}
             </div>
-          )}
+            <div className="win95-inset zone1-description">{currentTask.targetDescription}</div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="zone1-file-input"
-            onChange={handleFileChange}
-          />
-
-          <button
-            onClick={handleCaptureClick}
-            disabled={isProcessing || isCurrentApproved}
-            className={`win95-btn zone1-capture-btn btn-natural-wrap break-keep leading-snug${isCurrentApproved ? ' approved' : ''}`}
-          >
-            {isProcessing ? (
-              '写真圧縮・本部へ送信中...'
-            ) : isCurrentApproved ? (
-              <span className="inline-block">点検完了 [本部承認済]</span>
-            ) : currentTask.status === 'PENDING' ? (
-              <>
-                <span className="inline-block">再撮影して再提出</span>{' '}
-                <span className="inline-block">[審査待ち上書き]</span>
-              </>
-            ) : (
-              <>
-                <span className="inline-block">指定資料を撮影して送信</span>{' '}
-              </>
+            {currentTask.status === 'REJECTED' && (
+              <div className="zone1-reject-banner">
+                [撮り直してください] {currentTask.rejectionReason || '写真が不鮮明か、指定された資料と異なります。'}
+              </div>
             )}
-          </button>
+
+            {currentTask.status === 'PENDING' && (
+              <div
+                style={{
+                  padding: '8px',
+                  fontSize: '13px',
+                  backgroundColor: '#fff9c4',
+                  color: '#f57f17',
+                  border: '1px solid #fbc02d',
+                  marginBottom: '8px',
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                }}
+              >
+                スタッフが写真を確認しています。そのままお待ちください。
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="zone1-file-input"
+              onChange={handleFileChange}
+            />
+
+            <button
+              onClick={handleCaptureClick}
+              disabled={isProcessing}
+              className="win95-btn zone1-capture-btn btn-natural-wrap break-keep leading-snug"
+            >
+              {isProcessing ? (
+                '写真を送信しています...'
+              ) : currentTask.status === 'PENDING' ? (
+                <span className="inline-block">カメラを開いて撮り直す</span>
+              ) : (
+                <span className="inline-block">カメラを開いて撮影する</span>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 全点検承認後：エレベーターへの移動指示表示 */}
       {allApproved && (
         <div className="win95-window" style={{ border: '2px solid #2e7d32', backgroundColor: '#e8f5e9' }}>
           <div className="win95-titlebar" style={{ background: '#2e7d32', color: '#fff' }}>
-            <span>[点検完了] エレベーターへの移動指示</span>
+            <span>品質管理室の点検完了</span>
           </div>
           <div style={{ padding: '14px', textAlign: 'center' }}>
             <div
@@ -263,9 +258,9 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
                 marginBottom: '10px',
               }}
             >
-              品質管理室の全点検が承認されました。
+              すべての写真を確認しました。
               <br />
-              地下へ向かうため、エレベーターへ移動を開始してください。
+              エレベーターへ向かってください。
             </div>
             <button
               onClick={onProceedElevator}

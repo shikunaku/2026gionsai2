@@ -18,6 +18,8 @@ export interface ReconnectingModalProps {
   reconnectAttempts: number;
   /** 手動で即座に再接続をトリガーするコールバック */
   onManualReconnect: () => void;
+  /** 表示する文言の種類。visitor は来場者向けの平易な案内 */
+  variant?: 'default' | 'visitor';
 }
 
 export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
@@ -25,6 +27,7 @@ export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
   isOnline,
   reconnectAttempts,
   onManualReconnect,
+  variant = 'default',
 }) => {
   const [isMounted, setIsMounted] = React.useState(false);
 
@@ -92,7 +95,11 @@ export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
             textTransform: 'uppercase',
           }}
         >
-          {!isOnline ? 'NETWORK OFFLINE' : 'SIGNAL LOST'}
+          {variant === 'visitor'
+            ? '通信が切れました'
+            : !isOnline
+            ? 'NETWORK OFFLINE'
+            : 'SIGNAL LOST'}
         </h2>
 
         {/* 状況メッセージ */}
@@ -104,7 +111,11 @@ export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
             margin: '0 0 16px',
           }}
         >
-          {!isOnline
+          {variant === 'visitor'
+            ? !isOnline
+              ? 'ネットワークに接続できません。スタッフにお知らせください。'
+              : '自動で再接続しています。そのままお待ちください。'
+            : !isOnline
             ? '端末のWi-Fi/LAN通信が切断されています。ネットワーク接続を確認してください。'
             : '中央管理サーバーとのリンクが途絶しました。バックグラウンドで自動再接続を試みています...'}
         </p>
@@ -123,7 +134,8 @@ export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
               marginBottom: '20px',
             }}
           >
-            再試行回数: <span style={{ fontWeight: 'bold' }}>#{reconnectAttempts}</span>
+            {variant === 'visitor' ? '再接続を試した回数' : '再試行回数'}:{' '}
+            <span style={{ fontWeight: 'bold' }}>#{reconnectAttempts}</span>
           </div>
         )}
 
@@ -147,7 +159,7 @@ export const ReconnectingModal: React.FC<ReconnectingModalProps> = ({
             onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
             onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            今すぐ再接続を試行
+            {variant === 'visitor' ? 'もう一度接続する' : '今すぐ再接続を試行'}
           </button>
         </div>
       </div>

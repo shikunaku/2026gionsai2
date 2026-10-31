@@ -43,13 +43,13 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
       {/* Header Window */}
       <div className="win95-window phase-init-window">
         <div className="win95-titlebar phase-init-titlebar">
-          <span className="phase-init-title-text">[端末OS v3.84] 保守端末初期設定</span>
-          <span className="phase-init-title-tag">[待機]</span>
+          <span className="phase-init-title-text">点検用端末の準備</span>
+          <span className="phase-init-title-tag">[開始前]</span>
         </div>
         <div className="phase-init-id-panel">
           <div className="phase-init-id-row">
             <div className="phase-init-id-field">
-              <span className="phase-init-id-label">端末ID:</span>
+              <span className="phase-init-id-label">端末番号:</span>
               <input
                 type="text"
                 value={deviceId}
@@ -58,7 +58,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
                 className="win95-inset phase-init-id-input"
               />
             </div>
-            <span className="phase-init-id-hint">自動割当済</span>
+            <span className="phase-init-id-hint">自動設定済み</span>
           </div>
         </div>
       </div>
@@ -66,17 +66,16 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
       {/* Safety Notice Box */}
       <div className="win95-window phase-init-window phase-init-notice">
         <div className="win95-titlebar phase-init-titlebar-warn">
-          <span>[重要規定] 巡視保守業務 安全規定</span>
+          <span>体験前の注意</span>
         </div>
         <div className="win95-inset-dark phase-init-rules">
-          <p className="phase-init-rules-heading">[保安注意事項]</p>
-          <p className="rule">1. 本端末は第零製造区画の巡視保守用専用端末です。</p>
-          <p className="rule">2. 各エリアで指示された点検内容に従ってください。</p>
-          <p className="rule">3. 異常振動・異音・照明明滅の可能性があります。</p>
-          <p className="rule">4. 業務中は画面から目を離さず、必ず管理者の指示に従ってください。</p>
+          <p className="phase-init-rules-heading">始める前に確認してください</p>
+          <p className="rule">1. 画面とスタッフの案内に沿って進んでください。</p>
+          <p className="rule">2. 体験中に大きな音、振動、光の点滅があります。</p>
+          <p className="rule">3. 気分が悪くなったときは、すぐにスタッフへお知らせください。</p>
+          <p className="rule">4. 周囲と足元に注意して移動してください。</p>
           <div className="phase-init-rules-note">
-            <p>※ 業務に伴い、端末の音声出力・背面ライト・画面振動が自動連動します。</p>
-            <p>※ なお、点検業務中における貴殿の損失に関しては負いかねますのでご了承ください。</p>
+            <p>※ 体験に合わせて、端末の音・ライト・振動が自動で作動します。</p>
           </div>
         </div>
 
@@ -88,7 +87,7 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
             />
-            <span>上記安全規定に同意する</span>
+            <span>注意事項を確認しました</span>
           </label>
         </div>
       </div>
@@ -101,10 +100,10 @@ export const PhaseInit: React.FC<PhaseInitProps> = ({
           className={`win95-btn phase-start-btn btn-natural-wrap break-keep leading-snug${agreed ? ' agreed' : ''}`}
         >
           {isStarting ? (
-            'システム初期化中...'
+            '画面を準備しています...'
           ) : (
             <>
-              <span className="inline-block">同意して点検を開始</span>{' '}
+              <span className="inline-block">体験を開始する</span>{' '}
             </>
           )}
         </button>
