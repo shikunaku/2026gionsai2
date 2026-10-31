@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { InspectionTask, ReviewStatus } from '../../lib/types';
+import { compressPhotoToJpeg } from '../../lib/photoCompression';
 import '../../styles/client.css';
 
 interface PhaseQualityControlProps {
@@ -9,7 +10,7 @@ interface PhaseQualityControlProps {
   tasks: InspectionTask[];
   arrived: boolean;
   onArrive: () => void;
-  onPhotoSubmit: (taskId: number, taskTitle: string, imageBase64: string) => void;
+  onPhotoSubmit: (taskId: number, taskTitle: string, image: Blob) => Promise<void>;
   onProceedElevator: () => void;
   playShutterSound?: () => void;
   onPhotoTaken?: () => void;
@@ -56,48 +57,16 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
     if (playShutterSound) playShutterSound();
 
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 800;
-
-          if (width > height) {
-            if (width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            }
-          } else {
-            if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-            onPhotoSubmit(currentTask.id, currentTask.title, compressedBase64);
-            if (onPhotoTaken) onPhotoTaken();
-          }
-          setIsProcessing(false);
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      const compressedImage = await compressPhotoToJpeg(file);
+      onPhotoTaken?.();
+      await onPhotoSubmit(currentTask.id, currentTask.title, compressedImage);
     } catch (err) {
       console.error('Photo processing error:', err);
+      window.alert(err instanceof Error ? err.message : '写真の送信に失敗しました');
+    } finally {
       setIsProcessing(false);
+      e.target.value = '';
     }
-
-    if (onPhotoTaken) onPhotoTaken();
-    e.target.value = '';
   };
 
   const getStatusBadge = (status: ReviewStatus) => {

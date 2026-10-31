@@ -31,7 +31,6 @@ export interface UseSocketReturn {
  */
 export function useSocket(): UseSocketReturn {
   const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
-  const hasDisconnectedRef = useRef<boolean>(false);
   const [connected, setConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
@@ -102,7 +101,6 @@ export function useSocket(): UseSocketReturn {
     socket.on('disconnect', (reason) => {
       console.warn('[Socket] Disconnected:', reason);
       setConnected(false);
-      hasDisconnectedRef.current = true;
       // 意図的な切断以外は再接続待機状態へ遷移
       if (reason !== 'io client disconnect') {
         setIsReconnecting(true);
@@ -125,17 +123,6 @@ export function useSocket(): UseSocketReturn {
       setConnected(true);
       setIsReconnecting(false);
       setReconnectAttempts(0);
-      // If reconnection follows a prior disconnect, reload non-excluded pages
-      if (hasDisconnectedRef.current) {
-        const path = window.location.pathname;
-        const isClientPage = path.startsWith('/client');
-        const isCCTVPage = path.startsWith('/admin/cctv');
-        if (!isClientPage && !isCCTVPage) {
-          console.log('[Socket] Reloading page after reconnection to sync state');
-          window.location.reload();
-        }
-        hasDisconnectedRef.current = false;
-      }
     });
 
     socket.on('connect_error', (error) => {

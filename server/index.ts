@@ -10,6 +10,7 @@ import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import next from 'next';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors';
@@ -41,8 +42,8 @@ export const EFFECT_TIMINGS = {
   ELEVATOR_ARRIVAL_GLITCH_DURATION_MS: 1200,
   /** デフォルトのエレベータ単発グリッチ時間 (1.5秒) */
   ELEVATOR_DEFAULT_GLITCH_DURATION_MS: 1500,
-  /** 画像転送用最大バッファサイズ (20MB) */
-  MAX_HTTP_BUFFER_SIZE_BYTES: 2e7,
+  /** Socket.IO制御イベント用最大バッファサイズ (1MB) */
+  MAX_HTTP_BUFFER_SIZE_BYTES: 1e6,
 } as const;
 
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -86,7 +87,7 @@ async function main() {
 
   const app = express();
   app.use(cors());
-  app.use(express.json({ limit: '20mb' }));
+  app.use(express.json({ limit: '1mb' }));
 
   const ssl = getSslCredentials();
   const isHttps = !!ssl;
@@ -100,6 +101,101 @@ async function main() {
       methods: ['GET', 'POST'],
     },
     maxHttpBufferSize: EFFECT_TIMINGS.MAX_HTTP_BUFFER_SIZE_BYTES,
+  });
+
+  const submissionDir = path.resolve(process.cwd(), 'data', 'submissions');
+  fs.mkdirSync(submissionDir, { recursive: true });
+  // 旧バージョンで画像だけ保存された写真も、管理画面から復旧・確認できるようにする。
+  for (const filename of fs.readdirSync(submissionDir)) {
+    if (/^[a-f0-9-]+\.jpg$/i.test(filename)) {
+      try {
+        const filePath = path.resolve(submissionDir, filename);
+        const imageUrl = `/api/photo-submissions/${filename}`;
+        store.recoverSubmission(imageUrl, fs.statSync(filePath).mtimeMs);
+      } catch (error) {
+        console.warn('[Photo] Failed to recover saved image:', error);
+      }
+    }
+  }
+
+  const removeSubmissionFiles = (submissions: Array<{ imageUrl: string }>) => {
+    for (const submission of submissions) {
+      const filename = path.basename(submission.imageUrl);
+      if (!/^[a-f0-9-]+\.jpg$/i.test(filename)) continue;
+      const filePath = path.resolve(submissionDir, filename);
+      if (path.dirname(filePath) !== submissionDir) continue;
+      fs.promises.unlink(filePath).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') console.warn('[Photo] Failed to remove image:', error);
+      });
+    }
+  };
+
+  app.post(
+    '/api/photo-submissions',
+    express.raw({ type: 'image/jpeg', limit: '2mb' }),
+    async (req, res) => {
+      const readQuery = (key: string) => {
+        const value = req.query[key];
+        return typeof value === 'string' ? value.trim() : '';
+      };
+      const deviceId = readQuery('deviceId');
+      const taskTitle = readQuery('taskTitle').slice(0, 200);
+      const taskId = Number(readQuery('taskId'));
+
+      if (!deviceId || !store.getDevice(deviceId) || !Number.isInteger(taskId) || !taskTitle) {
+        res.status(400).json({ error: '端末またはタスク情報が不正です' });
+        return;
+      }
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        res.status(400).json({ error: 'JPEG画像がありません' });
+        return;
+      }
+      if (req.body.length < 3 || req.body[0] !== 0xff || req.body[1] !== 0xd8 || req.body[2] !== 0xff) {
+        res.status(415).json({ error: 'JPEG形式の画像だけ送信できます' });
+        return;
+      }
+
+      const filename = `${crypto.randomUUID()}.jpg`;
+      const filePath = path.resolve(submissionDir, filename);
+      const imageUrl = `/api/photo-submissions/${filename}`;
+
+      try {
+        await fs.promises.writeFile(filePath, req.body, { flag: 'wx' });
+        const { submission, evicted, deduped } = store.addSubmission(
+          deviceId,
+          taskId,
+          taskTitle,
+          imageUrl
+        );
+        if (deduped || !submission) {
+          removeSubmissionFiles([{ imageUrl }]);
+          res.status(409).json({ error: '同じ写真が短時間に重複送信されました' });
+          return;
+        }
+        if (evicted) removeSubmissionFiles([evicted]);
+        io.to('admin_room').emit('admin:submission_added', submission);
+        res.status(201).json({ submission });
+      } catch (error) {
+        console.error('[Photo] Upload failed:', error);
+        removeSubmissionFiles([{ imageUrl }]);
+        res.status(500).json({ error: '写真を保存できませんでした' });
+      }
+    }
+  );
+
+  app.get('/api/photo-submissions/:filename', (req, res) => {
+    const { filename } = req.params;
+    if (!/^[a-f0-9-]+\.jpg$/i.test(filename)) {
+      res.status(404).end();
+      return;
+    }
+    const filePath = path.resolve(submissionDir, filename);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Cache-Control', 'private, max-age=86400, immutable');
+    res.sendFile(filePath);
   });
 
   /** CCTV 監視カメラ接続台帳 (cam1, cam2, cam3) */
@@ -146,7 +242,8 @@ async function main() {
     socket.on('device:reset', ({ deviceId }) => {
       console.log(`[Socket] Device reset requested for: ${deviceId}`);
       store.updateDevice(deviceId, { phase: 'STANDBY', location: '待機ホール (受付)' });
-      store.clearDeviceSubmissions(deviceId);
+      const removedSubmissions = store.clearDeviceSubmissions(deviceId);
+      removeSubmissionFiles(removedSubmissions);
       io.to(`device:${deviceId}`).emit('phase:update', { phase: 'STANDBY', deviceId });
       io.to(`device:${deviceId}`).emit('device:reset', { deviceId });
       io.to('admin_room').emit('admin:submissions_cleared', { deviceId });
@@ -239,18 +336,6 @@ async function main() {
     // ------------------------------------------------------------------------
     // B. ミッション写真提出・審査
     // ------------------------------------------------------------------------
-
-    socket.on('task:photo_submit', ({ deviceId, taskId, taskTitle, imageBase64 }) => {
-      console.log(`[Socket] Photo submitted by ${deviceId} for task ${taskId}: ${taskTitle}`);
-      const { submission, deduped } = store.addSubmission(deviceId, taskId, taskTitle, imageBase64);
-      if (deduped) {
-        console.log(`[Socket] Debounced duplicate submission from ${deviceId} on task ${taskId}`);
-        return;
-      }
-      if (submission) {
-        io.to('admin_room').emit('admin:submission_added', submission);
-      }
-    });
 
     // ------------------------------------------------------------------------
     // C. 機材制御・エレベータ・演出連動
@@ -555,7 +640,8 @@ async function main() {
       if (targetDeviceId) {
         store.updateDevice(targetDeviceId, { phase });
         if (phase === 'STANDBY') {
-          store.clearDeviceSubmissions(targetDeviceId);
+          const removedSubmissions = store.clearDeviceSubmissions(targetDeviceId);
+          removeSubmissionFiles(removedSubmissions);
           io.to(`device:${targetDeviceId}`).emit('device:reset', { deviceId: targetDeviceId });
         }
         io.to(`device:${targetDeviceId}`).emit('phase:update', { phase, deviceId: targetDeviceId });
@@ -563,7 +649,8 @@ async function main() {
         for (const dev of store.getAllDevices()) {
           store.updateDevice(dev.deviceId, { phase });
           if (phase === 'STANDBY') {
-            store.clearDeviceSubmissions(dev.deviceId);
+            const removedSubmissions = store.clearDeviceSubmissions(dev.deviceId);
+            removeSubmissionFiles(removedSubmissions);
             io.to(`device:${dev.deviceId}`).emit('device:reset', { deviceId: dev.deviceId });
           }
           io.to(`device:${dev.deviceId}`).emit('phase:update', { phase, deviceId: dev.deviceId });
@@ -579,10 +666,12 @@ async function main() {
     socket.on('admin:clear_submissions', ({ deviceId } = {}) => {
       if (deviceId) {
         console.log(`[Admin] Clear submissions for device: ${deviceId}`);
-        store.clearDeviceSubmissions(deviceId);
+        const removedSubmissions = store.clearDeviceSubmissions(deviceId);
+        removeSubmissionFiles(removedSubmissions);
       } else {
         console.log('[Admin] Clear all submissions');
-        store.clearAllSubmissions();
+        const removedSubmissions = store.clearAllSubmissions();
+        removeSubmissionFiles(removedSubmissions);
       }
       io.to('admin_room').emit('admin:submissions_cleared', deviceId ? { deviceId } : {});
     });
@@ -795,6 +884,21 @@ async function main() {
       }
     });
   });
+
+  app.use(
+    (error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'type' in error &&
+        error.type === 'entity.too.large'
+      ) {
+        res.status(413).json({ error: '写真は2MB以下にしてください' });
+        return;
+      }
+      next(error);
+    }
+  );
 
   // Next.js リクエストハンドラーへ委託
   app.all('*', (req, res) => {

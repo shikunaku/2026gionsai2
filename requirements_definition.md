@@ -100,7 +100,7 @@ graph TB
 #### PDA 固有のハードウェア・ブラウザ試行錯誤対策ノウハウ
 1. **カメラ撮影の確実性**:
    - `getUserMedia` での生ビデオ描画は低価格Androidタブレットや特定WebViewでハング・クラッシュするため、`<input type="file" accept="image/*" capture="environment">` を採用。
-   - `change` イベント受信後、`FileReader` + `HTML5 Canvas` により最大長辺を **800px (または640px)** にリサイズ、`image/jpeg (quality: 0.7)` に圧縮して Base64 送信。通信負荷を極小化。
+   - `change` イベント受信後、Object URL + `HTML5 Canvas` により最大長辺を **800px** にリサイズし、`image/jpeg (quality: 0.7)` のBlobとしてHTTP送信。Base64化による容量増加を避ける。
 2. **フラッシュライト（背面トーチ）制御の多重フォールバック**:
    - 第1優先: Android WebView の JavascriptInterface (`window.Android.turnOnFlash()`, `turnOffFlash()`, `toggleFlash()`)。
    - 第2優先: Web標準 `ImageCapture` / `MediaStreamTrack.applyConstraints({ advanced: [{ torch: true }] })`。
@@ -178,7 +178,7 @@ graph TB
 | `device:start_inspection` | Client | `{ deviceId: string }` | 点検開始（INIT → ZONE1） |
 | `device:battery_update` | Client | `{ deviceId: string, batteryLevel: number\|string, charging: boolean }` | 電池残量同期 |
 | `device:flash_state` | Client | `{ deviceId: string, flashState: boolean }` | トーチ点灯状態報告 |
-| `task:photo_submit` | Client | `{ deviceId: string, taskId: number, taskTitle: string, imageBase64: string }` | 点検写真提出 |
+| `POST /api/photo-submissions` | Client | JPEG Blob + `{ deviceId, taskId, taskTitle }` | 2MB上限の点検写真アップロード |
 | `machine:control` | Client | `{ machineId: string, state: boolean, deviceId: string }` | 機器操作（コンベア/バルブ） |
 | `phase:update` | Server | `{ phase: string, deviceId: string }` | エリア強制変更 |
 | `task:review_result` | Server | `{ submissionId: string, taskId: number, status: 'APPROVED'\|'REJECTED', reason?: string }` | 写真審査結果 |

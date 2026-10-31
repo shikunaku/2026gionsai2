@@ -448,7 +448,7 @@ function ClientContent() {
     }
   };
 
-  const handlePhotoSubmit = (taskId: number, taskTitle: string, imageBase64: string) => {
+  const handlePhotoSubmit = async (taskId: number, taskTitle: string, image: Blob) => {
     if (taskId === 10) {
       setManufacturingPhotoStatus('PENDING');
     } else {
@@ -457,13 +457,28 @@ function ClientContent() {
       );
     }
 
-    if (socket) {
-      socket.emit('task:photo_submit', {
-        deviceId,
-        taskId,
-        taskTitle,
-        imageBase64,
+    try {
+      const query = new URLSearchParams({ deviceId, taskId: String(taskId), taskTitle });
+      const response = await fetch(`/api/photo-submissions?${query.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: image,
       });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || '写真のアップロードに失敗しました');
+      }
+    } catch (error) {
+      if (taskId === 10) {
+        setManufacturingPhotoStatus('UNINSPECTED');
+      } else {
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === taskId ? { ...task, status: 'UNINSPECTED' } : task
+          )
+        );
+      }
+      throw error;
     }
   };
 

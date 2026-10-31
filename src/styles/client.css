@@ -645,14 +645,14 @@
 }
 
 .horror-blood-layer.splatter {
-  background-image: url('/blood_splatter.jpg');
+  background-image: url('/blood_splatter.webp');
   opacity: 0.85;
   mix-blend-mode: multiply;
   animation: blood-drip-pulse 3s ease-in-out infinite alternate;
 }
 
 .horror-blood-layer.handprint {
-  background-image: url('/blood_handprint.jpg');
+  background-image: url('/blood_handprint.webp');
   opacity: 0.9;
   mix-blend-mode: screen;
   filter: contrast(220%) invert(0%) sepia(80%) hue-rotate(330deg);

@@ -134,7 +134,7 @@ export default function CctvDashboardPage() {
 
   // Socket イベントリスナー
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     // ビューアーとして登録
     socket.emit('cctv:register_viewer');
@@ -258,7 +258,7 @@ export default function CctvDashboardPage() {
       socket.off('cctv:status', handleStatusUpdate);
       socket.off('cctv:signal', handleSignal);
     };
-  }, [socket, getOrCreatePeerConnection]);
+  }, [socket, connected, getOrCreatePeerConnection]);
 
   // 遠隔ライト操作
   const handleToggleLight = (camId: CctvCameraId, e?: React.MouseEvent) => {

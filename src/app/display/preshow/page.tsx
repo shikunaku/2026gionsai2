@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
 import { DEFAULT_VIDEO_CONFIG } from '../../../lib/types';
 import { requestFullscreenSafe } from '../../../lib/fullscreen';
+import { AnalogNoiseCanvas } from '../../../components/common/AnalogNoiseCanvas';
 import '../../../styles/video-display.css';
 
 export default function PreshowDisplayPlayerPage() {
@@ -15,54 +16,7 @@ export default function PreshowDisplayPlayerPage() {
   const [preshowEndedSent, setPreshowEndedSent] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const noiseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
-
-  // Background Analog TV Noise on standby (same as Area 3 video player)
-  useEffect(() => {
-    const canvas = noiseCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let running = true;
-    const renderNoise = () => {
-      if (!running) return;
-
-      const clientW = canvas.clientWidth;
-      const clientH = canvas.clientHeight;
-      if (!clientW || !clientH || isNaN(clientW) || isNaN(clientH)) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      const w = Math.floor(clientW / 2);
-      const h = Math.floor(clientH / 2);
-      if (w <= 0 || h <= 0) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      canvas.width = w;
-      canvas.height = h;
-
-      const imgData = ctx.createImageData(w, h);
-      const buffer = new Uint32Array(imgData.data.buffer);
-      const len = buffer.length;
-
-      for (let i = 0; i < len; i++) {
-        const shade = Math.floor(Math.random() * 255);
-        buffer[i] = (255 << 24) | (shade << 16) | (shade << 8) | shade;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      requestAnimationFrame(renderNoise);
-    };
-
-    renderNoise();
-    return () => {
-      running = false;
-    };
-  }, []);
 
   // Fetch available video files in public/videos/
   useEffect(() => {
@@ -210,7 +164,7 @@ export default function PreshowDisplayPlayerPage() {
       {/* Standby screen with CRT Scanlines, Noise, and Vignette */}
       {!isPlaying && (
         <div className="video-standby-screen">
-          <canvas ref={noiseCanvasRef} className="video-noise-canvas" />
+          <AnalogNoiseCanvas className="video-noise-canvas" />
           <div className="video-scanlines" />
           <div className="video-vignette" />
 

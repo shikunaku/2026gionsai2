@@ -16,7 +16,7 @@ export default function EquipmentPage() {
   const [activeTab, setActiveTab] = useState<'network' | 'serial'>('serial');
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     socket.emit('equipment:get_all');
 
@@ -45,7 +45,7 @@ export default function EquipmentPage() {
       socket.off('equipment:updated');
       socket.off('equipment:removed');
     };
-  }, [socket]);
+  }, [socket, connected]);
 
   const handleControl = (id: string, action: string, value: any) => {
     if (socket) {

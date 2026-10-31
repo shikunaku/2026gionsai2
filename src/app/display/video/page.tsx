@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
+import { AnalogNoiseCanvas } from '../../../components/common/AnalogNoiseCanvas';
 import {
   DEFAULT_VIDEO_CONFIG,
   CctvCameraId,
@@ -33,7 +34,6 @@ export default function VideoDisplayPlayerPage() {
   const [cctvClock, setCctvClock] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const noiseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const proceduralCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -131,51 +131,6 @@ export default function VideoDisplayPlayerPage() {
     [socket]
   );
 
-  // Background Analog TV Noise on standby
-  useEffect(() => {
-    const canvas = noiseCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let running = true;
-    const renderNoise = () => {
-      if (!running) return;
-
-      const clientW = canvas.clientWidth;
-      const clientH = canvas.clientHeight;
-      if (!clientW || !clientH || isNaN(clientW) || isNaN(clientH)) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      const w = Math.floor(clientW / 2);
-      const h = Math.floor(clientH / 2);
-      if (w <= 0 || h <= 0) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      canvas.width = w;
-      canvas.height = h;
-
-      const imgData = ctx.createImageData(w, h);
-      const buffer = new Uint32Array(imgData.data.buffer);
-      const len = buffer.length;
-
-      for (let i = 0; i < len; i++) {
-        const shade = Math.floor(Math.random() * 255);
-        buffer[i] = (255 << 24) | (shade << 16) | (shade << 8) | shade;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      requestAnimationFrame(renderNoise);
-    };
-
-    renderNoise();
-    return () => {
-      running = false;
-    };
-  }, []);
 
   const [availableVideos, setAvailableVideos] = useState<string[]>([]);
 
@@ -198,7 +153,7 @@ export default function VideoDisplayPlayerPage() {
 
   // Listen to WebSocket events
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     // CCTVビューアーとして登録（カメラ配信受信準備）
     socket.emit('cctv:register_viewer');
@@ -476,7 +431,7 @@ export default function VideoDisplayPlayerPage() {
       socket.off('video:trigger_play', handleTriggerPlay);
       socket.off('video:reset', handleVideoReset);
     };
-  }, [socket, availableVideos, audioUnlocked, getOrCreatePeerConnection]);
+  }, [socket, connected, availableVideos, audioUnlocked, getOrCreatePeerConnection]);
 
   // Audio unlock click handler
   const handleUnlockAudio = async () => {
@@ -681,7 +636,7 @@ export default function VideoDisplayPlayerPage() {
       {/* 2. Standby screen with CRT Scanlines and Grain */}
       {displayMode === 'video' && !isPlaying && (
         <div className="video-standby-screen">
-          <canvas ref={noiseCanvasRef} className="video-noise-canvas" />
+          <AnalogNoiseCanvas className="video-noise-canvas" />
           <div className="video-scanlines" />
           <div className="video-vignette" />
 

@@ -236,7 +236,7 @@ function CameraStreamerContent() {
 
   // Socket イベントリスナー
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     // 接続時に自身のカメラIDをサーバーへ登録
     socket.emit('cctv:register_camera', { camId: selectedCamId });
@@ -320,7 +320,7 @@ function CameraStreamerContent() {
       socket.off('cctv:light_control', handleRemoteLightControl);
       socket.off('cctv:signal', handleSignal);
     };
-  }, [socket, selectedCamId, setTorch, createPeerConnectionForViewer]);
+  }, [socket, connected, selectedCamId, setTorch, createPeerConnectionForViewer]);
 
   // カメラ切り替えハンドラー
   const handleCamSelect = (newId: CctvCameraId) => {

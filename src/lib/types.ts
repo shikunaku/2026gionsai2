@@ -191,7 +191,10 @@ export interface PhotoSubmission {
   deviceId: string;
   taskId: number;
   taskTitle: string;
-  imageBase64: string;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  /** 旧管理画面との互換用。値は画像URL。 */
+  imageBase64?: string;
   timestamp: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   reason?: string;
@@ -421,12 +424,6 @@ export interface ClientToServerEvents {
     charging: boolean;
   }) => void;
   'device:flash_state': (payload: { deviceId: string; flashState: boolean }) => void;
-  'task:photo_submit': (payload: {
-    deviceId: string;
-    taskId: number;
-    taskTitle: string;
-    imageBase64: string;
-  }) => void;
   'machine:control': (payload: { machineId: string; state: boolean; deviceId: string }) => void;
 
   // 搬送コンベア直接操作

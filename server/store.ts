@@ -13,6 +13,13 @@ export class AppStore {
 
   private constructor() {
     this.equipments = persistence.loadEquipments();
+    this.submissions = persistence
+      .loadSubmissions()
+      .slice(0, 100)
+      .map((submission) => ({
+        ...submission,
+        imageBase64: submission.imageUrl,
+      }));
   }
 
   public static getInstance(): AppStore {
@@ -117,8 +124,8 @@ export class AppStore {
     deviceId: string,
     taskId: number,
     taskTitle: string,
-    imageBase64: string
-  ): { submission?: PhotoSubmission; deduped: boolean } {
+    imageUrl: string
+  ): { submission?: PhotoSubmission; evicted?: PhotoSubmission; deduped: boolean } {
     const dedupKey = `${deviceId}:${taskId}`;
     const now = Date.now();
     const lastTime = this.recentSubmissions.get(dedupKey);
@@ -135,7 +142,9 @@ export class AppStore {
       deviceId,
       taskId,
       taskTitle,
-      imageBase64,
+      imageUrl,
+      thumbnailUrl: imageUrl,
+      imageBase64: imageUrl,
       timestamp: now,
       status: 'PENDING',
     };
@@ -144,11 +153,31 @@ export class AppStore {
     this.submissions.unshift(submission);
 
     // Limit to latest 100 submissions in memory
-    if (this.submissions.length > 100) {
-      this.submissions.pop();
-    }
+    const evicted = this.submissions.length > 100 ? this.submissions.pop() : undefined;
+    persistence.saveSubmissions(this.submissions);
 
-    return { submission, deduped: false };
+    return { submission, evicted, deduped: false };
+  }
+
+  public recoverSubmission(imageUrl: string, timestamp: number): PhotoSubmission | undefined {
+    if (this.submissions.some((submission) => submission.imageUrl === imageUrl)) return undefined;
+
+    const submission: PhotoSubmission = {
+      id: `recovered_${timestamp}_${Math.random().toString(36).substring(2, 7)}`,
+      deviceId: 'RECOVERED',
+      taskId: 0,
+      taskTitle: '再起動前に保存された写真',
+      imageUrl,
+      thumbnailUrl: imageUrl,
+      imageBase64: imageUrl,
+      timestamp,
+      status: 'PENDING',
+    };
+    this.submissions.push(submission);
+    this.submissions.sort((a, b) => b.timestamp - a.timestamp);
+    if (this.submissions.length > 100) this.submissions.pop();
+    persistence.saveSubmissions(this.submissions);
+    return submission;
   }
 
   public getSubmissions(): PhotoSubmission[] {
@@ -169,24 +198,31 @@ export class AppStore {
         const dedupKey = `${sub.deviceId}:${sub.taskId}`;
         this.recentSubmissions.delete(dedupKey);
       }
+      persistence.saveSubmissions(this.submissions);
     }
     return sub;
   }
 
-  public clearDeviceSubmissions(deviceId: string): void {
+  public clearDeviceSubmissions(deviceId: string): PhotoSubmission[] {
     console.log(`[Store] Clearing photo submissions and debounce cache for device: ${deviceId}`);
+    const removed = this.submissions.filter((s) => s.deviceId === deviceId);
     this.submissions = this.submissions.filter((s) => s.deviceId !== deviceId);
     for (const key of Array.from(this.recentSubmissions.keys())) {
       if (key.startsWith(`${deviceId}:`)) {
         this.recentSubmissions.delete(key);
       }
     }
+    persistence.saveSubmissions(this.submissions);
+    return removed;
   }
 
-  public clearAllSubmissions(): void {
+  public clearAllSubmissions(): PhotoSubmission[] {
     console.log('[Store] Clearing all photo submissions and debounce cache');
+    const removed = this.submissions;
     this.submissions = [];
     this.recentSubmissions.clear();
+    persistence.saveSubmissions(this.submissions);
+    return removed;
   }
 
   // Equipments management

@@ -16,6 +16,22 @@ export const HorrorCanvasOverlay: React.FC<HorrorCanvasOverlayProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+    const preloadedImages: HTMLImageElement[] = [];
+    const timer = window.setTimeout(() => {
+      ['/blood_splatter.webp', '/blood_handprint.webp'].forEach((src) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.src = src;
+        preloadedImages.push(image);
+      });
+    }, 1500);
+    return () => {
+      window.clearTimeout(timer);
+      preloadedImages.length = 0;
+    };
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !glitchOptions) return;
     const ctx = canvas.getContext('2d');

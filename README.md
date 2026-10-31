@@ -29,9 +29,9 @@ graph TD
 
     subgraph Server["中央統合サーバー (server/index.ts)"]
         SocketServer["Socket.IO WebSocket Server<br/>(ポート 3000 / HTTP & HTTPS)"]
-        Store["インメモリストア (store.ts)<br/>・端末ステート & ロール管理<br/>・写真重複排除デバウンス (10s)"]
+        Store["状態ストア (store.ts)<br/>・端末ステート & ロール管理<br/>・写真重複排除デバウンス (10s)"]
         McuMgr["MCUディスパッチャー (mcu-manager.ts)<br/>・ESP32コマンド生成<br/>・緊急全点灯 / コンベア制御 / 生首"]
-        Persistence["データ永続化 (persistence.ts)<br/>・data/equipments.json"]
+        Persistence["データ永続化 (persistence.ts)<br/>・data/equipments.json<br/>・写真メタデータ / JPEG"]
     end
 
     subgraph Hardware["物理機材 & マイコン群 (firmware/)"]
@@ -107,7 +107,7 @@ graph TD
 
 ### ② 品質管理室 (エリア1撮影点検)
 - **PDA操作**: 参加者は1F通路を進んで品質管理室へ入室し、PDAの「エリア1（品質管理室）に到着した [点検開始]」ボタンをタップします。
-- **点検ミッション**: 室内に残された指定資料（点検書類等）をカメラで撮影し、管理卓へ送信します。写真は端末側Canvasで長辺1280px/WebPに軽量圧縮され即座にアップロードされます。
+- **点検ミッション**: 室内に残された指定資料（点検書類等）をカメラで撮影し、管理卓へ送信します。写真は端末側Canvasで長辺800px/JPEG品質0.7へ圧縮し、Base64を使わずBlobのままアップロードされます。
 - **スタッフ審査**: 管理画面（`/admin`）の写真審査キューにリアルタイム表示され、スタッフが「合格（APPROVED）」または「差戻し（REJECTED）」を判定します。合格するとPDAに「点検完了」が表示され、エレベーターへの移動指示が出ます。
 
 ### ③ エレベーター (1F ➔ B1F 降下シーケンス)
@@ -150,8 +150,8 @@ graph TD
 │   └── videos/               # 演出用動画ファイル配置場所 (.gitkeep)
 ├── server/                   # バックエンド・リアルタイムWebSocketサーバー
 │   ├── index.ts              # Express + Socket.IO + Next.js カスタムサーバー
-│   ├── store.ts              # インメモリストア (端末・審査キュー・機材状態管理)
-│   ├── persistence.ts        # equipments.json のファイルI/O
+│   ├── store.ts              # 端末・審査キュー・機材状態管理
+│   ├── persistence.ts        # 機材・写真メタデータのファイルI/O
 │   └── mcu-manager.ts        # ハードウェア通信プロトコルブリッジ
 └── src/                      # フロントエンド (Next.js 14 App Router)
     ├── app/                  # 各種画面ルーティング
@@ -238,7 +238,7 @@ graph TD
 | `device:ready` | クライアント / 全端末 | `{ deviceId, phase, location?, role? }` | 端末接続時の初期登録およびロール（`client`, `sound_node`等）通知 |
 | `device:start_inspection` | PDA端末 | `{ deviceId }` | 安全規定同意による点検開始通知（PDAはエリア1へ直行） |
 | `device:arrive` | PDA端末 | `{ deviceId, phase }` | 各エリア到着ボタンの押下通知（コンベア自動駆動等のトリガー） |
-| `task:photo_submit` | PDA端末 | `{ deviceId, taskId, taskTitle, imageBase64 }` | 点検写真の提出（10秒間の重複排除デバウンス付き） |
+| `POST /api/photo-submissions` | PDA端末 | JPEG Blob + `deviceId`, `taskId`, `taskTitle` | 2MB上限の写真アップロード（10秒間の重複排除付き） |
 | `preshow:start` | 管理卓 / 画面 | `{ targetDeviceId?, videoSrc? }` | プレショー映像再生の開始指示 |
 | `preshow:ended` | プレショー端末 | `{ targetDeviceId? }` | プレショー終了通知（全PDAへ点検開始・振動アラート一斉発行） |
 | `elevator:trigger_move` | PDA / 管理 | `{ from?, to?, deviceId? }` | エレベータ下降演出シーケンスの開始 |

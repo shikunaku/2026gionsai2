@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { compressPhotoToJpeg } from '../../lib/photoCompression';
 import '../../styles/client.css';
 
 interface PhaseManufacturingLineProps {
@@ -8,7 +9,7 @@ interface PhaseManufacturingLineProps {
   arrived: boolean;
   onArrive: () => void;
   onConveyorStart: () => void;
-  onPhotoSubmit: (taskId: number, taskTitle: string, imageBase64: string) => void;
+  onPhotoSubmit: (taskId: number, taskTitle: string, image: Blob) => Promise<void>;
   onProceedMonitorRoom: () => void;
   photoApproved: boolean;
   photoStatus?: 'UNINSPECTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -43,46 +44,15 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
     if (playShutterSound) playShutterSound();
 
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDim = 800;
-
-          if (width > height) {
-            if (width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            }
-          } else {
-            if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-            onPhotoSubmit(10, 'ベルトコンベア稼働部および搬送パレット', compressedBase64);
-          }
-          setIsProcessing(false);
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      const compressedImage = await compressPhotoToJpeg(file);
+      await onPhotoSubmit(10, 'ベルトコンベア稼働部および搬送パレット', compressedImage);
     } catch (err) {
       console.error('Photo processing error:', err);
+      window.alert(err instanceof Error ? err.message : '写真の送信に失敗しました');
+    } finally {
       setIsProcessing(false);
+      e.target.value = '';
     }
-
-    e.target.value = '';
   };
 
   // 1. 到着前: 到着ボタン画面

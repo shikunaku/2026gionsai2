@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../../../hooks/useSocket';
+import { AnalogNoiseCanvas } from '../../../components/common/AnalogNoiseCanvas';
 import {
   CctvCameraId,
   CCTV_CAMERAS,
@@ -47,7 +48,6 @@ export default function ElevatorBackgroundPlayerPage() {
   const [cctvClock, setCctvClock] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const noiseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const proceduralCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const glitchTimerRef = useRef<NodeJS.Timeout | number | null>(null);
@@ -137,51 +137,6 @@ export default function ElevatorBackgroundPlayerPage() {
     [socket]
   );
 
-  // Background Analog TV Noise on standby
-  useEffect(() => {
-    const canvas = noiseCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let running = true;
-    const renderNoise = () => {
-      if (!running) return;
-
-      const clientW = canvas.clientWidth;
-      const clientH = canvas.clientHeight;
-      if (!clientW || !clientH || isNaN(clientW) || isNaN(clientH)) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      const w = Math.floor(clientW / 2);
-      const h = Math.floor(clientH / 2);
-      if (w <= 0 || h <= 0) {
-        requestAnimationFrame(renderNoise);
-        return;
-      }
-
-      canvas.width = w;
-      canvas.height = h;
-
-      const imgData = ctx.createImageData(w, h);
-      const buffer = new Uint32Array(imgData.data.buffer);
-      const len = buffer.length;
-
-      for (let i = 0; i < len; i++) {
-        const shade = Math.floor(Math.random() * 255);
-        buffer[i] = (255 << 24) | (shade << 16) | (shade << 8) | shade;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      requestAnimationFrame(renderNoise);
-    };
-
-    renderNoise();
-    return () => {
-      running = false;
-    };
-  }, []);
 
   const [availableVideos, setAvailableVideos] = useState<string[]>([]);
 
@@ -358,7 +313,7 @@ export default function ElevatorBackgroundPlayerPage() {
 
   // WebSocket イベントリスナー
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !connected) return;
 
     // CCTVビューアーとして登録
     socket.emit('cctv:register_viewer');
@@ -512,7 +467,7 @@ export default function ElevatorBackgroundPlayerPage() {
       socket.off('elevator:glitch', handleElevatorGlitch);
       socket.off('elevator:play_video', handlePlayVideo);
     };
-  }, [socket, getOrCreatePeerConnection, triggerGlitch, playElevatorDescent]);
+  }, [socket, connected, getOrCreatePeerConnection, triggerGlitch, playElevatorDescent]);
 
   // 音声アンロック＆全画面化
   const handleUnlockAudio = async () => {
@@ -595,7 +550,7 @@ export default function ElevatorBackgroundPlayerPage() {
       {/* 2. 待機画面（CRT走査線＋アナログノイズ） */}
       {displayMode === 'video' && !hasStartedVideo && (
         <div className="elevator-bg-standby">
-          <canvas ref={noiseCanvasRef} className="elevator-bg-noise-canvas" />
+          <AnalogNoiseCanvas className="elevator-bg-noise-canvas" />
           <div className="elevator-bg-scanlines" />
           <div className="elevator-bg-vignette" />
 

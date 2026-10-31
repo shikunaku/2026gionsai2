@@ -37,6 +37,8 @@ next-env.d.ts
 
 # Scratch & Temporary
 /scratch/
+/data/submissions/
+/data/submissions.json
 
 # Large Video Files (Exclude media while keeping folder)
 public/videos/*

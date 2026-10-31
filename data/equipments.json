@@ -8,7 +8,7 @@
     "mcuId": "ESP32_MAIN",
     "protocol": "serial",
     "endpoint": "COM3 / USB",
-    "updatedAt": "2026-10-31T21:57:45.694Z"
+    "updatedAt": "2026-10-31T22:37:25.896Z"
   },
   {
     "id": "eq_valve_01",

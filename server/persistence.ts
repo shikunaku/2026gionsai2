@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { EquipmentItem } from '../src/lib/types';
+import { EquipmentItem, PhotoSubmission } from '../src/lib/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const FILE_PATH = path.join(DATA_DIR, 'equipments.json');
+const SUBMISSIONS_FILE_PATH = path.join(DATA_DIR, 'submissions.json');
 
 export class PersistenceManager {
   private static instance: PersistenceManager;
@@ -39,6 +40,27 @@ export class PersistenceManager {
       console.log(`[Persistence] Saved ${equipments.length} equipments to equipments.json`);
     } catch (err) {
       console.error('[Persistence] Error saving equipments.json:', err);
+    }
+  }
+
+  public loadSubmissions(): PhotoSubmission[] {
+    try {
+      if (fs.existsSync(SUBMISSIONS_FILE_PATH)) {
+        const raw = fs.readFileSync(SUBMISSIONS_FILE_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (err) {
+      console.error('[Persistence] Error loading submissions.json:', err);
+    }
+    return [];
+  }
+
+  public saveSubmissions(submissions: PhotoSubmission[]): void {
+    try {
+      fs.writeFileSync(SUBMISSIONS_FILE_PATH, JSON.stringify(submissions, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[Persistence] Error saving submissions.json:', err);
     }
   }
 }

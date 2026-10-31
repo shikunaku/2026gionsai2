@@ -54,6 +54,7 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
           <div className="review-list">
             {submissions.map((sub) => {
               const isPending = sub.status === 'PENDING';
+              const imageSrc = `${sub.thumbnailUrl || sub.imageUrl}?v=${Math.floor(sub.timestamp)}`;
               return (
                 <div
                   key={sub.id}
@@ -66,7 +67,7 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
                       className="review-thumb"
                       title="クリックで拡大表示"
                     >
-                      <img src={sub.imageBase64} alt="点検写真" />
+                      <img src={imageSrc} alt="点検写真" />
                     </div>
 
                     {/* Metadata & Actions */}
@@ -144,7 +145,10 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
               </button>
             </div>
             <div className="review-modal-body">
-              <img src={selectedSubmission.imageBase64} alt="点検写真拡大" />
+              <img
+                src={`${selectedSubmission.imageUrl}?v=${Math.floor(selectedSubmission.timestamp)}`}
+                alt="点検写真拡大"
+              />
             </div>
           </div>
         </div>
