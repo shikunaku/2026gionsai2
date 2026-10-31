@@ -47,7 +47,7 @@ export interface DetectedUsbInfo {
 /** 内部で保持するアクティブなポートセッション情報 */
 interface ActivePortSession {
   port: SerialPort;
-  writer: WritableStreamDefaultWriter<string> | null;
+  writer: WritableStreamDefaultWriter<Uint8Array> | null;
   reader: ReadableStreamDefaultReader<string> | null;
   abortController: AbortController;
   readLoopRunning: boolean;
@@ -164,12 +164,7 @@ export async function connectSerialDevice(
     throw new Error(`[WebSerial] Port writable stream is not available for device: ${deviceId}`);
   }
 
-  const textEncoder = new TextEncoderStream();
-  // pipeToのエラーを捕捉し、不意な切断でもアプリ全体がクラッシュしないようハンドリング
-  textEncoder.readable.pipeTo(port.writable).catch((err) => {
-    console.warn(`[WebSerial] Writable stream pipe closed for ${deviceId}:`, err);
-  });
-  const writer = textEncoder.writable.getWriter();
+  const writer = (port.writable as WritableStream<Uint8Array>).getWriter();
 
   // --- 3. セッション登録 ---
   const abortController = new AbortController();
@@ -299,7 +294,8 @@ export async function sendSerialCommand(deviceId: string, payload: Record<string
 
   // マイコン側の行単位パーサーが解釈できるように末尾に \n を付与
   const jsonStr = JSON.stringify(payload) + '\n';
-  await session.writer.write(jsonStr);
+  const encoder = new TextEncoder();
+  await session.writer.write(encoder.encode(jsonStr));
 }
 
 /**

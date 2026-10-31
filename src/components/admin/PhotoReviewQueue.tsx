@@ -7,11 +7,13 @@ import '../../styles/admin.css';
 interface PhotoReviewQueueProps {
   submissions: PhotoSubmission[];
   onReview: (submissionId: string, status: 'APPROVED' | 'REJECTED', reason?: string) => void;
+  onClearSubmissions?: (deviceId?: string) => void;
 }
 
 export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
   submissions,
   onReview,
+  onClearSubmissions,
 }) => {
   const [selectedSubmission, setSelectedSubmission] = useState<PhotoSubmission | null>(null);
 
@@ -28,8 +30,21 @@ export const PhotoReviewQueue: React.FC<PhotoReviewQueueProps> = ({
 
   return (
     <div className="win95-window admin-panel">
-      <div className="win95-titlebar">
+      <div className="win95-titlebar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>[点検写真レビュー] ({submissions.length}件)</span>
+        {submissions.length > 0 && onClearSubmissions && (
+          <button
+            onClick={() => {
+              if (window.confirm('点検写真のレビュー履歴をすべてクリアしますか？')) {
+                onClearSubmissions();
+              }
+            }}
+            className="win95-btn"
+            style={{ fontSize: '10px', padding: '1px 6px', background: '#b71c1c', color: '#fff', border: '1px solid #7f0000' }}
+          >
+            全写真クリア
+          </button>
+        )}
       </div>
 
       <div className="review-body">

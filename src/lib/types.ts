@@ -366,6 +366,7 @@ export interface ServerToClientEvents {
   'elevator:state': (payload: ElevatorStatePayload) => void;
   'elevator:glitch': (payload?: { duration?: number }) => void;
   'elevator:power': (payload: { powerOn: boolean }) => void;
+  'elevator:play_video': (payload?: { videoSrc?: string }) => void;
 
   // エリア3 ビデオ表示画面向けイベント
   'video:trigger_play': (payload?: { videoSrc?: string; title?: string }) => void;
@@ -388,6 +389,9 @@ export interface ServerToClientEvents {
   'sound:play': (payload: SoundNodePlayPayload) => void;
   'sound:stop': (payload?: { targetDeviceId?: string }) => void;
 
+  // 端末初期化リセットイベント
+  'device:reset': (payload: { deviceId: string }) => void;
+
   // CCTV監視カメラ関連イベント
   'cctv:signal': (payload: CctvSignalPayload) => void;
   'cctv:light_control': (payload: CctvLightPayload) => void;
@@ -403,6 +407,7 @@ export interface ClientToServerEvents {
     location?: string;
     role?: DeviceRole;
   }) => void;
+  'device:reset': (payload: { deviceId: string }) => void;
   'device:start_inspection': (payload: { deviceId: string }) => void;
   'device:arrive': (payload: { deviceId: string; phase: DevicePhase }) => void;
   'device:battery_update': (payload: {
@@ -427,6 +432,7 @@ export interface ClientToServerEvents {
   'elevator:set_floor': (payload: ElevatorStatePayload) => void;
   'elevator:trigger_glitch': (payload?: { duration?: number }) => void;
   'elevator:power': (payload: { powerOn: boolean; deviceId?: string }) => void;
+  'elevator:play_video': (payload?: { videoSrc?: string }) => void;
 
   // ビデオトリガー
   'video:trigger_play': (payload?: { videoSrc?: string; deviceId?: string }) => void;
@@ -463,6 +469,7 @@ export interface ClientToServerEvents {
     status: 'APPROVED' | 'REJECTED';
     reason?: string;
   }) => void;
+  'admin:clear_submissions': (payload?: { deviceId?: string }) => void;
   'admin:override_phase': (payload: { targetDeviceId?: string; phase: DevicePhase }) => void;
   'admin:trigger_effect': (payload: {
     targetDeviceId?: string;

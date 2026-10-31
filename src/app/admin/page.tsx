@@ -123,6 +123,10 @@ export default function AdminPage() {
     socket?.emit('admin:review_photo', { submissionId, status, reason });
   };
 
+  const handleClearSubmissions = (deviceId?: string) => {
+    socket?.emit('admin:clear_submissions', { deviceId });
+  };
+
   const handleOverrideAllPhase = (phase: DevicePhase) => {
     socket?.emit('admin:override_phase', { phase });
   };
@@ -153,6 +157,10 @@ export default function AdminPage() {
 
   const handleElevatorGlitch = () => {
     socket?.emit('elevator:trigger_glitch', { duration: 1500 });
+  };
+
+  const handleElevatorPlayVideo = () => {
+    socket?.emit('elevator:play_video', {});
   };
 
   const handleConveyorControl = (action: 'forward' | 'reverse' | 'stop') => {
@@ -232,6 +240,11 @@ export default function AdminPage() {
               [エレベータ画面]
             </button>
           </Link>
+          <Link href="/display/elevator" className="app-nav-link" target="_blank">
+            <button className="win95-btn app-nav-btn" title="エレベーター背景映像・CCTV画面 (別タブ)">
+              [EV背景映像]
+            </button>
+          </Link>
           <Link href="/display/video" className="app-nav-link" target="_blank">
             <button className="win95-btn app-nav-btn" title="エリア3映像再生端末">
               [エリア3映像画面]
@@ -259,7 +272,11 @@ export default function AdminPage() {
         </div>
 
         <div className="app-column">
-          <PhotoReviewQueue submissions={submissions} onReview={handleReviewPhoto} />
+          <PhotoReviewQueue
+            submissions={submissions}
+            onReview={handleReviewPhoto}
+            onClearSubmissions={handleClearSubmissions}
+          />
         </div>
 
         <div className="app-column">
@@ -279,6 +296,7 @@ export default function AdminPage() {
             onElevatorSetFloor={handleElevatorSetFloor}
             onElevatorTriggerMove={handleElevatorTriggerMove}
             onElevatorGlitch={handleElevatorGlitch}
+            onElevatorPlayVideo={handleElevatorPlayVideo}
             onConveyorControl={handleConveyorControl}
             onTriggerVideoPlay={handleTriggerVideoPlay}
             onTriggerPreshow={handleTriggerPreshow}

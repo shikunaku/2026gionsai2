@@ -49,6 +49,7 @@ interface EffectTriggerPanelProps {
   onElevatorSetFloor?: (floor: 'FLOOR_1' | 'MOVING' | 'FLOOR_B1' | 'OFF') => void;
   onElevatorTriggerMove?: () => void;
   onElevatorGlitch?: () => void;
+  onElevatorPlayVideo?: () => void;
   onConveyorControl?: (action: 'forward' | 'reverse' | 'stop') => void;
   onTriggerVideoPlay?: () => void;
   /** プレショー演出制御 */
@@ -109,6 +110,7 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   onElevatorSetFloor,
   onElevatorTriggerMove,
   onElevatorGlitch,
+  onElevatorPlayVideo,
   onConveyorControl,
   onTriggerVideoPlay,
   onTriggerPreshow,
@@ -291,14 +293,37 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
               チラつき
             </button>
           </div>
-          <button
-            onClick={() => onElevatorTriggerMove && onElevatorTriggerMove()}
-            className="win95-btn btn-natural-wrap break-keep leading-snug"
-            style={{ width: '100%', marginTop: '4px', padding: '6px', fontSize: '11px', fontWeight: 'bold', backgroundColor: '#263238', color: '#fff' }}
-          >
-            <span className="inline-block">降下シーケンス実行</span>{' '}
-            <span className="inline-block">(扉閉鎖 -&gt; 降下音 -&gt; 照明明滅 -&gt; 暗転 -&gt; 到着)</span>
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '6px' }}>
+            <button
+              onClick={() => onElevatorPlayVideo && onElevatorPlayVideo()}
+              className="win95-btn btn-natural-wrap break-keep leading-snug"
+              style={{
+                padding: '6px 4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                backgroundColor: '#1565c0',
+                color: '#fff',
+                border: '1px solid #1e88e5',
+              }}
+              title="エレベーター背景画面（/display/elevator）でエレベーター映像（elevator.mp4）を再生"
+            >
+              <span className="inline-block">🎬 EV映像再生</span>
+            </button>
+            <button
+              onClick={() => onElevatorTriggerMove && onElevatorTriggerMove()}
+              className="win95-btn btn-natural-wrap break-keep leading-snug"
+              style={{
+                padding: '6px 4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                backgroundColor: '#263238',
+                color: '#fff',
+              }}
+              title="扉閉鎖 -> 降下音 -> 照明明滅 -> 暗転 -> 到着の一連のシーケンスを実行"
+            >
+              <span className="inline-block">降下シーケンス実行</span>
+            </button>
+          </div>
         </fieldset>
 
         {/* ④ 製造ライン ＆ ギミック・生首制御 */}

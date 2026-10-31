@@ -137,6 +137,16 @@ async function main() {
       broadcastAdminState();
     });
 
+    // 端末初期化リセット（同意画面復帰時）
+    socket.on('device:reset', ({ deviceId }) => {
+      console.log(`[Socket] Device reset requested for: ${deviceId}`);
+      store.updateDevice(deviceId, { phase: 'STANDBY', location: '待機ホール (受付)' });
+      store.clearDeviceSubmissions(deviceId);
+      io.to(`device:${deviceId}`).emit('phase:update', { phase: 'STANDBY', deviceId });
+      io.to(`device:${deviceId}`).emit('device:reset', { deviceId });
+      broadcastAdminState();
+    });
+
     // 探索・点検の開始トリガー（端末側はプレショーをスキップしエリア1品質管理室へ直行）
     socket.on('device:start_inspection', ({ deviceId }) => {
       console.log(`[Socket] Device start inspection (skip preshow -> quality_control): ${deviceId}`);
@@ -382,6 +392,12 @@ async function main() {
       io.emit('elevator:glitch', { duration });
     });
 
+    // エレベータ映像直接再生トリガー
+    socket.on('elevator:play_video', (payload) => {
+      console.log('[Socket] Elevator video play triggered!', payload);
+      io.emit('elevator:play_video', payload || {});
+    });
+
     // ビデオ再生トリガー
     socket.on('video:trigger_play', (payload) => {
       console.log('[Socket] Video play triggered!', payload);
@@ -552,12 +568,32 @@ async function main() {
       console.log(`[Admin] Override phase: ${phase} -> ${targetDeviceId || 'ALL'}`);
       if (targetDeviceId) {
         store.updateDevice(targetDeviceId, { phase });
+        if (phase === 'STANDBY') {
+          store.clearDeviceSubmissions(targetDeviceId);
+          io.to(`device:${targetDeviceId}`).emit('device:reset', { deviceId: targetDeviceId });
+        }
         io.to(`device:${targetDeviceId}`).emit('phase:update', { phase, deviceId: targetDeviceId });
       } else {
         for (const dev of store.getAllDevices()) {
           store.updateDevice(dev.deviceId, { phase });
+          if (phase === 'STANDBY') {
+            store.clearDeviceSubmissions(dev.deviceId);
+            io.to(`device:${dev.deviceId}`).emit('device:reset', { deviceId: dev.deviceId });
+          }
           io.to(`device:${dev.deviceId}`).emit('phase:update', { phase, deviceId: dev.deviceId });
         }
+      }
+      broadcastAdminState();
+    });
+
+    // 管理コンソールからの写真キュー手動クリア
+    socket.on('admin:clear_submissions', ({ deviceId } = {}) => {
+      if (deviceId) {
+        console.log(`[Admin] Clear submissions for device: ${deviceId}`);
+        store.clearDeviceSubmissions(deviceId);
+      } else {
+        console.log('[Admin] Clear all submissions');
+        store.clearAllSubmissions();
       }
       broadcastAdminState();
     });

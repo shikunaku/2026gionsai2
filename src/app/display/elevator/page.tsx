@@ -25,6 +25,7 @@ export default function ElevatorBackgroundPlayerPage() {
   const { socket, connected } = useSocket();
   const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [hasStartedVideo, setHasStartedVideo] = useState<boolean>(false);
   const [videoSrc, setVideoSrc] = useState<string>('');
   const [useProcedural, setUseProcedural] = useState<boolean>(false);
   const [isGlitching, setIsGlitching] = useState<boolean>(false);
@@ -250,7 +251,7 @@ export default function ElevatorBackgroundPlayerPage() {
       const elapsed = Date.now() - startTime;
       if (elapsed > duration) {
         setIsPlaying(false);
-        setUseProcedural(false);
+        // 元の待機画面には戻さず、Canvasの最終フレームで停止保持
         return;
       }
 
@@ -314,6 +315,46 @@ export default function ElevatorBackgroundPlayerPage() {
 
     renderDescent();
   }, []);
+
+  // エレベーター降下演出の開始（動画ファイルがある場合は動画再生、無ければプロシージャル描画）
+  const playElevatorDescent = useCallback(
+    (explicitSrc?: string) => {
+      setDisplayMode('video');
+
+      // 指定された動画、または elevator 関連の動画ファイルを探す
+      let selectedFile = explicitSrc;
+      if (!selectedFile) {
+        const found = availableVideos.find((f) => {
+          const lower = f.toLowerCase();
+          return lower.includes('elevator') || lower.includes('ev') || lower.includes('descent');
+        });
+        if (found) {
+          selectedFile = `/videos/${found}`;
+        }
+      }
+
+      setHasStartedVideo(true);
+      if (selectedFile) {
+        const src = selectedFile.startsWith('/') ? selectedFile : `/videos/${selectedFile}`;
+        setVideoSrc(src);
+        setIsPlaying(true);
+        setUseProcedural(false);
+
+        if (videoRef.current) {
+          videoRef.current.src = src;
+          videoRef.current.currentTime = 0;
+          videoRef.current.muted = !audioUnlocked;
+          videoRef.current.play().catch(() => {
+            playElevatorDescentAnimation();
+          });
+        }
+      } else {
+        // 専用動画がない場合はリアルタイム降下プロシージャルアニメーション
+        playElevatorDescentAnimation();
+      }
+    },
+    [availableVideos, audioUnlocked, playElevatorDescentAnimation]
+  );
 
   // WebSocket イベントリスナー
   useEffect(() => {
@@ -448,12 +489,19 @@ export default function ElevatorBackgroundPlayerPage() {
       triggerGlitch(payload?.duration || 1500);
     };
 
+    // エレベーター映像再生指示（管理コンソール等から）
+    const handlePlayVideo = (payload?: { videoSrc?: string }) => {
+      console.log('[Elevator BG] Video play triggered explicitly:', payload);
+      playElevatorDescent(payload?.videoSrc);
+    };
+
     socket.on('cctv:all_status', handleAllStatus);
     socket.on('cctv:status', handleStatusUpdate);
     socket.on('cctv:signal', handleSignal);
     socket.on('cctv:monitor_switch', handleCctvSwitch);
     socket.on('elevator:state', handleElevatorState);
     socket.on('elevator:glitch', handleElevatorGlitch);
+    socket.on('elevator:play_video', handlePlayVideo);
 
     return () => {
       socket.off('cctv:all_status', handleAllStatus);
@@ -462,38 +510,9 @@ export default function ElevatorBackgroundPlayerPage() {
       socket.off('cctv:monitor_switch', handleCctvSwitch);
       socket.off('elevator:state', handleElevatorState);
       socket.off('elevator:glitch', handleElevatorGlitch);
+      socket.off('elevator:play_video', handlePlayVideo);
     };
-  }, [socket, getOrCreatePeerConnection, triggerGlitch]);
-
-  // エレベーター降下演出の開始（動画ファイルがある場合は動画再生、無ければプロシージャル描画）
-  const playElevatorDescent = useCallback(() => {
-    setDisplayMode('video');
-
-    // elevator 関連の動画ファイルを探す
-    const elevatorVideo = availableVideos.find((f) => {
-      const lower = f.toLowerCase();
-      return lower.includes('elevator') || lower.includes('ev') || lower.includes('descent');
-    });
-
-    if (elevatorVideo) {
-      const src = `/videos/${elevatorVideo}`;
-      setVideoSrc(src);
-      setIsPlaying(true);
-      setUseProcedural(false);
-
-      if (videoRef.current) {
-        videoRef.current.src = src;
-        videoRef.current.currentTime = 0;
-        videoRef.current.muted = !audioUnlocked;
-        videoRef.current.play().catch(() => {
-          playElevatorDescentAnimation();
-        });
-      }
-    } else {
-      // 専用動画がない場合はリアルタイム降下プロシージャルアニメーション
-      playElevatorDescentAnimation();
-    }
-  }, [availableVideos, audioUnlocked, playElevatorDescentAnimation]);
+  }, [socket, getOrCreatePeerConnection, triggerGlitch, playElevatorDescent]);
 
   // 音声アンロック＆全画面化
   const handleUnlockAudio = async () => {
@@ -574,7 +593,7 @@ export default function ElevatorBackgroundPlayerPage() {
       )}
 
       {/* 2. 待機画面（CRT走査線＋アナログノイズ） */}
-      {displayMode === 'video' && !isPlaying && (
+      {displayMode === 'video' && !hasStartedVideo && (
         <div className="elevator-bg-standby">
           <canvas ref={noiseCanvasRef} className="elevator-bg-noise-canvas" />
           <div className="elevator-bg-scanlines" />
@@ -609,16 +628,20 @@ export default function ElevatorBackgroundPlayerPage() {
         ref={videoRef}
         className="elevator-bg-video"
         style={{
-          display: displayMode === 'video' && isPlaying && !useProcedural ? 'block' : 'none',
+          display: displayMode === 'video' && hasStartedVideo && !useProcedural ? 'block' : 'none',
         }}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => {
+          console.log('[Elevator BG] Video playback finished. Holding on last frame without reverting.');
+          setIsPlaying(false);
+          // 元の待機画面には戻さず、最終フレームで静止したまま表示し続ける
+        }}
         playsInline
         autoPlay
         preload="auto"
       />
 
       {/* 4. プロシージャル降下シャフト描画 Canvas */}
-      {displayMode === 'video' && isPlaying && useProcedural && (
+      {displayMode === 'video' && hasStartedVideo && useProcedural && (
         <canvas ref={proceduralCanvasRef} className="elevator-bg-canvas" />
       )}
 
@@ -641,7 +664,7 @@ export default function ElevatorBackgroundPlayerPage() {
             }
           }}
         >
-          {displayMode === 'video' ? '降下テスト' : '映像モード'}
+          {displayMode === 'video' ? '映像再開' : '映像モード'}
         </button>
         <button
           className="elevator-bg-hud-btn"
@@ -651,6 +674,19 @@ export default function ElevatorBackgroundPlayerPage() {
         >
           {displayMode === 'cctv' ? '映像に戻す' : 'CCTV中継'}
         </button>
+        {hasStartedVideo && (
+          <button
+            className="elevator-bg-hud-btn"
+            onClick={() => {
+              setHasStartedVideo(false);
+              setIsPlaying(false);
+              setUseProcedural(false);
+            }}
+            title="待機画面（砂嵐）に戻す"
+          >
+            待機画面へ
+          </button>
+        )}
         <FullscreenButton className="elevator-bg-hud-fs-btn" />
       </div>
     </div>

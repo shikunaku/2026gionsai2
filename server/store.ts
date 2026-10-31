@@ -168,6 +168,22 @@ export class AppStore {
     return sub;
   }
 
+  public clearDeviceSubmissions(deviceId: string): void {
+    console.log(`[Store] Clearing photo submissions and debounce cache for device: ${deviceId}`);
+    this.submissions = this.submissions.filter((s) => s.deviceId !== deviceId);
+    for (const key of Array.from(this.recentSubmissions.keys())) {
+      if (key.startsWith(`${deviceId}:`)) {
+        this.recentSubmissions.delete(key);
+      }
+    }
+  }
+
+  public clearAllSubmissions(): void {
+    console.log('[Store] Clearing all photo submissions and debounce cache');
+    this.submissions = [];
+    this.recentSubmissions.clear();
+  }
+
   // Equipments management
   public getEquipments(): EquipmentItem[] {
     return this.equipments;

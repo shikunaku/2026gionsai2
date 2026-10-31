@@ -41,7 +41,7 @@ const GLITCH_CLASS: Record<string, string> = {
   signalLoss: 'glitch-signalLoss',
 };
 
-const INITIAL_TASKS: InspectionTask[] = [
+const createInitialTasks = (): InspectionTask[] => [
   {
     id: 1,
     title: '社員証の撮影１',
@@ -70,7 +70,7 @@ function ClientContent() {
   const [deviceId, setDeviceId] = useState<string>('0001');
   const [isClientMounted, setIsClientMounted] = useState<boolean>(false);
   const [phase, setPhase] = useState<DevicePhase>('STANDBY');
-  const [tasks, setTasks] = useState<InspectionTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<InspectionTask[]>(createInitialTasks());
   const [glitchOptions, setGlitchOptions] = useState<GlitchEffectOptions | null>(null);
   const [elevatorFloor, setElevatorFloor] = useState<ElevatorFloorState>('FLOOR_1');
 
@@ -100,6 +100,36 @@ function ClientContent() {
 
   const { torchOn, screenFlashActive, setTorch, toggleTorch, flicker, blinkPattern, stopBlink } =
     useTorch(handleTorchStateChange);
+
+  // 全ステートの初期化（同意画面復帰時・リセット時）
+  const resetClientState = useCallback(() => {
+    console.log('[Client] Resetting all inspection state and photo tasks to initial');
+    setTasks(createInitialTasks());
+    setGlitchOptions(null);
+    setElevatorFloor('FLOOR_1');
+    setPreshowEnded(false);
+    setQualityControlArrived(false);
+    setManufacturingLineArrived(false);
+    setManufacturingPhotoApproved(false);
+    setManufacturingPhotoStatus('UNINSPECTED');
+    setMonitorRoomArrived(false);
+    setMonitorVideoPlaying(false);
+    setMonitorVideoEnded(false);
+    setPanicActive(false);
+    stopBlink();
+    setTorch(false);
+    soundEngine.stopAll();
+  }, [stopBlink, setTorch, soundEngine]);
+
+  // 同意画面への手動復帰＆サーバー同期
+  const handleReturnToStandby = useCallback(() => {
+    console.log('[Client] Returning to STANDBY and emitting device:reset');
+    resetClientState();
+    setPhase('STANDBY');
+    if (socket && connected) {
+      socket.emit('device:reset', { deviceId });
+    }
+  }, [resetClientState, socket, connected, deviceId]);
 
   // Battery monitoring synchronization (every 5 seconds)
   const handleBatterySync = useCallback(
@@ -140,7 +170,9 @@ function ClientContent() {
         setPhase(newPhase);
 
         // 各フェーズへの状態同期
-        if (newPhase === 'quality_control' || newPhase === 'AREA_1_PHOTO') {
+        if (newPhase === 'STANDBY') {
+          resetClientState();
+        } else if (newPhase === 'quality_control' || newPhase === 'AREA_1_PHOTO') {
           setPreshowEnded(true);
         } else if (newPhase === 'manufacturing_line' || newPhase === 'AREA_2_CONVEYOR') {
           setQualityControlArrived(true);
@@ -150,6 +182,15 @@ function ClientContent() {
         } else if (newPhase === 'escape' || newPhase === 'PANIC_ESCAPE') {
           setPanicActive(true);
         }
+      }
+    });
+
+    // 端末初期化イベント
+    socket.on('device:reset', ({ deviceId: targetDevId }) => {
+      if (!targetDevId || targetDevId === deviceId) {
+        console.log('[Client] device:reset received - full reset to STANDBY');
+        resetClientState();
+        setPhase('STANDBY');
       }
     });
 
@@ -303,6 +344,7 @@ function ClientContent() {
     // 緊急シャットダウン
     socket.on('effect:shutdown', () => {
       console.log('[Client] Shutdown signal received!');
+      resetClientState();
       setPhase('STANDBY');
     });
 
@@ -339,6 +381,7 @@ function ClientContent() {
 
     return () => {
       socket.off('phase:update');
+      socket.off('device:reset');
       socket.off('preshow:ended');
       socket.off('elevator:state');
       socket.off('task:review_result');
@@ -352,7 +395,14 @@ function ClientContent() {
       socket.off('video:ended');
       socket.off('panic:trigger', handlePanicTrigger);
     };
-  }, [socket, deviceId, soundEngine, flicker, blinkPattern, stopBlink, setTorch]);
+  }, [socket, deviceId, soundEngine, flicker, blinkPattern, stopBlink, setTorch, resetClientState]);
+
+  // 同意画面（STANDBY）にフェーズが戻った際、確実に全状態を初期化
+  useEffect(() => {
+    if (phase === 'STANDBY') {
+      resetClientState();
+    }
+  }, [phase, resetClientState]);
 
   // Emit device:ready once connected or deviceId set
   useEffect(() => {
@@ -600,7 +650,7 @@ function ClientContent() {
 
           {/* 体験終了・端末返却 */}
           {(phase === 'return' || phase === 'RETURN') && (
-            <PhaseReturn deviceId={deviceId} />
+            <PhaseReturn deviceId={deviceId} onResetToInit={handleReturnToStandby} />
           )}
         </main>
 
