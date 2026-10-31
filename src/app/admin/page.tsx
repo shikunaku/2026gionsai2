@@ -8,7 +8,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useSocket } from '../../hooks/useSocket';
 import { FullscreenButton } from '../../components/common/FullscreenButton';
 import { ReconnectingModal } from '../../components/common/ReconnectingModal';
@@ -215,46 +214,6 @@ export default function AdminPage() {
         </div>
 
         <div className="app-titlebar-nav">
-          <Link href="/" className="app-nav-link">
-            <button className="win95-btn app-nav-btn" title="ポータル">
-              [ポータル]
-            </button>
-          </Link>
-          <Link href="/admin" className="app-nav-link">
-            <button className="win95-btn app-nav-btn active" title="管理コンソール（現在の画面）">
-              [管理コンソール]
-            </button>
-          </Link>
-          <Link href="/admin/cctv" className="app-nav-link" target="_blank">
-            <button className="win95-btn app-nav-btn" title="監視カメラ専用モニタリング画面 (別タブ)">
-              [監視CCTV]
-            </button>
-          </Link>
-          <Link href="/display/sound" className="app-nav-link" target="_blank">
-            <button className="win95-btn app-nav-btn" title="音響専用ノード画面を開く">
-              [音響ノード]
-            </button>
-          </Link>
-          <Link href="/elevator-display" className="app-nav-link" target="_blank">
-            <button className="win95-btn app-nav-btn" title="エレベータ階数表示画面">
-              [エレベータ画面]
-            </button>
-          </Link>
-          <Link href="/display/elevator" className="app-nav-link" target="_blank">
-            <button className="win95-btn app-nav-btn" title="エレベーター背景映像・CCTV画面 (別タブ)">
-              [EV背景映像]
-            </button>
-          </Link>
-          <Link href="/display/video" className="app-nav-link" target="_blank">
-            <button className="win95-btn app-nav-btn" title="エリア3映像再生端末">
-              [エリア3映像画面]
-            </button>
-          </Link>
-          <Link href="/equipment" className="app-nav-link">
-            <button className="win95-btn app-nav-btn" title="機材制御盤">
-              [機材制御盤]
-            </button>
-          </Link>
           <FullscreenButton className="app-nav-btn" />
         </div>
       </div>
@@ -283,7 +242,6 @@ export default function AdminPage() {
           <EffectTriggerPanel
             devices={devices}
             equipments={equipments}
-            onOverrideAllPhase={handleOverrideAllPhase}
             onTriggerGlitch={handleTriggerGlitch}
             onTriggerSound={handleTriggerSound}
             onTriggerSoundNode={handleTriggerSoundNode}

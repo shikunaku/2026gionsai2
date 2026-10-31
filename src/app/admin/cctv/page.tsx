@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import Link from 'next/link';
 import { useSocket } from '../../../hooks/useSocket';
 import { FullscreenButton } from '../../../components/common/FullscreenButton';
 import { CctvCameraId, CCTV_CAMERAS, CctvCameraStatusPayload } from '../../../lib/types';
-import { generateQrSvgString } from '../../../lib/qrCode';
 import '../../../styles/cctv.css';
 
 type LayoutMode = 'grid3' | 'focus' | 'single';
@@ -17,8 +15,6 @@ export default function CctvDashboardPage() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid3');
   // フォーカスまたはシングル表示で選択中のカメラID
   const [activeCamId, setActiveCamId] = useState<CctvCameraId>('cam1');
-  // QRコード一括表示モーダル
-  const [showQrModal, setShowQrModal] = useState<boolean>(false);
   // リアルタイムクロック
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
 
@@ -306,7 +302,6 @@ export default function CctvDashboardPage() {
     const config = CCTV_CAMERAS.find((c) => c.id === camId) || CCTV_CAMERAS[0];
     const status = cameraStatus[camId] || { online: false, lightOn: false };
     const isFocused = activeCamId === camId;
-    const qrSvg = generateQrSvgString(getCameraUrl(camId), { size: 100, margin: 2, color: '#000', backgroundColor: '#fff' });
 
     return (
       <div
@@ -349,24 +344,15 @@ export default function CctvDashboardPage() {
           {/* CRT Scanline */}
           <div className="cctv-scanline-overlay" />
 
-          {/* Standby No Signal with Mini QR */}
+          {/* Standby No Signal Screen */}
           {!status.online && (
             <div className="cctv-no-signal-box">
               <div className="cctv-no-signal-title">[NO SIGNAL]</div>
               <div className="cctv-no-signal-desc">
                 {config.location}
                 <br />
-                スマホでQRをスキャンして配信接続
+                カメラ待機中・未接続
               </div>
-              <div
-                className="cctv-qr-mini"
-                title="タップして接続URLを開く"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(getCameraUrl(camId), '_blank');
-                }}
-                dangerouslySetInnerHTML={{ __html: qrSvg }}
-              />
             </div>
           )}
 
@@ -442,22 +428,6 @@ export default function CctvDashboardPage() {
             </button>
           </div>
 
-          {/* QR Code Modal Trigger */}
-          <button
-            onClick={() => setShowQrModal(true)}
-            className="cctv-header-btn"
-            title="各カメラ接続用QRコードを一括表示"
-          >
-            カメラ接続QR
-          </button>
-
-          {/* Return to Admin Link */}
-          <Link href="/admin">
-            <button className="cctv-header-btn" title="集中管理コンソールに戻る">
-              管理画面へ
-            </button>
-          </Link>
-
           {/* Fullscreen Button */}
           <FullscreenButton className="cctv-header-btn" />
         </div>
@@ -469,64 +439,6 @@ export default function CctvDashboardPage() {
           {CCTV_CAMERAS.map((c) => renderCameraCard(c.id, c.id === activeCamId))}
         </div>
       </main>
-
-      {/* Camera Connection QR Code Modal */}
-      {showQrModal && (
-        <div className="cctv-modal-overlay" onClick={() => setShowQrModal(false)}>
-          <div className="cctv-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="cctv-modal-header">
-              <span className="cctv-modal-title">[CCTV CAMERA CONNECT] 監視カメラ接続QRコード</span>
-              <button className="cctv-modal-close" onClick={() => setShowQrModal(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="cctv-modal-body">
-              {CCTV_CAMERAS.map((cam) => {
-                const url = getCameraUrl(cam.id);
-                const svg = generateQrSvgString(url, { size: 160, margin: 4, color: '#000', backgroundColor: '#fff' });
-                const isOnline = cameraStatus[cam.id]?.online;
-
-                return (
-                  <div key={cam.id} className="cctv-qr-card">
-                    <div className="cctv-qr-card-title">{cam.name}</div>
-                    <div className="cctv-qr-card-desc">
-                      {cam.location}
-                      <br />
-                      ステータス:{' '}
-                      <span style={{ color: isOnline ? '#4ade80' : '#ef4444', fontWeight: 'bold' }}>
-                        {isOnline ? '接続中 (配信中)' : '未接続 (待機)'}
-                      </span>
-                    </div>
-
-                    <div
-                      className="cctv-qr-image-wrapper"
-                      dangerouslySetInnerHTML={{ __html: svg }}
-                      title="スマホで読み取って配信開始"
-                    />
-
-                    <input
-                      type="text"
-                      readOnly
-                      value={url}
-                      className="cctv-qr-url-input"
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-
-                    <div style={{ marginTop: '8px' }}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        <button className="cctv-header-btn" style={{ fontSize: '10px' }}>
-                          この端末でテスト開く
-                        </button>
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ type GlitchMode =
 
 interface EffectTriggerPanelProps {
   devices?: DeviceInfo[];
-  onOverrideAllPhase: (phase: DevicePhase) => void;
+  onOverrideAllPhase?: (phase: DevicePhase) => void;
   onTriggerGlitch: (options: {
     level: number;
     duration: number;
@@ -157,83 +157,10 @@ export const EffectTriggerPanel: React.FC<EffectTriggerPanelProps> = ({
   return (
     <div className="win95-window admin-panel">
       <div className="win95-titlebar effect-titlebar">
-        <span>[演出・機材・5フェーズ進行制御]</span>
+        <span>[演出・機材・会場進行制御]</span>
       </div>
 
       <div className="effect-body">
-        {/* Phase Overrides (全5フェーズ構成) */}
-        <fieldset className="win95-groupbox">
-          <legend className="win95-groupbox-legend">全端末 体験フェーズ手動切替 (全5フェーズ)</legend>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '3px', marginTop: '4px' }}>
-            <button
-              onClick={() => onOverrideAllPhase('preshow')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontWeight: 'bold' }}
-              title="① プレショー: 待機ホール・ガイダンス映像"
-            >
-              ①プレショー
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('quality_control')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontWeight: 'bold' }}
-              title="② 品質管理室: 到着確認・資料撮影提出"
-            >
-              ②品質管理室
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('elevator')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontWeight: 'bold' }}
-              title="③ エレベーター: 扉閉鎖・降下・照明明滅"
-            >
-              ③エレベータ
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('manufacturing_line')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontWeight: 'bold' }}
-              title="④ 製造ライン: コンベア起動・撮影・生首ギミック"
-            >
-              ④製造ライン
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('monitor_room')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontWeight: 'bold', backgroundColor: '#6a1b9a', color: '#fff' }}
-              title="⑤ モニター室: 最終映像・脱出"
-            >
-              ⑤モニター室
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px', marginTop: '4px' }}>
-            <button
-              onClick={() => onOverrideAllPhase('STANDBY')}
-              className="win95-btn effect-btn-phase"
-              style={{ fontSize: '10px' }}
-              title="待機初期状態へリセット"
-            >
-              待機(リセット)
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('escape')}
-              className="win95-btn effect-btn-phase"
-              style={{ backgroundColor: '#b71c1c', color: '#fff', fontWeight: 'bold', fontSize: '10px' }}
-              title="パニック非常脱出状態"
-            >
-              非常脱出[パニック]
-            </button>
-            <button
-              onClick={() => onOverrideAllPhase('return')}
-              className="win95-btn effect-btn-phase"
-              style={{ backgroundColor: '#2e5b3e', color: '#fff', fontWeight: 'bold', fontSize: '10px' }}
-              title="端末返却案内"
-            >
-              端末返却案内
-            </button>
-          </div>
-        </fieldset>
 
         {/* プレショー操作パネル */}
         <fieldset className="win95-groupbox">

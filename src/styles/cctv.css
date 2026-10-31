@@ -4,25 +4,30 @@
 
 .cctv-root {
   width: 100vw;
+  max-width: 100%;
   height: 100dvh;
   background-color: #080a0d;
   color: #e2e8f0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   font-family: 'Consolas', 'Courier New', monospace, sans-serif;
   box-sizing: border-box;
 }
 
 /* Header Bar */
 .cctv-header {
-  height: 48px;
+  min-height: 48px;
+  height: auto;
   background: linear-gradient(90deg, #0f141c, #1a2332);
   border-bottom: 2px solid #2d3748;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 6px 12px;
+  gap: 8px;
   flex-shrink: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   z-index: 10;
@@ -31,25 +36,28 @@
 .cctv-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .cctv-title {
-  font-size: 15px;
+  font-size: clamp(12px, 3.5vw, 15px);
   font-weight: 800;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   color: #38bdf8;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .cctv-live-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background-color: #ef4444;
   animation: cctvPulse 1.2s infinite;
+  flex-shrink: 0;
 }
 
 @keyframes cctvPulse {
@@ -59,12 +67,13 @@
 }
 
 .cctv-status-badge {
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 2px 6px;
   background-color: #1e293b;
   border: 1px solid #334155;
   border-radius: 4px;
   color: #94a3b8;
+  white-space: nowrap;
 }
 
 .cctv-status-badge.online {
@@ -76,21 +85,29 @@
 .cctv-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .cctv-clock {
-  font-size: 13px;
+  font-size: 11px;
   color: #38bdf8;
-  letter-spacing: 1px;
-  margin-right: 8px;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .cctv-clock {
+    display: none;
+  }
 }
 
 .cctv-header-btn {
   background-color: #1e293b;
   border: 1px solid #475569;
   color: #f1f5f9;
-  padding: 5px 12px;
+  padding: 4px 8px;
   font-size: 11px;
   font-weight: bold;
   border-radius: 4px;
@@ -125,10 +142,11 @@
   border: none;
   border-right: 1px solid #334155;
   color: #94a3b8;
-  padding: 5px 10px;
-  font-size: 11px;
+  padding: 4px 8px;
+  font-size: 10px;
   font-weight: bold;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .cctv-layout-btn:last-child {
@@ -143,37 +161,67 @@
 /* CCTV Viewport Container */
 .cctv-viewport-container {
   flex: 1;
-  padding: 10px;
+  padding: 8px;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100dvh - 48px);
 }
 
 .cctv-layout-wrapper {
   width: 100%;
   height: 100%;
+  flex: 1;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   box-sizing: border-box;
+  min-height: 0;
 }
 
-/* 1. Grid 3 Mode (3分割均等) */
+/* 1. Grid 3 Mode: 
+   全解像度で3カラム等分割し、画面下端まで100%フル表示 (高さ一杯に表示)
+*/
+.layout-grid3 {
+  height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+
 .layout-grid3 .cctv-layout-wrapper {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: 1fr;
+  height: 100%;
+  align-items: stretch;
 }
 
-@media (max-width: 900px) {
+.layout-grid3 .cctv-card {
+  height: 100%;
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+@media (max-width: 639px) {
+  .layout-grid3 {
+    overflow-y: auto;
+  }
   .layout-grid3 .cctv-layout-wrapper {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(3, 1fr);
+    height: 100%;
   }
 }
 
-/* 2. Focus Mode (1大 + 2小) */
+/* 2. Focus Mode: 
+   PC: 1大 (左) + 2小 (右)
+   モバイル・タブレット (<800px): 1大 (上) + 2小 (下)
+*/
 .layout-focus .cctv-layout-wrapper {
-  grid-template-columns: 2.2fr 1fr;
+  grid-template-columns: 2fr 1fr;
   grid-template-rows: 1fr 1fr;
+  height: 100%;
 }
 
 .layout-focus .cctv-card.is-active-focus {
@@ -185,30 +233,46 @@
   grid-column: 2 / 3;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 799px) {
   .layout-focus .cctv-layout-wrapper {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 2fr 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
   }
   .layout-focus .cctv-card.is-active-focus {
     grid-column: 1 / 3;
     grid-row: 1 / 2;
   }
   .layout-focus .cctv-card.is-sub-focus {
+    grid-column: auto;
     grid-row: 2 / 3;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout-focus .cctv-layout-wrapper {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .layout-focus .cctv-card.is-active-focus {
+    grid-column: 1 / 2;
+    grid-row: auto;
+  }
+  .layout-focus .cctv-card.is-sub-focus {
+    grid-column: 1 / 2;
+    grid-row: auto;
   }
 }
 
 /* 3. Single Mode (1画面全開) */
 .layout-single .cctv-layout-wrapper {
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
+  height: 100%;
 }
 
 .layout-single .cctv-card.is-active-focus {
-  grid-column: 1 / 2;
-  grid-row: 1 / 2;
   display: flex !important;
+  height: 100%;
 }
 
 .layout-single .cctv-card.is-sub-focus {
@@ -224,8 +288,17 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+@media (max-height: 550px) {
+  .cctv-card {
+    min-height: 160px;
+  }
 }
 
 .cctv-card.focused {
@@ -356,12 +429,24 @@
   margin-bottom: 12px;
 }
 
-.cctv-qr-mini {
-  background-color: #ffffff;
-  padding: 6px;
+.cctv-connect-direct-btn {
+  background-color: #0284c7;
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: bold;
   border-radius: 4px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.cctv-connect-direct-btn:hover {
+  background-color: #0369a1;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+  transform: translateY(-1px);
 }
 
 /* Bottom Controls Bar */

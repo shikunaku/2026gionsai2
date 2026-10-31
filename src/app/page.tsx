@@ -5,62 +5,115 @@ import Link from 'next/link';
 import { FullscreenButton } from '../components/common/FullscreenButton';
 import '../styles/portal.css';
 
-const PORTAL_CARDS = [
+interface PortalCardItem {
+  key: string;
+  href: string;
+  title: string;
+  description: string;
+  launchLabel: string;
+}
+
+interface PortalCategory {
+  categoryName: string;
+  categoryDesc: string;
+  cards: PortalCardItem[];
+}
+
+const PORTAL_CATEGORIES: PortalCategory[] = [
   {
-    key: 'client',
-    href: '/client',
-    title: '[端末] 参加者用 PDA 端末',
-    description: '現場巡回保守員向け画面。写真撮影・機器操作・フラッシュライト・プロシージャル怪異音響を搭載。',
-    launchLabel: 'PDA 端末を起動 (/client) ->',
+    categoryName: '[管理・監視系]',
+    categoryDesc: 'アトラクション全体の統括・遠隔監視・物理機材制御',
+    cards: [
+      {
+        key: 'admin',
+        href: '/admin',
+        title: '[管理] 集中管理コンソール',
+        description: '運営スタッフ向け統括画面。端末監視・点検写真合否審査・グリッチ/音響/トーチ遠隔制御。',
+        launchLabel: '管理コンソールを起動 (/admin) ->',
+      },
+      {
+        key: 'cctv',
+        href: '/admin/cctv',
+        title: '[監視] 監視カメラ CCTV モニター',
+        description: '現場設置カメラ3台（品質管理室/通路・EV前/製造ライン）のWebRTC常時モニタリング・3分割/フォーカス切替。',
+        launchLabel: 'CCTV モニターを起動 (/admin/cctv) ->',
+      },
+      {
+        key: 'equipment',
+        href: '/equipment',
+        title: '[機材] 機材演出制御盤',
+        description: '物理設備（ESP32有線/Wi-Fi/Bluetooth対応リレー・サーボ・ライト・ファン）の個別登録と遠隔制御。',
+        launchLabel: '機材制御盤を起動 (/equipment) ->',
+      },
+      {
+        key: 'preshow-console',
+        href: '/preshow',
+        title: '[演出] プレショー担当者操作コンソール',
+        description: 'プレショー担当スタッフ向け操作画面。接続端末一覧・フラッシュライト遠隔点滅・画面グリッチ・プレショー映像上映スイッチ。',
+        launchLabel: 'プレショー操作卓を起動 (/preshow) ->',
+      },
+    ],
   },
   {
-    key: 'admin',
-    href: '/admin',
-    title: '[管理] 集中管理コンソール',
-    description: '運営スタッフ向け4カラム画面。端末監視・点検写真合否審査・グリッチ/音響/トーチ遠隔制御。',
-    launchLabel: '管理コンソールを起動 (/admin) ->',
+    categoryName: '[ディスプレイ・演出系]',
+    categoryDesc: '館内スクリーン・プロジェクター・電照パネル・音響ノード端末',
+    cards: [
+      {
+        key: 'elevator-bg',
+        href: '/display/elevator',
+        title: '[背景] エレベーター背景映像・CCTV演出端末',
+        description: 'エレベーター内専用背景画面。1F〜B1F降下シークエンス連動・シャフトアニメーション・CCTV中継対応。',
+        launchLabel: 'EV背景画面を起動 (/display/elevator) ->',
+      },
+      {
+        key: 'elevator',
+        href: '/elevator-display',
+        title: '[電照] エレベータ内 階数表示端末',
+        description: '段ボール切り抜き用バックライト電照パネル画面。縦横切替、キャリブレーション、フリッカー演出対応。',
+        launchLabel: '階数表示を起動 (/elevator-display) ->',
+      },
+      {
+        key: 'preshow',
+        href: '/display/preshow',
+        title: '[映像] プレショー映像 (Pre-show Display)',
+        description: '待機ホール正面スクリーン用フルスクリーン再生プレイヤー。管理卓からの上映トリガー・映像終了通知連動。',
+        launchLabel: 'プレショー映像を起動 (/display/preshow) ->',
+      },
+      {
+        key: 'video',
+        href: '/display/video',
+        title: '[映像] エリア3/モニター室 最終映像再生端末',
+        description: 'エリア3大型プロジェクター/モニター用フルスクリーン再生プレイヤー。怪異タイムスタンプ検知＆パニック連動。',
+        launchLabel: 'モニター室映像を起動 (/display/video) ->',
+      },
+      {
+        key: 'sound',
+        href: '/display/sound',
+        title: '[音響] 音響再生専用ノード (Sound Node)',
+        description: '会場内天井・隠しスピーカー用待機端末。ワンタップでオーディオ待機し、サーバーからの音響指示を即時再生。',
+        launchLabel: '音響ノードを起動 (/display/sound) ->',
+      },
+    ],
   },
   {
-    key: 'equipment',
-    href: '/equipment',
-    title: '[機材] 機材演出制御盤',
-    description: '物理設備（ESP32有線/Wi-Fi/Bluetooth対応リレー・サーボ・ライト・ファン）の個別登録と遠隔制御。',
-    launchLabel: '機材制御盤を起動 (/equipment) ->',
-  },
-  {
-    key: 'elevator',
-    href: '/elevator-display',
-    title: '[演出] エレベータ内 階数表示端末',
-    description: '段ボール切り抜き用バックライト電照パネル画面。縦横切替、キャリブレーション、フリッカー演出対応。',
-    launchLabel: 'エレベータ表示を起動 (/elevator-display) ->',
-  },
-  {
-    key: 'elevator-bg',
-    href: '/display/elevator',
-    title: '[背景] エレベーター背景映像・CCTV演出端末',
-    description: 'モニター室技術を適用したエレベーター専用背景画面。1F〜B1F降下シークエンス連動・シャフトアニメーション・CCTV中継対応。',
-    launchLabel: 'エレベーター背景画面を起動 (/display/elevator) ->',
-  },
-  {
-    key: 'cctv',
-    href: '/admin/cctv',
-    title: '[監視] 監視カメラ CCTV モニター',
-    description: '現場配置のカメラ3台（品質管理室/通路・EV前/製造ライン）のWebRTC常時モニタリング。遠隔ライト操作・3分割/フォーカス切替対応。',
-    launchLabel: 'CCTV モニターを起動 (/admin/cctv) ->',
-  },
-  {
-    key: 'preshow',
-    href: '/display/preshow',
-    title: '[演出] プレショー映像 (Pre-show Display)',
-    description: '待機ホール正面スクリーン用フルスクリーン再生プレイヤー。管理卓からの上映トリガー・映像終了時のスマホ点検通知連動対応。',
-    launchLabel: 'プレショー映像を起動 (/display/preshow) ->',
-  },
-  {
-    key: 'video',
-    href: '/display/video',
-    title: '[演出] エリア3/モニター室 最終映像再生端末',
-    description: 'エリア3（モニター室）大型プロジェクター/モニター用フルスクリーン再生プレイヤー。怪異タイムスタンプ検知＆パニック連動。',
-    launchLabel: 'モニター室映像を起動 (/display/video) ->',
+    categoryName: '[端末系]',
+    categoryDesc: '参加者携行端末および現場中継用カメラ配信用端末',
+    cards: [
+      {
+        key: 'client',
+        href: '/client',
+        title: '[端末] 参加者用 PDA 端末',
+        description: '現場巡回保守員向け画面。写真撮影・機器点検操作・フラッシュライト・プロシージャル怪異音響を搭載。',
+        launchLabel: 'PDA 端末を起動 (/client) ->',
+      },
+      {
+        key: 'camera',
+        href: '/camera',
+        title: '[配信] CCTV 配信用カメラ画面',
+        description: '現場中継配信用スマートフォン向け画面。内蔵カメラ映像をWebRTC経由でCCTVモニターへリアルタイム中継。',
+        launchLabel: '配信カメラを起動 (/camera) ->',
+      },
+    ],
   },
 ];
 
@@ -80,18 +133,28 @@ export default function PortalPage() {
             <h1>第零製造所 設備点検・演出統合コンソール</h1>
           </div>
 
-          <div className="portal-cards">
-            {PORTAL_CARDS.map((card) => (
-              <div key={card.key} className="win95-window portal-card">
-                <div>
-                  <div className={`portal-card-title ${card.key}`}>{card.title}</div>
-                  <div className="portal-card-desc">{card.description}</div>
+          <div className="portal-sections">
+            {PORTAL_CATEGORIES.map((section) => (
+              <div key={section.categoryName} className="portal-category-group">
+                <div className="portal-category-header">
+                  <span className="portal-category-title">{section.categoryName}</span>
+                  <span className="portal-category-desc">{section.categoryDesc}</span>
                 </div>
-                <Link href={card.href} className="portal-link">
-                  <button className={`win95-btn portal-launch-btn ${card.key}`}>
-                    {card.launchLabel}
-                  </button>
-                </Link>
+                <div className="portal-cards">
+                  {section.cards.map((card) => (
+                    <div key={card.key} className="win95-window portal-card">
+                      <div>
+                        <div className={`portal-card-title ${card.key}`}>{card.title}</div>
+                        <div className="portal-card-desc">{card.description}</div>
+                      </div>
+                      <Link href={card.href} className="portal-link">
+                        <button className={`win95-btn portal-launch-btn ${card.key}`}>
+                          {card.launchLabel}
+                        </button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

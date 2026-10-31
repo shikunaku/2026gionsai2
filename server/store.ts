@@ -164,6 +164,11 @@ export class AppStore {
     if (sub) {
       sub.status = status;
       sub.reason = reason;
+      // If rejected, allow client to resend by clearing deduplication entry
+      if (status === 'REJECTED') {
+        const dedupKey = `${sub.deviceId}:${sub.taskId}`;
+        this.recentSubmissions.delete(dedupKey);
+      }
     }
     return sub;
   }

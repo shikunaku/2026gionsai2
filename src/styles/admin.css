@@ -4,11 +4,46 @@
 .admin-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(360px, 1.4fr) minmax(320px, 1fr) minmax(340px, 1.1fr);
-  gap: 6px;
-  padding: 6px;
+  grid-template-columns: minmax(340px, 1.3fr) minmax(300px, 1fr) minmax(320px, 1.2fr);
+  gap: 8px;
+  padding: 8px;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .admin-workspace {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-column {
+    height: auto !important;
+    min-height: 380px;
+  }
+}
+
+/* Preshow Console Workspace Responsive */
+.preshow-workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 1.3fr) minmax(320px, 1fr);
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .preshow-workspace {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .preshow-panel-left {
+    height: auto !important;
+    min-height: 350px;
+  }
 }
 
 /* ===== Shared admin panel scaffolding ===== */

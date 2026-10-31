@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { useSocket } from '../../hooks/useSocket';
 import { useTorch } from '../../hooks/useTorch';
 import { useBattery } from '../../hooks/useBattery';
+import { useWakeLock } from '../../hooks/useWakeLock';
+import { ScreenDimmerOverlay } from '../../components/common/ScreenDimmerOverlay';
 import { CctvCameraId, CCTV_CAMERAS } from '../../lib/types';
 import '../../styles/client.css';
 
@@ -16,6 +18,7 @@ function CameraStreamerContent() {
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState<number>(0);
+  const { isActive: wakeLockActive } = useWakeLock(true);
 
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -43,20 +46,26 @@ function CameraStreamerContent() {
     onStateChange: handleTorchChange,
   });
 
-  // バッテリー監視
-  const handleBatterySync = useCallback(
-    (batteryLevel: number) => {
+  // バッテリー監視（スロットル）
+  const handleBatterySync = (() => {
+    let lastEmit = 0;
+    const throttleMs = 5000; // 5 秒ごとに送信
+    return (batteryLevel: number) => {
+      const now = Date.now();
+      if (now - lastEmit < throttleMs) return;
+      lastEmit = now;
       if (socket && connected) {
         socket.emit('cctv:camera_status_update', {
           camId: selectedCamId,
           online: isStreaming,
           lightOn: torchOn,
           batteryLevel,
+          room: 'cctv', // ルーム限定でブロードキャスト
         });
       }
-    },
-    [socket, connected, selectedCamId, isStreaming, torchOn]
-  );
+    };
+  })();
+
 
   const { level: batteryLevel, charging } = useBattery(handleBatterySync);
 
@@ -70,9 +79,9 @@ function CameraStreamerContent() {
         audio: false, // 監視用映像専用（帯域・負荷削減）
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 640, max: 960 },
-          height: { ideal: 480, max: 720 },
-          frameRate: { ideal: 15, max: 20 }, // 15〜20fpsでスマホの熱暴走と帯域詰まりを完全防止
+          width: { ideal: 640, max: 640 }, // 固定 640px 幅
+          height: { ideal: 360, max: 360 }, // 固定 360px 高さ (CCTV 用に軽量化)
+          frameRate: { ideal: 5, max: 5 }, // 5 FPS に制限して帯域と CPU 負荷を削減
         },
       });
 
@@ -89,12 +98,13 @@ function CameraStreamerContent() {
 
       // サーバーへ登録通知および接続済みビューアーへの配信接続要求
       if (socket && connected) {
-        socket.emit('cctv:register_camera', { camId: selectedCamId });
+        socket.emit('cctv:register_camera', { camId: selectedCamId, room: 'cctv' });
         socket.emit('cctv:camera_status_update', {
           camId: selectedCamId,
           online: true,
           lightOn: torchOn,
           batteryLevel,
+          room: 'cctv', // ルーム限定でブロードキャスト
         });
       }
     } catch (err: any) {
@@ -551,6 +561,9 @@ function CameraStreamerContent() {
           <span>TORCH: {torchOn ? 'ON' : 'OFF'}</span>
         </footer>
       </div>
+
+      {/* 画面調光・消灯防止ステータス */}
+      <ScreenDimmerOverlay wakeLockActive={wakeLockActive} initialLevel="normal" />
     </div>
   );
 }

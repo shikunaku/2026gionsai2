@@ -17,11 +17,13 @@ graph TD
         Portal["統合ポータル<br/>/<br/>(Launchpad)"]
         PDA["参加者用PDA端末<br/>/client<br/>(Camera / Torch / SFX / Glitch)"]
         Admin["集中管理コンソール<br/>/admin<br/>(Tele-monitor / Review / Trigger)"]
-        CCTV["CCTV監視モニター<br/>/admin/cctv<br/>(WebRTC Multi-Cam)"]
+        PreshowConsole["プレショー操作卓<br/>/preshow<br/>(Device List / Torch / Glitch / Preshow Play)"]
+        CCTV["CCTV監視モニター<br/>/admin/cctv<br/>(WebRTC Multi-Cam / Responsive)"]
+        CameraStream["現場配信カメラ<br/>/camera<br/>(WebRTC Streamer / Wake Lock / Dimmer)"]
         PreshowDisp["プレショー映像端末<br/>/display/preshow<br/>(Fullscreen Video Player)"]
         ElevatorDisp["エレベータ電照パネル<br/>/elevator-display<br/>(Flicker / Floor Display)"]
         VideoDisp["モニター室最終映像端末<br/>/display/video<br/>(Fullscreen Video Player)"]
-        SoundNode["音響専用ノード<br/>/display/sound<br/>(Web Audio / MP3 Cache Engine)"]
+        SoundNode["音響専用ノード<br/>/display/sound<br/>(Web Audio / Wake Lock / Dimmer)"]
         EquipPanel["機材制御盤<br/>/equipment<br/>(Web Serial / Relay Control)"]
     end
 
@@ -39,8 +41,10 @@ graph TD
     end
 
     PDA <-->|WebSocket: device:ready, arrive, photo_submit, effect:*| SocketServer
-    Admin <-->|WebSocket: admin:join, override_phase, review_photo, trigger_*| SocketServer
+    Admin <-->|WebSocket: admin:join, review_photo, trigger_*| SocketServer
+    PreshowConsole <-->|WebSocket: admin:join, effect:*, preshow:start| SocketServer
     CCTV <-->|WebRTC Signaling: cctv:signal, cctv:light_control| SocketServer
+    CameraStream <-->|WebRTC Stream: cctv:register_camera, cctv:signal| CCTV
     PreshowDisp <-->|WebSocket: preshow:start, preshow:ended| SocketServer
     VideoDisp <-->|WebSocket: video:trigger_play, panic:trigger, video:ended| SocketServer
     ElevatorDisp <-->|WebSocket: elevator:state, elevator:glitch| SocketServer
@@ -59,14 +63,16 @@ graph TD
 
 | ノード種別 | エンドポイント | 主な責務と機能仕様 |
 |---|---|---|
-| **統合ポータル** | `/` | 各種サイネージ、PDA端末、管理画面、監視卓へのダイレクト起動リンク集。**プレショー専用画面 (`/display/preshow`)** と **モニター室最終映像画面 (`/display/video`)** の導線を明確に分離して提供。 |
-| **参加者用PDA端末** | `/client` | 現場巡視保守員向けスマホ画面。**スマホ側での動画再生を完全排除**し、「安全規定同意」→「エリア1到着確認」→「指定資料撮影・送信」の超軽量・高安定動作フローを採用。背面トーチ（LED）、画面グリッチ、警告バイブレーション、オフライン自動復帰ダイアログを完備。 |
-| **集中管理コンソール** | `/admin` | 運営スタッフ向け4カラム管理画面。全PDA端末・サイネージのリアルタイム監視（バッテリー残量・充電状態・通信リンク・現在フェーズ）、提出写真の即時合否審査、各フェーズの遠隔進行、全館恐怖演出の一斉発火、非常用全点灯スイッチ。 |
-| **監視カメラCCTV** | `/admin/cctv` | 現場各所（品質管理室/通路・EV前/製造ライン）に設置されたカメラ端末からのWebRTC P2P低遅延映像中継。遠隔フラッシュライト点灯、カメラ専有時ハイブリッドトーチ制御、3分割/個別フォーカス切替。 |
-| **プレショー映像端末** | `/display/preshow` | 待機ホール正面スクリーン用フルスクリーン動画再生プレイヤー。CRTスキャンライン待機画面、ブラウザAutoplay制限解除オーバーレイ、管理卓からの `preshow:start` トリガー受信、映像終了（`ended`）時のサーバー通知連動（`preshow:ended`）。 |
+| **統合ポータル** | `/` | 各種サイネージ、PDA端末、管理画面、操作卓へのダイレクト起動リンク集。全画面のヘッダーナビゲーションを整理し、「アトラクション・現場端末」「管理・監視・演出操作卓」「空間演出・音響・物理機材」の3分類で整理。 |
+| **参加者用PDA端末** | `/client` | 現場巡視保守員向けスマホ画面。**スマホ側での動画再生を完全排除**し、「安全規定同意」➔「エリア1到着確認」➔「指定資料撮影・送信」の超軽量・高安定動作フローを採用。背面トーチ（LED）、画面グリッチ、警告バイブレーション、オフライン自動復帰ダイアログを完備。 |
+| **集中管理コンソール** | `/admin` | 運営スタッフ向け集中管理画面（3カラムレスポンシブ構成）。全PDA端末・サイネージのリアルタイム監視（バッテリー残量・充電状態・通信リンク・現在フェーズ）、提出写真の即時合否審査、全館恐怖演出の一斉発火、非常用全点灯スイッチ。 |
+| **プレショー操作卓** | `/preshow` | 待機ホール・プレショー担当スタッフ向け専用コンソール。スマートフォンやタブレットからの操作に対応。接続端末一覧（バッテリー・充電状況・リンク監視）、一括および個別端末へのフラッシュライト遠隔制御（点滅・点灯・消灯）、画面グリッチ妨害、プレショー映像の再生開始スイッチ、直近操作ログを提供。 |
+| **監視カメラCCTV** | `/admin/cctv` | 現場各所（品質管理室/通路・EV前/製造ライン）に設置されたカメラ端末からのWebRTC P2P低遅延映像監視モニター。小型端末から大型ディスプレイまで柔軟に対応するレスポンシブグリッドレイアウト（モバイル1列、3分割時は画面下端まで最大表示）。不要なQRコード表示を排した即時監視UI。 |
+| **現場配信カメラ** | `/camera` | 会場内に定置または携行する監視カメラ配信用端末画面。背面カメラ映像のWebRTC常時中継、フラッシュライト遠隔受動制御、端末の自動スリープを防止する **Wake Lock API常時稼働**、および暗所での光漏れを防ぐ **Web画面調光オーバーレイ（標準 / 減光 / 超減光）** を搭載。 |
+| **プレショー映像端末** | `/display/preshow` | 待機ホール正面スクリーン用フルスクリーン動画再生プレイヤー。CRTスキャンライン待機画面、ブラウザAutoplay制限解除オーバーレイ、管理卓または操作卓からの `preshow:start` トリガー受信、映像終了（`ended`）時のサーバー通知連動（`preshow:ended`）。 |
 | **エレベータ電照パネル** | `/elevator-display` | 段ボール筐体くり抜き用の上下2分割全画面発光電照板。遠隔バッテリー監視連携、蛍光灯チラつきグリッチ演出、1F/B1F表示切替、降下中消灯シーケンス。 |
 | **モニター室最終映像端末** | `/display/video` | エリア3（モニター室）大型プロジェクター/モニター用フルスクリーン再生プレイヤー。怪異出現タイムスタンプ（5.0秒）検知による全館パニック連動（`panic:trigger`）およびプロシージャルホラー音響フォールバック。 |
-| **音響専用ノード** | `/display/sound` | 会場内の隠しスピーカー・天井スピーカー接続端末。Autoplay制約のワンタップ解除、プロシージャル合成音およびMP3キャッシュ再生。 |
+| **音響専用ノード** | `/display/sound` | 会場内の隠しスピーカー・天井スピーカー接続端末。Autoplay制約のワンタップ解除、プロシージャル合成音およびMP3キャッシュ再生。暗所設置に対応する **Wake Lock API画面消灯防止** および **Web画面調光オーバーレイ** を完備。 |
 | **機材演出制御盤** | `/equipment` | Web Serial APIを用いたESP32マイコン直結制御、COMポート自動検出、リレー/サーボの個別ON/OFFテスト。 |
 
 ---
@@ -151,7 +157,7 @@ graph TD
     ├── app/                  # 各種画面ルーティング
     │   ├── admin/            # 集中管理コンソール画面 (/admin)
     │   │   └── cctv/         # CCTV監視カメラ画面 (/admin/cctv)
-    │   ├── camera/           # 監視カメラ映像配信側画面 (/camera)
+    │   ├── camera/           # 現場監視カメラ映像配信画面 (/camera)
     │   ├── client/           # 参加者用PDA端末画面 (/client)
     │   ├── display/
     │   │   ├── preshow/      # プレショー映像再生端末 (/display/preshow)
@@ -159,19 +165,21 @@ graph TD
     │   │   └── sound/        # 音響専用ノード端末 (/display/sound)
     │   ├── elevator-display/ # エレベータ階数表示端末 (/elevator-display)
     │   ├── equipment/        # 機材制御盤画面 (/equipment)
+    │   ├── preshow/          # プレショー担当スタッフ用操作卓 (/preshow)
     │   ├── api/video-files/  # public/videos/ 内のファイル一覧取得API
     │   ├── layout.tsx        # アプリ全体共通ルートレイアウト
     │   └── page.tsx          # 統合ポータルランチャー画面 (/)
     ├── components/           # UIコンポーネント群
     │   ├── admin/            # 端末監視、写真審査、演出発火パネル
     │   ├── client/           # 各フェーズUI (PhaseInit, PhaseQualityControl, PhaseElevatorSeq等)
-    │   ├── common/           # 全画面切替、オフライン再接続モーダル
+    │   ├── common/           # 画面調光オーバーレイ(ScreenDimmerOverlay)、再接続モーダル
     │   └── equipment/        # Web Serial設定ダイアログ、機材カード
     ├── hooks/                # カスタムフック
     │   ├── useSocket.ts      # WebSocket接続・切断・再接続監視
     │   ├── useSoundEngine.ts # 音響エンジンラッパーフック
     │   ├── useTorch.ts       # ネイティブBridge / Web Camera トーチ制御フック
-    │   └── useBattery.ts     # バッテリー残量テレメトリ監視フック
+    │   ├── useBattery.ts     # バッテリー残量テレメトリ監視フック
+    │   └── useWakeLock.ts    # Screen Wake Lock APIによる画面消灯防止フック
     ├── lib/                  # コアロジック・共通ユーティリティ
     │   ├── soundEngine.ts    # Web Audio API シンセサイザー & MP3キャッシュ再生
     │   ├── types.ts          # システム全域のTypeScript型定義・イベント規約・定数
@@ -303,6 +311,14 @@ npm run dev
 ### 4. ブラウザのカメラアクセス権限
 - **PDA端末**: 初回アクセス時にカメラ利用許可ダイアログが表示されます。誤って「拒否」を押した場合は、ブラウザのアドレスバー左側のアイコン（鍵マーク等）から「カメラのアクセス」を「許可」に変更してページをリロードしてください。
 - **Androidキオスク端末（AndroidBridge）**: 専用ネイティブシェルアプリを使用している場合、`AndroidKioskBridge` が自動注入され、CameraManagerによる高速トーチ・ストロボ制御が優先作動します。
+
+### 5. 現場端末の画面自動消灯（スリープ）防止と調光（Wake Lock & Dimmer）
+- **無操作スリープの防止**: 配信カメラ（`/camera`）および音響ノード（`/display/sound`）では、端末が自動スリープして通信や配信が途絶する事故を防ぐため、**Screen Wake Lock API**（`useWakeLock`）を自動起動します。タブ復帰時（`visibilitychange`）にも自動で再取得されます。
+- **暗所演出での光漏れ防止**: 暗闇の会場内に設置された端末の画面光が演出を邪魔しないよう、右上に「画面調光」トグル（標準 / 減光 65% / 超減光 92%）を設けています。OS本来のバックライト輝度を触ることなくWebレイヤー上で安全に遮光可能です。
+
+### 6. プレショー操作卓（/preshow）の運用
+- **スタッフ携行運用**: プレショー待機ホール担当スタッフがスマートフォンや小型端末から片手で操作できるよう、全幅タッチフレンドリーなUI設計になっています。
+- **遠隔演出機能**: 待機列の参加者PDA端末の生存・バッテリー状態を把握しながら、トーチ点滅（怪異演出）・常時点灯（誘導）・消灯や画面グリッチを即時発火可能。待機ホールの準備が整った段階で「プレショー上映開始」を実行できます。
 
 ---
 

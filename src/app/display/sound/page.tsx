@@ -13,6 +13,8 @@ import { useSocket } from '../../../hooks/useSocket';
 import { useSoundEngine } from '../../../hooks/useSoundEngine';
 import { FullscreenButton } from '../../../components/common/FullscreenButton';
 import { ReconnectingModal } from '../../../components/common/ReconnectingModal';
+import { ScreenDimmerOverlay } from '../../../components/common/ScreenDimmerOverlay';
+import { useWakeLock } from '../../../hooks/useWakeLock';
 import { SoundNodePlayPayload } from '../../../lib/types';
 
 function SoundNodeContent() {
@@ -22,6 +24,7 @@ function SoundNodeContent() {
 
   const { socket, connected, isReconnecting, reconnectAttempts, isOnline, manualReconnect } = useSocket();
   const { engine, unlockAudio } = useSoundEngine();
+  const { isActive: wakeLockActive } = useWakeLock(true);
 
   /** AudioContextがユーザー操作によりアンロックされたか */
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -321,6 +324,9 @@ function SoundNodeContent() {
           ))
         )}
       </footer>
+
+      {/* 画面調光・消灯防止ステータス */}
+      <ScreenDimmerOverlay wakeLockActive={wakeLockActive} initialLevel="dim" />
     </div>
   );
 }

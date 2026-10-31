@@ -31,6 +31,7 @@ export interface UseSocketReturn {
  */
 export function useSocket(): UseSocketReturn {
   const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
+  const hasDisconnectedRef = useRef<boolean>(false);
   const [connected, setConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
@@ -43,7 +44,14 @@ export function useSocket(): UseSocketReturn {
     if (socketRef.current) {
       console.log('[Socket] Manual reconnect triggered.');
       setIsReconnecting(true);
-      socketRef.current.connect();
+      // Reset socket state before reconnecting to avoid stale reconnection attempts
+      socketRef.current.disconnect();
+      // Small timeout to ensure clean disconnect before reconnect
+      setTimeout(() => {
+        if (socketRef.current) {
+          socketRef.current.connect();
+        }
+      }, 100);
     }
   }, []);
 
@@ -94,9 +102,15 @@ export function useSocket(): UseSocketReturn {
     socket.on('disconnect', (reason) => {
       console.warn('[Socket] Disconnected:', reason);
       setConnected(false);
+      hasDisconnectedRef.current = true;
       // 意図的な切断以外は再接続待機状態へ遷移
       if (reason !== 'io client disconnect') {
         setIsReconnecting(true);
+      }
+      // 強制的に再接続を開始 (auto-reconnect が機能しない場合のフォールバック)
+      if (!socket.connected) {
+        console.log('[Socket] Attempting manual reconnection...');
+        socket.connect();
       }
     });
 
@@ -111,10 +125,28 @@ export function useSocket(): UseSocketReturn {
       setConnected(true);
       setIsReconnecting(false);
       setReconnectAttempts(0);
+      // If reconnection follows a prior disconnect, reload non-excluded pages
+      if (hasDisconnectedRef.current) {
+        const path = window.location.pathname;
+        const isClientPage = path.startsWith('/client');
+        const isCCTVPage = path.startsWith('/admin/cctv');
+        if (!isClientPage && !isCCTVPage) {
+          console.log('[Socket] Reloading page after reconnection to sync state');
+          window.location.reload();
+        }
+        hasDisconnectedRef.current = false;
+      }
     });
 
-    socket.io.on('reconnect_error', (error) => {
-      console.warn('[Socket] Reconnect attempt failed:', error.message);
+    socket.on('connect_error', (error) => {
+      console.warn('[Socket] Connect error:', error.message);
+      // Keep attempting reconnection but allow UI to reflect that we are not stuck
+      setIsReconnecting(false);
+    });
+
+    (socket.io as any).on('reconnect_failed', () => {
+      console.warn('[Socket] Reconnect failed after max attempts');
+      setIsReconnecting(false);
     });
 
     return () => {

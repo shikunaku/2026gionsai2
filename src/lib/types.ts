@@ -80,6 +80,7 @@ export interface CctvCameraStatusPayload {
   online: boolean;
   lightOn?: boolean;
   batteryLevel?: number | string;
+  room?: string;
 }
 
 /** エレベータ階層状態 */
@@ -453,8 +454,7 @@ export interface ClientToServerEvents {
   'sound:register_node': (payload: { deviceId: string; location?: string }) => void;
   'sound:trigger': (payload: SoundNodePlayPayload) => void;
 
-  // CCTV監視カメラ（配信側・ビューアー側）イベント
-  'cctv:register_camera': (payload: { camId: CctvCameraId; deviceId?: string }) => void;
+  'cctv:register_camera': (payload: { camId: CctvCameraId; deviceId?: string; room?: string }) => void;
   'cctv:register_viewer': () => void;
   'cctv:signal': (payload: CctvSignalPayload) => void;
   'cctv:light_control': (payload: CctvLightPayload) => void;

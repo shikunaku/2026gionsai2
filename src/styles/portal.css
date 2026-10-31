@@ -47,6 +47,30 @@
   color: #555861;
 }
 
+.portal-category-group {
+  margin-bottom: 22px;
+}
+
+.portal-category-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #a0a0a0;
+}
+
+.portal-category-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.portal-category-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
 .portal-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -69,8 +93,15 @@
 
 .portal-card-title.client { color: #2d4b73; }
 .portal-card-title.admin { color: #6e3535; }
+.portal-card-title.cctv { color: #5a3d73; }
 .portal-card-title.equipment { color: #2d5b3d; }
 .portal-card-title.elevator-bg { color: #1e3a8a; }
+.portal-card-title.elevator { color: #78350f; }
+.portal-card-title.preshow { color: #374151; }
+.portal-card-title.video { color: #1f2937; }
+.portal-card-title.sound { color: #4338ca; }
+.portal-card-title.camera { color: #047857; }
+.portal-card-title.preshow-console { color: #0369a1; }
 
 .portal-card-desc {
   font-size: 11px;
@@ -91,8 +122,15 @@
 
 .win95-btn.portal-launch-btn.client { background-color: #3b5a80; color: #f0f3f8; }
 .win95-btn.portal-launch-btn.admin { background-color: #6e3535; color: #f8f0f0; }
+.win95-btn.portal-launch-btn.cctv { background-color: #5a3d73; color: #fdf4ff; }
 .win95-btn.portal-launch-btn.equipment { background-color: #2d5b3d; color: #eff8f2; }
+.win95-btn.portal-launch-btn.preshow-console { background-color: #0369a1; color: #f0f9ff; }
 .win95-btn.portal-launch-btn.elevator-bg { background-color: #1e3a8a; color: #eff6ff; }
+.win95-btn.portal-launch-btn.elevator { background-color: #78350f; color: #fef3c7; }
+.win95-btn.portal-launch-btn.preshow { background-color: #374151; color: #f9fafb; }
+.win95-btn.portal-launch-btn.video { background-color: #1f2937; color: #f3f4f6; }
+.win95-btn.portal-launch-btn.sound { background-color: #4338ca; color: #eef2ff; }
+.win95-btn.portal-launch-btn.camera { background-color: #047857; color: #ecfdf5; }
 
 .win95-inset-dark.portal-status {
   margin-top: 18px;
