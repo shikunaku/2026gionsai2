@@ -89,7 +89,7 @@ export const PhaseQualityControl: React.FC<PhaseQualityControlProps> = ({
         <div className="win95-window">
           <div
             className="win95-titlebar"
-            style={{ background: 'linear-gradient(90deg, #000080, #1084d0)' }}
+            style={{ background: '#1f4f7a' }}
           >
             <span>品質管理室へ移動</span>
             <span className="phase-init-title-tag">端末 {deviceId}</span>

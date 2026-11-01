@@ -288,7 +288,6 @@ async function main() {
     // プレショー開始トリガー (Adminまたはクライアントから)
     socket.on('preshow:start', (payload) => {
       console.log('[Socket] Preshow start triggered:', payload);
-      io.emit('preshow:trigger', payload || {});
       io.emit('preshow:start', payload || {});
     });
 

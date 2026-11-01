@@ -31,7 +31,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
         <div className="win95-window">
           <div
             className="win95-titlebar"
-            style={{ background: 'linear-gradient(90deg, #4a148c, #6a1b9a)' }}
+            style={{ background: '#55207f' }}
           >
             <span>モニター室へ移動</span>
             <span className="phase-init-title-tag">端末 {deviceId}</span>
@@ -91,11 +91,7 @@ export const PhaseMonitorRoom: React.FC<PhaseMonitorRoomProps> = ({
         <div
           className="win95-titlebar"
           style={{
-            background: panicActive
-              ? 'linear-gradient(90deg, #b71c1c, #d50000)'
-              : videoEnded
-              ? 'linear-gradient(90deg, #0284c7, #0369a1)'
-              : 'linear-gradient(90deg, #4a148c, #6a1b9a)',
+            background: panicActive ? '#b71c1c' : videoEnded ? '#0369a1' : '#55207f',
             color: '#fff',
           }}
         >

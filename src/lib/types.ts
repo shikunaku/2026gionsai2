@@ -386,7 +386,6 @@ export interface ServerToClientEvents {
   'panic:trigger': (payload?: { timestamp?: number; reason?: string }) => void;
 
   // プレショー・各フェーズ演出イベント
-  'preshow:trigger': (payload?: { videoSrc?: string; targetDeviceId?: string }) => void;
   'preshow:start': (payload?: { videoSrc?: string; targetDeviceId?: string }) => void;
   'preshow:ended': (payload?: { targetDeviceId?: string }) => void;
   'phase:arrival_confirmed': (payload: { phase: DevicePhase; deviceId: string }) => void;

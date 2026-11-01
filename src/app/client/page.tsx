@@ -6,7 +6,6 @@ import { useSocket } from '../../hooks/useSocket';
 import { useTorch } from '../../hooks/useTorch';
 import { useBattery } from '../../hooks/useBattery';
 import { useSoundEngine } from '../../hooks/useSoundEngine';
-import { FullscreenButton } from '../../components/common/FullscreenButton';
 import { ReconnectingModal } from '../../components/common/ReconnectingModal';
 import { HorrorCanvasOverlay } from '../../components/client/HorrorCanvasOverlay';
 import { PhaseInit } from '../../components/client/PhaseInit';
@@ -553,7 +552,6 @@ function ClientContent() {
               {charging ? '[充電中]' : '[バッテリー]'} {batteryLevel}%
             </span>
 
-            <FullscreenButton className="client-fs-btn" variant="visitor" />
           </div>
         </header>
 

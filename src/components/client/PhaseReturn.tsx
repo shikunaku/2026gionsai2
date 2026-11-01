@@ -13,7 +13,7 @@ export const PhaseReturn: React.FC<PhaseReturnProps> = ({ deviceId, onResetToIni
     <div className="phase-return phase-container">
       {/* Title */}
       <div className="win95-window">
-        <div className="win95-titlebar" style={{ background: 'linear-gradient(90deg, #1b3a27, #2e5b3e)' }}>
+        <div className="win95-titlebar" style={{ background: '#254b33' }}>
           <span>体験終了</span>
           <span className="phase-init-title-tag">端末 {deviceId}</span>
         </div>

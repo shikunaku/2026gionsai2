@@ -98,12 +98,10 @@ export default function PreshowDisplayPlayerPage() {
     };
 
     socket.on('preshow:start', handleStartPlayback);
-    socket.on('preshow:trigger', handleStartPlayback);
     socket.on('video:reset', handleVideoReset);
 
     return () => {
       socket.off('preshow:start', handleStartPlayback);
-      socket.off('preshow:trigger', handleStartPlayback);
       socket.off('video:reset', handleVideoReset);
     };
   }, [socket, availableVideos, audioUnlocked]);

@@ -149,8 +149,6 @@ export default function VideoDisplayPlayerPage() {
       });
   }, []);
 
-  const [isPreshowMode, setIsPreshowMode] = useState<boolean>(false);
-
   // Listen to WebSocket events
   useEffect(() => {
     if (!socket || !connected) return;
@@ -295,43 +293,8 @@ export default function VideoDisplayPlayerPage() {
       }, 50);
     };
 
-    const handlePreshowTrigger = (payload?: { videoSrc?: string }) => {
-      console.log('[Video Player] PRESHOW_TRIGGER received:', payload);
-      setIsPreshowMode(true);
-      setDisplayMode('video');
-      hasTriggeredPanicRef.current = false;
-      setPanicEmitted(false);
-
-      let src = payload?.videoSrc;
-      if (!src) {
-        if (availableVideos.length > 0) {
-          src = `/videos/${availableVideos[0]}`;
-        } else {
-          src = '/videos/preshow.mp4';
-        }
-      }
-
-      setVideoSrc(src);
-      setIsPlaying(true);
-      setUseProcedural(false);
-
-      if (videoRef.current) {
-        videoRef.current.src = src;
-        videoRef.current.currentTime = 0;
-        videoRef.current.muted = !audioUnlocked;
-        videoRef.current.play().catch((err) => {
-          console.warn('[Video Player] Preshow play fallback:', err);
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play().catch(() => {});
-          }
-        });
-      }
-    };
-
     const handleTriggerPlay = (payload?: { videoSrc?: string; title?: string }) => {
       console.log('[Video Player] TRIGGER_VIDEO_PLAY received:', payload);
-      setIsPreshowMode(false);
       setDisplayMode('video');
       hasTriggeredPanicRef.current = false;
       setPanicEmitted(false);
@@ -418,7 +381,6 @@ export default function VideoDisplayPlayerPage() {
     socket.on('cctv:status', handleStatusUpdate);
     socket.on('cctv:signal', handleSignal);
     socket.on('cctv:monitor_switch', handleCctvSwitch);
-    socket.on('preshow:trigger', handlePreshowTrigger);
     socket.on('video:trigger_play', handleTriggerPlay);
     socket.on('video:reset', handleVideoReset);
 
@@ -427,7 +389,6 @@ export default function VideoDisplayPlayerPage() {
       socket.off('cctv:status', handleStatusUpdate);
       socket.off('cctv:signal', handleSignal);
       socket.off('cctv:monitor_switch', handleCctvSwitch);
-      socket.off('preshow:trigger', handlePreshowTrigger);
       socket.off('video:trigger_play', handleTriggerPlay);
       socket.off('video:reset', handleVideoReset);
     };
@@ -471,17 +432,13 @@ export default function VideoDisplayPlayerPage() {
     console.log('[Video Player] Video ended.');
     setIsPlaying(false);
     if (socket) {
-      if (isPreshowMode) {
-        socket.emit('preshow:ended');
-      } else {
-        socket.emit('video:ended');
-        // ユーザー要件: 「映像を見たあと、そのままCCTVの映像を映してほしい」
-        // 映像再生完了後、自動的にCAM-3（または設定されたCCTV画面）へ切り替え
-        setDisplayMode('cctv');
-        setCctvLayout('single');
-        setCctvActiveCam('cam3');
-        console.log('[Video Player] Auto-switched to CCTV live camera feed (CAM-3)');
-      }
+      socket.emit('video:ended');
+      // ユーザー要件: 「映像を見たあと、そのままCCTVの映像を映してほしい」
+      // 映像再生完了後、自動的にCAM-3（または設定されたCCTV画面）へ切り替え
+      setDisplayMode('cctv');
+      setCctvLayout('single');
+      setCctvActiveCam('cam3');
+      console.log('[Video Player] Auto-switched to CCTV live camera feed (CAM-3)');
     }
   };
 

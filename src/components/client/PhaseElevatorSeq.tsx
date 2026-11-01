@@ -46,7 +46,7 @@ export const PhaseElevatorSeq: React.FC<PhaseElevatorSeqProps> = ({
       <div className="win95-window">
         <div
           className="win95-titlebar"
-          style={{ background: 'linear-gradient(90deg, #1f2429, #37474f)' }}
+          style={{ background: '#252d33' }}
         >
           <span>エレベーターでB1Fへ移動</span>
           <span className="phase-init-title-tag">端末 {deviceId}</span>

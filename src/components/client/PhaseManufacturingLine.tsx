@@ -62,7 +62,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
         <div className="win95-window">
           <div
             className="win95-titlebar"
-            style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
+            style={{ background: '#245f32' }}
           >
             <span>第零製造ラインへ移動</span>
             <span className="phase-init-title-tag">端末 {deviceId}</span>
@@ -121,7 +121,7 @@ export const PhaseManufacturingLine: React.FC<PhaseManufacturingLineProps> = ({
       <div className="win95-window">
         <div
           className="win95-titlebar"
-          style={{ background: 'linear-gradient(90deg, #1b5e20, #2e7d32)' }}
+          style={{ background: '#245f32' }}
         >
           <span>第零製造ライン - コンベアを撮影</span>
           <span className="phase-init-title-tag">端末 {deviceId}</span>
